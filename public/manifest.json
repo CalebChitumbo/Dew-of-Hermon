@@ -1,0 +1,21 @@
+{
+  "name": "Potter's Wheel Ministry",
+  "short_name": "Potter's Wheel",
+  "description": "Ministry management for Dew of Hermon Youth Ministry",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF8F0",
+  "theme_color": "#5B3A29",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

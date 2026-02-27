@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=DM+Serif+Display&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    --background: 30 100% 97%;
+    --foreground: 20 30% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 30% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 30% 15%;
+    --primary: 25 40% 26%;
+    --primary-foreground: 30 100% 97%;
+    --secondary: 30 30% 90%;
+    --secondary-foreground: 25 40% 26%;
+    --muted: 30 20% 94%;
+    --muted-foreground: 20 10% 45%;
+    --accent: 170 35% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 20% 88%;
+    --input: 30 20% 88%;
+    --ring: 25 40% 26%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(30 20% 88%);
+  }
+  body {
+    @apply bg-cream font-sans antialiased;
+    color: hsl(20 30% 15%);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
