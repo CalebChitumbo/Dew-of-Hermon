@@ -35,15 +35,31 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
+async function setSessionCookie(user: FirebaseUser) {
+  try {
+    const idToken = await user.getIdToken();
+    await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+  } catch (error) {
+    console.error("Failed to set session cookie:", error);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
-      if (!user) {
+      if (user) {
+        // Ensure session cookie stays fresh on auth state changes
+        await setSessionCookie(user);
+      } else {
         setUserData(null);
         setLoading(false);
       }
@@ -75,7 +91,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [firebaseUser]);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    await setSessionCookie(cred.user);
   };
 
   const signUp = async (email: string, password: string, name: string) => {
@@ -93,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    await setSessionCookie(cred.user);
   };
 
   const signInWithGoogle = async () => {
@@ -114,9 +132,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updatedAt: new Date(),
       });
     }
+    await setSessionCookie(cred.user);
   };
 
   const signOut = async () => {
+    await fetch("/api/auth/session", { method: "DELETE" });
     await firebaseSignOut(auth);
     setUserData(null);
   };
