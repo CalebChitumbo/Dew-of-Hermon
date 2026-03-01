@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { canAssignAnyRole, canAssignOwnDeptRole } from "@/lib/permissions";
+
+export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
 
 export async function GET(
