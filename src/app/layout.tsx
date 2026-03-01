@@ -3,6 +3,8 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Potter's Wheel | Dew of Hermon Youth Ministry",
   description:

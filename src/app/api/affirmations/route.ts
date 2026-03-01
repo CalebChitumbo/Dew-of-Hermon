@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { Affirmation } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/affirmations - List affirmations
 export async function GET(request: NextRequest) {
   try {

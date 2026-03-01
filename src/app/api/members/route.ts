@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { canManageMembers } from "@/lib/permissions";
+
+export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
 
 export async function GET(request: Request) {

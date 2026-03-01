@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { sendEmail } from "@/lib/email";
+
+export const dynamic = "force-dynamic";
 import {
   ReminderDay,
   ServiceRole,
