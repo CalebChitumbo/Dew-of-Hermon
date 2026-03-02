@@ -11,7 +11,15 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+export const isFirebaseConfigured =
+  !!firebaseConfig.apiKey && !!firebaseConfig.projectId && !!firebaseConfig.appId;
+
 function getApp(): FirebaseApp {
+  if (!isFirebaseConfigured) {
+    throw new Error(
+      "Firebase is not configured. Please set NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, and NEXT_PUBLIC_FIREBASE_APP_ID environment variables."
+    );
+  }
   return getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 }
 

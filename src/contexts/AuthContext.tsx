@@ -12,13 +12,14 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, isFirebaseConfigured } from "@/lib/firebase";
 import { User } from "@/types";
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   userData: User | null;
   loading: boolean;
+  error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -29,6 +30,7 @@ const AuthContext = createContext<AuthContextType>({
   firebaseUser: null,
   userData: null,
   loading: true,
+  error: null,
   signIn: async () => {},
   signUp: async () => {},
   signInWithGoogle: async () => {},
@@ -39,39 +41,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-      if (!user) {
-        setUserData(null);
-        setLoading(false);
-      }
-    });
-    return unsubAuth;
+    if (!isFirebaseConfigured) {
+      setLoading(false);
+      setError("Firebase is not configured. Please check environment variables.");
+      return;
+    }
+
+    try {
+      const unsubAuth = onAuthStateChanged(
+        auth,
+        (user) => {
+          setFirebaseUser(user);
+          setError(null);
+          if (!user) {
+            setUserData(null);
+            setLoading(false);
+          }
+        },
+        (err) => {
+          console.error("Auth state error:", err);
+          setError(err.message);
+          setLoading(false);
+        }
+      );
+      return unsubAuth;
+    } catch (err) {
+      console.error("Failed to initialize auth listener:", err);
+      setError(err instanceof Error ? err.message : "Failed to connect to authentication service");
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (!firebaseUser) return;
+    if (!firebaseUser || !isFirebaseConfigured) return;
 
-    const unsubUser = onSnapshot(
-      doc(db, "users", firebaseUser.uid),
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setUserData({
-            id: snapshot.id,
-            ...data,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-            updatedAt: data.updatedAt?.toDate?.() || new Date(),
-          } as User);
-        } else {
-          setUserData(null);
+    try {
+      const unsubUser = onSnapshot(
+        doc(db, "users", firebaseUser.uid),
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            setUserData({
+              id: snapshot.id,
+              ...data,
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+              updatedAt: data.updatedAt?.toDate?.() || new Date(),
+            } as User);
+          } else {
+            setUserData(null);
+          }
+          setLoading(false);
+        },
+        (err) => {
+          console.error("User data listener error:", err);
+          setLoading(false);
         }
-        setLoading(false);
-      }
-    );
-    return unsubUser;
+      );
+      return unsubUser;
+    } catch (err) {
+      console.error("Failed to initialize user listener:", err);
+      setLoading(false);
+    }
   }, [firebaseUser]);
 
   const signIn = async (email: string, password: string) => {
@@ -127,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         firebaseUser,
         userData,
         loading,
+        error,
         signIn,
         signUp,
         signInWithGoogle,
