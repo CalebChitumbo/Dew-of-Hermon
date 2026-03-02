@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     cookieStore.set("session", idToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
 export async function DELETE() {
   try {
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     cookieStore.delete("session");
     return NextResponse.json({ success: true });
   } catch (error) {
