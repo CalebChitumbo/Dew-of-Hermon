@@ -40,6 +40,8 @@ function getAuthErrorMessage(error: unknown): string {
         return "Sign-in popup was blocked. Please allow popups for this site.";
       case "auth/network-request-failed":
         return "Network error. Please check your connection and try again.";
+      case "auth/unauthorized-domain":
+        return "This domain is not authorized. Please add it to your Firebase authorized domains.";
       default:
         return "An unexpected error occurred. Please try again.";
     }
