@@ -11,8 +11,8 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
 } from "firebase/auth";
-import { doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { onSnapshot, setDoc, getDoc } from "firebase/firestore";
+import { auth, safeDoc } from "@/lib/firebase";
 import { User } from "@/types";
 
 interface AuthContextType {
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!firebaseUser) return;
 
     const unsubUser = onSnapshot(
-      doc(db, "users", firebaseUser.uid),
+      safeDoc("users", firebaseUser.uid),
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, name: string) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
-    await setDoc(doc(db, "users", cred.user.uid), {
+    await setDoc(safeDoc("users", cred.user.uid), {
       name,
       email,
       phone: null,
@@ -98,10 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     const cred = await signInWithPopup(auth, provider);
-    const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+    const userDoc = await getDoc(safeDoc("users", cred.user.uid));
 
     if (!userDoc.exists()) {
-      await setDoc(doc(db, "users", cred.user.uid), {
+      await setDoc(safeDoc("users", cred.user.uid), {
         name: cred.user.displayName || "User",
         email: cred.user.email || "",
         phone: null,

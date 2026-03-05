@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Notification } from "@/types";
 
@@ -19,7 +19,7 @@ export function useNotifications() {
     }
 
     const q = query(
-      collection(db, "notifications"),
+      safeCollection("notifications"),
       where("userId", "==", firebaseUser.uid),
       orderBy("createdAt", "desc")
     );

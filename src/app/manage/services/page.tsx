@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { collection, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
@@ -145,7 +145,7 @@ function ServicesListContent() {
     if (!userData) return;
 
     // Listen to active (non-archived) services
-    const servicesRef = collection(db, "services");
+    const servicesRef = safeCollection("services");
     const activeQuery = query(
       servicesRef,
       where("isArchived", "==", false),
@@ -182,7 +182,7 @@ function ServicesListContent() {
         for (let i = 0; i < eventIdArray.length; i += 30) {
           const chunk = eventIdArray.slice(i, i + 30);
           const eventsQuery = query(
-            collection(db, "events"),
+            safeCollection("events"),
             where(documentId(), "in", chunk)
           );
           const eventsSnap = await getDocs(eventsQuery);
@@ -217,7 +217,7 @@ function ServicesListContent() {
         for (let i = 0; i < serviceIds.length; i += 30) {
           const chunk = serviceIds.slice(i, i + 30);
           const assignQuery = query(
-            collection(db, "serviceAssignments"),
+            safeCollection("serviceAssignments"),
             where("serviceId", "in", chunk)
           );
           const assignSnap = await getDocs(assignQuery);

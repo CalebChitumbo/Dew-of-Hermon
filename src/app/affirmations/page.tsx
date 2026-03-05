@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { onSnapshot, orderBy, query } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Affirmation, Service, AppEvent } from "@/types";
 import { canManageAffirmations } from "@/lib/permissions";
@@ -32,7 +32,7 @@ export default function AffirmationsPage() {
 
   useEffect(() => {
     const affirmationsQuery = query(
-      collection(db, "affirmations"),
+      safeCollection("affirmations"),
       orderBy("createdAt", "desc")
     );
 
@@ -54,7 +54,7 @@ export default function AffirmationsPage() {
   }, []);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "services"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("services"), (snapshot) => {
       const svcMap = new Map<string, Service>();
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -72,7 +72,7 @@ export default function AffirmationsPage() {
   }, []);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "events"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("events"), (snapshot) => {
       const evtMap = new Map<string, AppEvent>();
       snapshot.docs.forEach((d) => {
         const data = d.data();

@@ -4,8 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  collection,
-  doc,
   query,
   where,
   orderBy,
@@ -13,7 +11,7 @@ import {
   getDocs,
   documentId,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
@@ -414,7 +412,7 @@ function AssignmentBoardContent() {
 
     // Listen to service doc
     const unsubService = onSnapshot(
-      doc(db, "services", serviceId),
+      safeDoc("services", serviceId),
       async (snapshot) => {
         if (!snapshot.exists()) {
           setService(null);
@@ -428,7 +426,7 @@ function AssignmentBoardContent() {
         // Fetch linked event
         if (data.eventId) {
           const { getDoc } = await import("firebase/firestore");
-          const eventDoc = await getDoc(doc(db, "events", data.eventId));
+          const eventDoc = await getDoc(safeDoc("events", data.eventId));
           if (eventDoc.exists()) {
             const eData = eventDoc.data();
             event = {
@@ -470,7 +468,7 @@ function AssignmentBoardContent() {
   // ─── Load roles ───
 
   useEffect(() => {
-    const rolesRef = collection(db, "serviceRoles");
+    const rolesRef = safeCollection("serviceRoles");
     const rolesQuery = query(rolesRef, orderBy("order"));
 
     const unsubRoles = onSnapshot(rolesQuery, (snapshot) => {
@@ -500,7 +498,7 @@ function AssignmentBoardContent() {
   useEffect(() => {
     if (!serviceId) return;
 
-    const assignmentsRef = collection(db, "serviceAssignments");
+    const assignmentsRef = safeCollection("serviceAssignments");
     const assignmentsQuery = query(
       assignmentsRef,
       where("serviceId", "==", serviceId)
@@ -536,7 +534,7 @@ function AssignmentBoardContent() {
   // ─── Load departments ───
 
   useEffect(() => {
-    const deptRef = collection(db, "departments");
+    const deptRef = safeCollection("departments");
     const deptQuery = query(deptRef, orderBy("order"));
 
     const unsubDept = onSnapshot(deptQuery, (snapshot) => {
@@ -563,7 +561,7 @@ function AssignmentBoardContent() {
     if (members.length > 0) return;
     setMembersLoading(true);
     try {
-      const membersRef = collection(db, "users");
+      const membersRef = safeCollection("users");
       const membersQuery = query(
         membersRef,
         where("isActive", "==", true),

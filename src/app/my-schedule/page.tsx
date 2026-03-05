@@ -3,17 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  collection,
   query,
   where,
   onSnapshot,
-  doc,
   updateDoc,
-  addDoc,
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { ServiceAssignment, Service, AppEvent, UserAvailability } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -66,7 +63,7 @@ export default function MySchedulePage() {
     if (!firebaseUser) return;
 
     const assignmentsQuery = query(
-      collection(db, "serviceAssignments"),
+      safeCollection("serviceAssignments"),
       where("userId", "==", firebaseUser.uid),
       orderBy("createdAt", "desc")
     );
@@ -92,7 +89,7 @@ export default function MySchedulePage() {
 
   // Listen to services to enrich assignment data
   useEffect(() => {
-    const unsubServices = onSnapshot(collection(db, "services"), (snapshot) => {
+    const unsubServices = onSnapshot(safeCollection("services"), (snapshot) => {
       const svcMap = new Map<string, Service>();
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -111,7 +108,7 @@ export default function MySchedulePage() {
 
   // Listen to events for date/venue info
   useEffect(() => {
-    const unsubEvents = onSnapshot(collection(db, "events"), (snapshot) => {
+    const unsubEvents = onSnapshot(safeCollection("events"), (snapshot) => {
       const evtMap = new Map<string, AppEvent>();
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -135,7 +132,7 @@ export default function MySchedulePage() {
     if (!firebaseUser) return;
 
     const unsubAvailability = onSnapshot(
-      collection(db, "users", firebaseUser.uid, "availability"),
+      safeCollection("users", firebaseUser.uid, "availability"),
       (snapshot) => {
         const avail = snapshot.docs.map((d) => ({
           ...d.data(),
@@ -174,7 +171,7 @@ export default function MySchedulePage() {
   const handleConfirm = async (assignmentId: string) => {
     setActionLoading(assignmentId);
     try {
-      await updateDoc(doc(db, "serviceAssignments", assignmentId), {
+      await updateDoc(safeDoc("serviceAssignments", assignmentId), {
         status: "CONFIRMED",
         confirmedAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
@@ -188,7 +185,7 @@ export default function MySchedulePage() {
   const handleDecline = async (assignmentId: string) => {
     setActionLoading(assignmentId);
     try {
-      await updateDoc(doc(db, "serviceAssignments", assignmentId), {
+      await updateDoc(safeDoc("serviceAssignments", assignmentId), {
         status: "DECLINED",
         updatedAt: Timestamp.now(),
       });
@@ -204,7 +201,7 @@ export default function MySchedulePage() {
     try {
       const { setDoc } = await import("firebase/firestore");
       await setDoc(
-        doc(db, "users", firebaseUser.uid, "availability", unavailableDate),
+        safeDoc("users", firebaseUser.uid, "availability", unavailableDate),
         {
           available: false,
           reason: unavailableReason || null,
@@ -223,7 +220,7 @@ export default function MySchedulePage() {
     if (!firebaseUser) return;
     try {
       const { deleteDoc } = await import("firebase/firestore");
-      await deleteDoc(doc(db, "users", firebaseUser.uid, "availability", date));
+      await deleteDoc(safeDoc("users", firebaseUser.uid, "availability", date));
     } catch (error) {
       console.error("Error removing availability:", error);
     }

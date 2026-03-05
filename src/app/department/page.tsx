@@ -3,16 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  collection,
   query,
   where,
   onSnapshot,
-  doc,
   updateDoc,
   arrayUnion,
   getDocs,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   User,
@@ -77,7 +75,7 @@ export default function DepartmentPage() {
       return;
     }
 
-    const unsub = onSnapshot(collection(db, "departments"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("departments"), (snapshot) => {
       const depts = snapshot.docs
         .map((d) => ({
           id: d.id,
@@ -95,7 +93,7 @@ export default function DepartmentPage() {
     if (leadDeptIds.length === 0) return;
 
     const membersQuery = query(
-      collection(db, "users"),
+      safeCollection("users"),
       where("departmentIds", "array-contains-any", leadDeptIds)
     );
 
@@ -115,7 +113,7 @@ export default function DepartmentPage() {
 
   // Listen to all users (for adding members)
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "users"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("users"), (snapshot) => {
       const usrs = snapshot.docs.map((d) => ({
         id: d.id,
         ...d.data(),
@@ -132,7 +130,7 @@ export default function DepartmentPage() {
   useEffect(() => {
     if (leadDeptIds.length === 0) return;
 
-    const unsub = onSnapshot(collection(db, "serviceRoles"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("serviceRoles"), (snapshot) => {
       const roleData = snapshot.docs
         .map((d) => ({ id: d.id, ...d.data() })) as ServiceRole[];
       setRoles(roleData.filter((r) => leadDeptIds.includes(r.departmentId)));
@@ -159,7 +157,7 @@ export default function DepartmentPage() {
 
     chunks.forEach((chunk) => {
       const assignQuery = query(
-        collection(db, "serviceAssignments"),
+        safeCollection("serviceAssignments"),
         where("roleId", "in", chunk)
       );
 
@@ -190,7 +188,7 @@ export default function DepartmentPage() {
 
   // Listen to services
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "services"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("services"), (snapshot) => {
       const svcMap = new Map<string, Service>();
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -209,7 +207,7 @@ export default function DepartmentPage() {
 
   // Listen to events
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "events"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("events"), (snapshot) => {
       const evtMap = new Map<string, AppEvent>();
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -239,7 +237,7 @@ export default function DepartmentPage() {
     if (leadDeptIds.length === 0) return;
     setAddingMember(userId);
     try {
-      await updateDoc(doc(db, "users", userId), {
+      await updateDoc(safeDoc("users", userId), {
         departmentIds: arrayUnion(...leadDeptIds),
       });
       setAddDialogOpen(false);

@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDocs, query, orderBy } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Department, UserRole } from "@/types";
 import { roleLabels, canManageMembers } from "@/lib/permissions";
@@ -52,7 +52,7 @@ export default function MembersPage() {
     async function fetchData() {
       try {
         // Fetch users
-        const usersQuery = query(collection(db, "users"), orderBy("name"));
+        const usersQuery = query(safeCollection("users"), orderBy("name"));
         const usersSnapshot = await getDocs(usersQuery);
         const usersData = usersSnapshot.docs.map((doc) => {
           const data = doc.data();
@@ -69,7 +69,7 @@ export default function MembersPage() {
         setMembers(usersData);
 
         // Fetch departments
-        const deptsQuery = query(collection(db, "departments"), orderBy("order"));
+        const deptsQuery = query(safeCollection("departments"), orderBy("order"));
         const deptsSnapshot = await getDocs(deptsQuery);
         const deptsData = deptsSnapshot.docs.map((doc) => {
           const data = doc.data();

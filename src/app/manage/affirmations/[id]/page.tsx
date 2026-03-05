@@ -4,16 +4,13 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  doc,
   getDoc,
-  setDoc,
   updateDoc,
   addDoc,
-  collection,
   onSnapshot,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Affirmation, Service, AppEvent } from "@/types";
 import { RoleProtected } from "@/components/shared/RoleProtected";
@@ -55,7 +52,7 @@ export default function AffirmationEditorPage() {
 
     const fetchAffirmation = async () => {
       try {
-        const docSnap = await getDoc(doc(db, "affirmations", id));
+        const docSnap = await getDoc(safeDoc("affirmations", id));
         if (docSnap.exists()) {
           const data = docSnap.data();
           setTitle(data.title || "");
@@ -73,7 +70,7 @@ export default function AffirmationEditorPage() {
 
   // Fetch services
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "services"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("services"), (snapshot) => {
       const data = snapshot.docs.map((d) => {
         const raw = d.data();
         return {
@@ -91,7 +88,7 @@ export default function AffirmationEditorPage() {
 
   // Fetch events
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "events"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("events"), (snapshot) => {
       const evtMap = new Map<string, AppEvent>();
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -125,12 +122,12 @@ export default function AffirmationEditorPage() {
       };
 
       if (isNew) {
-        await addDoc(collection(db, "affirmations"), {
+        await addDoc(safeCollection("affirmations"), {
           ...affirmationData,
           createdAt: Timestamp.now(),
         });
       } else {
-        await updateDoc(doc(db, "affirmations", id), affirmationData);
+        await updateDoc(safeDoc("affirmations", id), affirmationData);
       }
 
       router.push("/manage/affirmations");
