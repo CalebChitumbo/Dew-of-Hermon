@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDocs, query, orderBy } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Department, UserRole } from "@/types";
 import { roleLabels, canManageMembers } from "@/lib/permissions";
@@ -55,7 +55,7 @@ export default function NewMemberPage() {
   useEffect(() => {
     async function fetchDepartments() {
       try {
-        const deptsQuery = query(collection(db, "departments"), orderBy("order"));
+        const deptsQuery = query(safeCollection("departments"), orderBy("order"));
         const snapshot = await getDocs(deptsQuery);
         const deptsData = snapshot.docs.map((doc) => {
           const data = doc.data();

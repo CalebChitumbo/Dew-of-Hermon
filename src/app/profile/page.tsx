@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { doc, updateDoc, Timestamp } from "firebase/firestore";
+import { updateDoc, Timestamp } from "firebase/firestore";
 import {
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
 } from "firebase/auth";
-import { db, auth } from "@/lib/firebase";
+import { auth, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export default function ProfilePage() {
     setProfileSaved(false);
 
     try {
-      await updateDoc(doc(db, "users", firebaseUser.uid), {
+      await updateDoc(safeDoc("users", firebaseUser.uid), {
         name: name.trim(),
         phone: phone.trim() || null,
         updatedAt: Timestamp.now(),

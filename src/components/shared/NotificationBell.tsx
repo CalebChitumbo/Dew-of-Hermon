@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { query, where, onSnapshot } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,17 +15,21 @@ export function NotificationBell() {
   useEffect(() => {
     if (!firebaseUser) return;
 
-    const q = query(
-      collection(db, "notifications"),
-      where("userId", "==", firebaseUser.uid),
-      where("isRead", "==", false)
-    );
+    try {
+      const q = query(
+        safeCollection("notifications"),
+        where("userId", "==", firebaseUser.uid),
+        where("isRead", "==", false)
+      );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      setUnreadCount(snapshot.size);
-    });
+      const unsub = onSnapshot(q, (snapshot) => {
+        setUnreadCount(snapshot.size);
+      });
 
-    return unsub;
+      return unsub;
+    } catch (err) {
+      console.error("NotificationBell: failed to subscribe", err);
+    }
   }, [firebaseUser]);
 
   return (

@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  collection,
   query,
   where,
   orderBy,
@@ -13,7 +12,7 @@ import {
   getDocs,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasMinRole } from "@/lib/permissions";
 import {
@@ -274,7 +273,7 @@ export default function DashboardPage() {
 
     const now = new Date();
     const eventsQuery = query(
-      collection(db, "events"),
+      safeCollection("events"),
       where("startDate", ">=", Timestamp.fromDate(now)),
       orderBy("startDate", "asc"),
       limit(1)
@@ -313,7 +312,7 @@ export default function DashboardPage() {
     }
 
     const servicesQuery = query(
-      collection(db, "services"),
+      safeCollection("services"),
       where("eventId", "==", nextEvent.id),
       limit(1)
     );
@@ -350,7 +349,7 @@ export default function DashboardPage() {
     }
 
     const assignmentsQuery = query(
-      collection(db, "serviceAssignments"),
+      safeCollection("serviceAssignments"),
       where("serviceId", "==", nextService.id)
     );
 
@@ -386,7 +385,7 @@ export default function DashboardPage() {
     if (!userData) return;
 
     const rolesQuery = query(
-      collection(db, "serviceRoles"),
+      safeCollection("serviceRoles"),
       orderBy("order", "asc")
     );
 
@@ -417,7 +416,7 @@ export default function DashboardPage() {
     if (!userData) return;
 
     const notifQuery = query(
-      collection(db, "notifications"),
+      safeCollection("notifications"),
       orderBy("createdAt", "desc"),
       limit(8)
     );

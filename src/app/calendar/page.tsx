@@ -16,7 +16,6 @@ import {
   parseISO,
 } from "date-fns";
 import {
-  collection,
   query,
   where,
   getDocs,
@@ -24,7 +23,7 @@ import {
   Timestamp,
   orderBy,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { canCreateEvents } from "@/lib/permissions";
 import { AppEvent, EventType } from "@/types";
@@ -141,7 +140,7 @@ export default function CalendarPage() {
       const monthStart = startOfMonth(currentMonth);
       const monthEnd = endOfMonth(currentMonth);
 
-      const eventsRef = collection(db, "events");
+      const eventsRef = safeCollection("events");
       const q = query(
         eventsRef,
         where("startDate", ">=", Timestamp.fromDate(monthStart)),
@@ -220,7 +219,7 @@ export default function CalendarPage() {
       const startDate = new Date(`${newEvent.date}T${newEvent.time || "09:00"}`);
       const now = new Date();
 
-      await addDoc(collection(db, "events"), {
+      await addDoc(safeCollection("events"), {
         title: newEvent.title,
         description: newEvent.description || null,
         type: newEvent.type,

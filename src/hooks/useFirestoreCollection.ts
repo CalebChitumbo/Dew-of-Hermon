@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import {
-  collection,
   query,
   onSnapshot,
   QueryConstraint,
   DocumentData,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection } from "@/lib/firebase";
 
 interface UseFirestoreCollectionOptions {
   collectionPath: string;
@@ -31,7 +30,7 @@ export function useFirestoreCollection<T extends DocumentData>({
       return;
     }
 
-    const collRef = collection(db, collectionPath);
+    const collRef = safeCollection(collectionPath);
     const q = constraints.length > 0
       ? query(collRef, ...constraints)
       : query(collRef);
