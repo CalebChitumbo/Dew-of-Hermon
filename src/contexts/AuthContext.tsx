@@ -69,6 +69,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserData(null);
         }
         setLoading(false);
+      },
+      (error) => {
+        console.error("Error listening to user document:", error);
+        setUserData(null);
+        setLoading(false);
       }
     );
     return unsubUser;
