@@ -417,6 +417,7 @@ export default function DashboardPage() {
 
     const notifQuery = query(
       safeCollection("notifications"),
+      where("userId", "==", userData.id),
       orderBy("createdAt", "desc"),
       limit(8)
     );
