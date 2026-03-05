@@ -4,7 +4,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  serverComponentsExternalPackages: ["firebase-admin"],
+  transpilePackages: ["firebase", "@firebase"],
+  serverExternalPackages: ["firebase-admin"],
 };
 
 export default nextConfig;

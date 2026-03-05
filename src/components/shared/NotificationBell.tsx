@@ -15,17 +15,21 @@ export function NotificationBell() {
   useEffect(() => {
     if (!firebaseUser) return;
 
-    const q = query(
-      collection(db, "notifications"),
-      where("userId", "==", firebaseUser.uid),
-      where("isRead", "==", false)
-    );
+    try {
+      const q = query(
+        collection(db, "notifications"),
+        where("userId", "==", firebaseUser.uid),
+        where("isRead", "==", false)
+      );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      setUnreadCount(snapshot.size);
-    });
+      const unsub = onSnapshot(q, (snapshot) => {
+        setUnreadCount(snapshot.size);
+      });
 
-    return unsub;
+      return unsub;
+    } catch (err) {
+      console.error("NotificationBell: failed to subscribe", err);
+    }
   }, [firebaseUser]);
 
   return (
