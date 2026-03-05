@@ -11,7 +11,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
 } from "firebase/auth";
-import { onSnapshot, setDoc, getDoc } from "firebase/firestore";
+import { onSnapshot, setDoc } from "firebase/firestore";
 import { auth, safeDoc } from "@/lib/firebase";
 import { User } from "@/types";
 
@@ -79,8 +79,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubUser;
   }, [firebaseUser]);
 
+  const createSession = async (user: FirebaseUser, isGoogleSignIn = false) => {
+    const idToken = await user.getIdToken();
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken, isGoogleSignIn }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Login failed");
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    await createSession(cred.user);
   };
 
   const signUp = async (email: string, password: string, name: string) => {
@@ -98,30 +112,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+    await createSession(cred.user);
   };
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     const cred = await signInWithPopup(auth, provider);
-    const userDoc = await getDoc(safeDoc("users", cred.user.uid));
-
-    if (!userDoc.exists()) {
-      await setDoc(safeDoc("users", cred.user.uid), {
-        name: cred.user.displayName || "User",
-        email: cred.user.email || "",
-        phone: null,
-        role: "MEMBER",
-        departmentIds: [],
-        leadsDepartmentIds: [],
-        profileImage: cred.user.photoURL || null,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-    }
+    await createSession(cred.user, true);
   };
 
   const signOut = async () => {
+    await fetch("/api/auth/session", { method: "DELETE" });
     await firebaseSignOut(auth);
     setUserData(null);
   };
