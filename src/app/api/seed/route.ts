@@ -152,11 +152,22 @@ const roles = [
 
 export async function POST(request: Request) {
   try {
-    // Authenticate the caller via session cookie
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("session")?.value;
+    // Accept a fresh ID token from the request body, or fall back to session cookie
+    let token: string | undefined;
 
-    if (!sessionCookie) {
+    try {
+      const body = await request.json();
+      token = body.idToken;
+    } catch {
+      // No JSON body — fall back to cookie
+    }
+
+    if (!token) {
+      const cookieStore = await cookies();
+      token = cookieStore.get("session")?.value;
+    }
+
+    if (!token) {
       return NextResponse.json(
         { error: "You must be logged in to seed data" },
         { status: 401 }
@@ -165,7 +176,7 @@ export async function POST(request: Request) {
 
     let uid: string;
     try {
-      const decoded = await adminAuth.verifyIdToken(sessionCookie);
+      const decoded = await adminAuth.verifyIdToken(token);
       uid = decoded.uid;
     } catch {
       return NextResponse.json(
