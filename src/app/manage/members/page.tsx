@@ -101,6 +101,13 @@ export default function MembersPage() {
     return map;
   }, [departments]);
 
+  const isFullAdmin = userData && canManageMembers(userData.role);
+  const isDeptLead = userData && !isFullAdmin && canManageDeptMembers(userData.role);
+  const hasAccess = isFullAdmin || isDeptLead;
+
+  // For DEPARTMENT_LEAD, only show members in their departments
+  const leadDeptIds = userData?.leadsDepartmentIds || [];
+
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
       // DEPARTMENT_LEAD can only see members in their departments
@@ -128,13 +135,6 @@ export default function MembersPage() {
       return matchesSearch && matchesRole && matchesDepartment;
     });
   }, [members, searchQuery, filterRole, filterDepartment, isDeptLead, leadDeptIds]);
-
-  const isFullAdmin = userData && canManageMembers(userData.role);
-  const isDeptLead = userData && !isFullAdmin && canManageDeptMembers(userData.role);
-  const hasAccess = isFullAdmin || isDeptLead;
-
-  // For DEPARTMENT_LEAD, only show members in their departments
-  const leadDeptIds = userData?.leadsDepartmentIds || [];
 
   if (!hasAccess) {
     return (
