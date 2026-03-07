@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { canManageMembers } from "@/lib/permissions";
+import { canManageMembers, getAssignableRoles } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
@@ -62,6 +62,17 @@ export async function POST(request: Request) {
         { error: "Name and email are required" },
         { status: 400 }
       );
+    }
+
+    // Enforce hierarchy: caller can only assign roles at or below their own level
+    if (role) {
+      const assignable = getAssignableRoles(callerRole);
+      if (!assignable.includes(role)) {
+        return NextResponse.json(
+          { error: "You cannot assign a role higher than your own" },
+          { status: 403 }
+        );
+      }
     }
 
     // Create Firebase Auth user with a temporary password

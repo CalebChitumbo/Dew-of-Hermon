@@ -45,6 +45,7 @@ const navItems: NavItem[] = [
 
 const deptLeadItems: NavItem[] = [
   { label: "My Department", href: "/department", icon: Building2, minRole: "DEPARTMENT_LEAD" },
+  { label: "Members", href: "/manage/members", icon: Users, minRole: "DEPARTMENT_LEAD" },
   { label: "Services", href: "/manage/services", icon: ClipboardList, minRole: "DEPARTMENT_LEAD" },
 ];
 
