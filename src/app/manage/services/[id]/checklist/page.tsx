@@ -4,15 +4,13 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  collection,
-  doc,
   query,
   where,
   orderBy,
   onSnapshot,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
@@ -133,7 +131,7 @@ function ChecklistContent() {
     if (!serviceId) return;
 
     const unsubService = onSnapshot(
-      doc(db, "services", serviceId),
+      safeDoc("services", serviceId),
       async (snapshot) => {
         if (!snapshot.exists()) {
           setService(null);
@@ -157,7 +155,7 @@ function ChecklistContent() {
         // Fetch event
         if (data.eventId) {
           const { getDoc } = await import("firebase/firestore");
-          const eventDoc = await getDoc(doc(db, "events", data.eventId));
+          const eventDoc = await getDoc(safeDoc("events", data.eventId));
           if (eventDoc.exists()) {
             const eData = eventDoc.data();
             setEventData({
@@ -188,7 +186,7 @@ function ChecklistContent() {
   useEffect(() => {
     if (!serviceId) return;
 
-    const checklistRef = collection(db, "checklistItems");
+    const checklistRef = safeCollection("checklistItems");
     const checklistQuery = query(
       checklistRef,
       where("serviceId", "==", serviceId),
@@ -223,7 +221,7 @@ function ChecklistContent() {
 
       setToggling(itemId);
       try {
-        const itemRef = doc(db, "checklistItems", itemId);
+        const itemRef = safeDoc("checklistItems", itemId);
         await updateDoc(itemRef, {
           isCompleted,
           completedBy: isCompleted ? userData.name : null,

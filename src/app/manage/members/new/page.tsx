@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDocs, query, orderBy } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Department, UserRole } from "@/types";
-import { roleLabels, canManageMembers } from "@/lib/permissions";
+import { roleLabels, canManageMembers, getAssignableRoles } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,13 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { ArrowLeft, Save, Shield, X } from "lucide-react";
 
-const ALL_ROLES: UserRole[] = [
-  "SUPER_ADMIN",
-  "ADMIN",
-  "DEPARTMENT_LEAD",
-  "YOUTH_LEADER",
-  "MEMBER",
-];
+// Roles are filtered dynamically based on caller via getAssignableRoles
 
 export default function NewMemberPage() {
   const router = useRouter();
@@ -55,7 +49,7 @@ export default function NewMemberPage() {
   useEffect(() => {
     async function fetchDepartments() {
       try {
-        const deptsQuery = query(collection(db, "departments"), orderBy("order"));
+        const deptsQuery = query(safeCollection("departments"), orderBy("order"));
         const snapshot = await getDocs(deptsQuery);
         const deptsData = snapshot.docs.map((doc) => {
           const data = doc.data();
@@ -157,6 +151,7 @@ export default function NewMemberPage() {
   }
 
   const hasAccess = userData && canManageMembers(userData.role);
+  const assignableRoles = userData ? getAssignableRoles(userData.role) : [];
 
   if (!hasAccess) {
     return (
@@ -273,7 +268,7 @@ export default function NewMemberPage() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ALL_ROLES.map((r) => (
+                  {assignableRoles.map((r) => (
                     <SelectItem key={r} value={r}>
                       {roleLabels[r]}
                     </SelectItem>

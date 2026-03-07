@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  collection,
   onSnapshot,
   orderBy,
   query,
   deleteDoc,
-  doc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Affirmation } from "@/types";
 import { RoleProtected } from "@/components/shared/RoleProtected";
@@ -44,7 +42,7 @@ export default function ManageAffirmationsPage() {
 
   useEffect(() => {
     const affirmationsQuery = query(
-      collection(db, "affirmations"),
+      safeCollection("affirmations"),
       orderBy("createdAt", "desc")
     );
 
@@ -69,7 +67,7 @@ export default function ManageAffirmationsPage() {
     if (!deleteId) return;
     setDeleting(true);
     try {
-      await deleteDoc(doc(db, "affirmations", deleteId));
+      await deleteDoc(safeDoc("affirmations", deleteId));
     } catch (error) {
       console.error("Error deleting affirmation:", error);
     }

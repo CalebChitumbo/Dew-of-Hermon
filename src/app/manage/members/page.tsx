@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDocs, query, orderBy } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Department, UserRole } from "@/types";
-import { roleLabels, canManageMembers } from "@/lib/permissions";
+import { roleLabels, canManageMembers, canManageDeptMembers } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,7 +52,7 @@ export default function MembersPage() {
     async function fetchData() {
       try {
         // Fetch users
-        const usersQuery = query(collection(db, "users"), orderBy("name"));
+        const usersQuery = query(safeCollection("users"), orderBy("name"));
         const usersSnapshot = await getDocs(usersQuery);
         const usersData = usersSnapshot.docs.map((doc) => {
           const data = doc.data();
@@ -69,7 +69,7 @@ export default function MembersPage() {
         setMembers(usersData);
 
         // Fetch departments
-        const deptsQuery = query(collection(db, "departments"), orderBy("order"));
+        const deptsQuery = query(safeCollection("departments"), orderBy("order"));
         const deptsSnapshot = await getDocs(deptsQuery);
         const deptsData = deptsSnapshot.docs.map((doc) => {
           const data = doc.data();
@@ -101,8 +101,23 @@ export default function MembersPage() {
     return map;
   }, [departments]);
 
+  const isFullAdmin = userData && canManageMembers(userData.role);
+  const isDeptLead = userData && !isFullAdmin && canManageDeptMembers(userData.role);
+  const hasAccess = isFullAdmin || isDeptLead;
+
+  // For DEPARTMENT_LEAD, only show members in their departments
+  const leadDeptIds = userData?.leadsDepartmentIds || [];
+
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
+      // DEPARTMENT_LEAD can only see members in their departments
+      if (isDeptLead && leadDeptIds.length > 0) {
+        const inLeadDept = member.departmentIds.some((dId) =>
+          leadDeptIds.includes(dId)
+        );
+        if (!inLeadDept) return false;
+      }
+
       // Search filter
       const matchesSearch =
         searchQuery === "" ||
@@ -119,9 +134,7 @@ export default function MembersPage() {
 
       return matchesSearch && matchesRole && matchesDepartment;
     });
-  }, [members, searchQuery, filterRole, filterDepartment]);
-
-  const hasAccess = userData && canManageMembers(userData.role);
+  }, [members, searchQuery, filterRole, filterDepartment, isDeptLead, leadDeptIds]);
 
   if (!hasAccess) {
     return (
@@ -157,12 +170,14 @@ export default function MembersPage() {
             Manage church members and their roles
           </p>
         </div>
-        <Link href="/manage/members/new">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Member
-          </Button>
-        </Link>
+        {isFullAdmin && (
+          <Link href="/manage/members/new">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Member
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

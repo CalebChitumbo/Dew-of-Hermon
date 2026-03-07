@@ -3,13 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  collection,
   query,
   where,
   onSnapshot,
   orderBy,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { ServiceAssignment, Service, AppEvent } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +38,7 @@ export default function ServiceHistoryPage() {
     if (!firebaseUser) return;
 
     const assignmentsQuery = query(
-      collection(db, "serviceAssignments"),
+      safeCollection("serviceAssignments"),
       where("userId", "==", firebaseUser.uid),
       orderBy("createdAt", "desc")
     );
@@ -64,7 +63,7 @@ export default function ServiceHistoryPage() {
   }, [firebaseUser]);
 
   useEffect(() => {
-    const unsubServices = onSnapshot(collection(db, "services"), (snapshot) => {
+    const unsubServices = onSnapshot(safeCollection("services"), (snapshot) => {
       const svcMap = new Map<string, Service>();
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -82,7 +81,7 @@ export default function ServiceHistoryPage() {
   }, []);
 
   useEffect(() => {
-    const unsubEvents = onSnapshot(collection(db, "events"), (snapshot) => {
+    const unsubEvents = onSnapshot(safeCollection("events"), (snapshot) => {
       const evtMap = new Map<string, AppEvent>();
       snapshot.docs.forEach((d) => {
         const data = d.data();

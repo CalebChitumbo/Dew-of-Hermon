@@ -2,12 +2,10 @@
 
 import { useEffect, useState } from "react";
 import {
-  collection,
   onSnapshot,
-  doc,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { ServiceRole, Department } from "@/types";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -59,7 +57,7 @@ export default function TemplatesPage() {
   const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "serviceRoles"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("serviceRoles"), (snapshot) => {
       const data = snapshot.docs
         .map((d) => ({ id: d.id, ...d.data() })) as ServiceRole[];
       setRoles(data.sort((a, b) => a.order - b.order));
@@ -70,7 +68,7 @@ export default function TemplatesPage() {
   }, []);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "departments"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("departments"), (snapshot) => {
       const deptMap = new Map<string, Department>();
       snapshot.docs.forEach((d) => {
         deptMap.set(d.id, {
@@ -104,7 +102,7 @@ export default function TemplatesPage() {
     setSaving(true);
 
     try {
-      await updateDoc(doc(db, "serviceRoles", editingRole), {
+      await updateDoc(safeDoc("serviceRoles", editingRole), {
         emailSubject: editSubject,
         emailBody: editBody,
       });

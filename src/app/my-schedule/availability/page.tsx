@@ -3,13 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  collection,
   onSnapshot,
-  doc,
   setDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserAvailability } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -43,7 +41,7 @@ export default function AvailabilityPage() {
     if (!firebaseUser) return;
 
     const unsub = onSnapshot(
-      collection(db, "users", firebaseUser.uid, "availability"),
+      safeCollection("users", firebaseUser.uid, "availability"),
       (snapshot) => {
         const avail = snapshot.docs.map((d) => ({
           ...d.data(),
@@ -70,7 +68,7 @@ export default function AvailabilityPage() {
       while (current <= end) {
         const dateStr = format(current, "yyyy-MM-dd");
         await setDoc(
-          doc(db, "users", firebaseUser.uid, "availability", dateStr),
+          safeDoc("users", firebaseUser.uid, "availability", dateStr),
           {
             available: false,
             reason: reason || null,
@@ -92,7 +90,7 @@ export default function AvailabilityPage() {
   const handleRemove = async (date: string) => {
     if (!firebaseUser) return;
     try {
-      await deleteDoc(doc(db, "users", firebaseUser.uid, "availability", date));
+      await deleteDoc(safeDoc("users", firebaseUser.uid, "availability", date));
     } catch (error) {
       console.error("Error removing availability:", error);
     }

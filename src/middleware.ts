@@ -11,6 +11,7 @@ const protectedPrefixes = [
   "/notifications",
   "/profile",
   "/affirmations",
+  "/seed",
 ];
 
 export function middleware(request: NextRequest) {
@@ -48,6 +49,7 @@ export const config = {
     "/notifications/:path*",
     "/profile/:path*",
     "/affirmations/:path*",
+    "/seed",
     "/login",
     "/register",
   ],

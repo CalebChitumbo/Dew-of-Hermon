@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  collection,
   query,
   where,
   onSnapshot,
   addDoc,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Department, ServiceRole, Service, AppEvent } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -75,7 +74,7 @@ export default function RecommendPage() {
     }
 
     const membersQuery = query(
-      collection(db, "users"),
+      safeCollection("users"),
       where("departmentIds", "array-contains-any", leadDeptIds)
     );
 
@@ -97,7 +96,7 @@ export default function RecommendPage() {
   useEffect(() => {
     if (leadDeptIds.length === 0) return;
 
-    const unsub = onSnapshot(collection(db, "serviceRoles"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("serviceRoles"), (snapshot) => {
       const data = snapshot.docs
         .map((d) => ({ id: d.id, ...d.data() })) as ServiceRole[];
       setRoles(data.filter((r) => leadDeptIds.includes(r.departmentId)));
@@ -108,7 +107,7 @@ export default function RecommendPage() {
 
   // Fetch upcoming services
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "services"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("services"), (snapshot) => {
       const data = snapshot.docs.map((d) => {
         const raw = d.data();
         return {
@@ -126,7 +125,7 @@ export default function RecommendPage() {
 
   // Fetch events
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "events"), (snapshot) => {
+    const unsub = onSnapshot(safeCollection("events"), (snapshot) => {
       const evtMap = new Map<string, AppEvent>();
       snapshot.docs.forEach((d) => {
         const data = d.data();
@@ -166,7 +165,7 @@ export default function RecommendPage() {
 
     setSubmitting(true);
     try {
-      await addDoc(collection(db, "recommendations"), {
+      await addDoc(safeCollection("recommendations"), {
         userId: selectedMember,
         userName: member.name,
         roleId: selectedRole,

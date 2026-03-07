@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   hasMinRole,
   canManageMembers,
+  canManageDeptMembers,
   canAssignAnyRole,
   canAssignOwnDeptRole,
   canCreateService,
@@ -14,6 +15,7 @@ import {
   canChangeUserRoles,
   canCreateEvents,
   canManageAffirmations,
+  getAssignableRoles,
 } from "@/lib/permissions";
 import { UserRole } from "@/types";
 
@@ -26,6 +28,7 @@ export function usePermissions() {
     role,
     hasMinRole: (required: UserRole) => hasMinRole(role, required),
     canManageMembers: canManageMembers(role),
+    canManageDeptMembers: canManageDeptMembers(role),
     canAssignAnyRole: canAssignAnyRole(role),
     canAssignOwnDeptRole: canAssignOwnDeptRole(role),
     canCreateService: canCreateService(role),
@@ -36,6 +39,7 @@ export function usePermissions() {
     canChangeUserRoles: canChangeUserRoles(role),
     canCreateEvents: canCreateEvents(role),
     canManageAffirmations: canManageAffirmations(role),
+    getAssignableRoles: () => getAssignableRoles(role),
     isAdmin: hasMinRole(role, "ADMIN"),
     isSuperAdmin: role === "SUPER_ADMIN",
     isDeptLead: hasMinRole(role, "DEPARTMENT_LEAD"),

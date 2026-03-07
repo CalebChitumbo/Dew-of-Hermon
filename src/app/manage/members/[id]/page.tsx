@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDocs, query, orderBy } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Department, UserRole } from "@/types";
 import {
   roleLabels,
   canManageMembers,
+  canManageDeptMembers,
   canChangeUserRoles,
   canDeleteMembers,
+  getAssignableRoles,
 } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,13 +49,7 @@ import {
   X,
 } from "lucide-react";
 
-const ALL_ROLES: UserRole[] = [
-  "SUPER_ADMIN",
-  "ADMIN",
-  "DEPARTMENT_LEAD",
-  "YOUTH_LEADER",
-  "MEMBER",
-];
+// Roles are now filtered dynamically based on caller via getAssignableRoles
 
 interface MemberData {
   id: string;
@@ -66,12 +62,8 @@ interface MemberData {
   isActive: boolean;
 }
 
-export default function EditMemberPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function EditMemberPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { userData } = useAuth();
   const { toast } = useToast();
@@ -115,7 +107,7 @@ export default function EditMemberPage({
         setIsActive(m.isActive);
 
         // Fetch departments
-        const deptsQuery = query(collection(db, "departments"), orderBy("order"));
+        const deptsQuery = query(safeCollection("departments"), orderBy("order"));
         const deptsSnapshot = await getDocs(deptsQuery);
         const deptsData = deptsSnapshot.docs.map((doc) => {
           const data = doc.data();
@@ -278,9 +270,10 @@ export default function EditMemberPage({
     setIsActive((prev) => !prev);
   }
 
-  const hasAccess = userData && canManageMembers(userData.role);
+  const hasAccess = userData && (canManageMembers(userData.role) || canManageDeptMembers(userData.role));
   const canEditRole = userData && canChangeUserRoles(userData.role);
   const canDelete = userData && canDeleteMembers(userData.role);
+  const assignableRoles = userData ? getAssignableRoles(userData.role) : [];
 
   if (loading) {
     return <PageLoader />;
@@ -437,7 +430,7 @@ export default function EditMemberPage({
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ALL_ROLES.map((r) => (
+                      {assignableRoles.map((r) => (
                         <SelectItem key={r} value={r}>
                           {roleLabels[r]}
                         </SelectItem>
@@ -450,7 +443,7 @@ export default function EditMemberPage({
                       {roleLabels[role]}
                     </Badge>
                     <p className="text-xs text-clay-400 mt-1">
-                      Only the Chairperson can change user roles.
+                      Only admins and above can change user roles.
                     </p>
                   </div>
                 )}

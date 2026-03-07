@@ -2,17 +2,14 @@
 
 import { useState, useEffect } from "react";
 import {
-  collection,
   query,
   where,
   orderBy,
   onSnapshot,
-  doc,
   updateDoc,
-  writeBatch,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { safeCollection, safeDoc, safeWriteBatch } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Notification } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -116,7 +113,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!firebaseUser) return;
 
-    const notificationsRef = collection(db, "notifications");
+    const notificationsRef = safeCollection("notifications");
     const q = query(
       notificationsRef,
       where("userId", "==", firebaseUser.uid),
@@ -155,7 +152,7 @@ export default function NotificationsPage() {
 
   async function markAsRead(notificationId: string) {
     try {
-      const notifRef = doc(db, "notifications", notificationId);
+      const notifRef = safeDoc("notifications", notificationId);
       await updateDoc(notifRef, { isRead: true });
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
@@ -171,9 +168,9 @@ export default function NotificationsPage() {
       const unreadNotifications = notifications.filter((n) => !n.isRead);
       if (unreadNotifications.length === 0) return;
 
-      const batch = writeBatch(db);
+      const batch = safeWriteBatch();
       for (const notif of unreadNotifications) {
-        const notifRef = doc(db, "notifications", notif.id);
+        const notifRef = safeDoc("notifications", notif.id);
         batch.update(notifRef, { isRead: true });
       }
       await batch.commit();
