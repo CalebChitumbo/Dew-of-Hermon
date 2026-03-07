@@ -10,8 +10,10 @@ import { Department, UserRole } from "@/types";
 import {
   roleLabels,
   canManageMembers,
+  canManageDeptMembers,
   canChangeUserRoles,
   canDeleteMembers,
+  getAssignableRoles,
 } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,13 +49,7 @@ import {
   X,
 } from "lucide-react";
 
-const ALL_ROLES: UserRole[] = [
-  "SUPER_ADMIN",
-  "ADMIN",
-  "DEPARTMENT_LEAD",
-  "YOUTH_LEADER",
-  "MEMBER",
-];
+// Roles are now filtered dynamically based on caller via getAssignableRoles
 
 interface MemberData {
   id: string;
@@ -278,9 +274,10 @@ export default function EditMemberPage({
     setIsActive((prev) => !prev);
   }
 
-  const hasAccess = userData && canManageMembers(userData.role);
+  const hasAccess = userData && (canManageMembers(userData.role) || canManageDeptMembers(userData.role));
   const canEditRole = userData && canChangeUserRoles(userData.role);
   const canDelete = userData && canDeleteMembers(userData.role);
+  const assignableRoles = userData ? getAssignableRoles(userData.role) : [];
 
   if (loading) {
     return <PageLoader />;
@@ -437,7 +434,7 @@ export default function EditMemberPage({
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ALL_ROLES.map((r) => (
+                      {assignableRoles.map((r) => (
                         <SelectItem key={r} value={r}>
                           {roleLabels[r]}
                         </SelectItem>
@@ -450,7 +447,7 @@ export default function EditMemberPage({
                       {roleLabels[role]}
                     </Badge>
                     <p className="text-xs text-clay-400 mt-1">
-                      Only the Chairperson can change user roles.
+                      Only admins and above can change user roles.
                     </p>
                   </div>
                 )}

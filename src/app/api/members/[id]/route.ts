@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { canManageMembers, canDeleteMembers, canChangeUserRoles } from "@/lib/permissions";
+import { canManageMembers, canDeleteMembers, canChangeUserRoles, getAssignableRoles } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
@@ -66,11 +66,28 @@ export async function PUT(
 
     const existingData = existingDoc.data()!;
 
-    if (role && role !== existingData.role && !canChangeUserRoles(callerRole)) {
-      return NextResponse.json(
-        { error: "Only Chairperson can change user roles" },
-        { status: 403 }
-      );
+    if (role && role !== existingData.role) {
+      if (!canChangeUserRoles(callerRole)) {
+        return NextResponse.json(
+          { error: "You do not have permission to change user roles" },
+          { status: 403 }
+        );
+      }
+      // Enforce hierarchy: caller can only assign roles at or below their own level
+      const assignable = getAssignableRoles(callerRole);
+      if (!assignable.includes(role)) {
+        return NextResponse.json(
+          { error: "You cannot assign a role higher than your own" },
+          { status: 403 }
+        );
+      }
+      // Prevent changing the role of someone with a higher role than the caller
+      if (!assignable.includes(existingData.role)) {
+        return NextResponse.json(
+          { error: "You cannot modify the role of someone with a higher role than yours" },
+          { status: 403 }
+        );
+      }
     }
 
     const updateData: Record<string, unknown> = {

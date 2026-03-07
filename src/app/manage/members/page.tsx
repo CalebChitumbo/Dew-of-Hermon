@@ -6,7 +6,7 @@ import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Department, UserRole } from "@/types";
-import { roleLabels, canManageMembers } from "@/lib/permissions";
+import { roleLabels, canManageMembers, canManageDeptMembers } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +103,14 @@ export default function MembersPage() {
 
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
+      // DEPARTMENT_LEAD can only see members in their departments
+      if (isDeptLead && leadDeptIds.length > 0) {
+        const inLeadDept = member.departmentIds.some((dId) =>
+          leadDeptIds.includes(dId)
+        );
+        if (!inLeadDept) return false;
+      }
+
       // Search filter
       const matchesSearch =
         searchQuery === "" ||
@@ -119,9 +127,14 @@ export default function MembersPage() {
 
       return matchesSearch && matchesRole && matchesDepartment;
     });
-  }, [members, searchQuery, filterRole, filterDepartment]);
+  }, [members, searchQuery, filterRole, filterDepartment, isDeptLead, leadDeptIds]);
 
-  const hasAccess = userData && canManageMembers(userData.role);
+  const isFullAdmin = userData && canManageMembers(userData.role);
+  const isDeptLead = userData && !isFullAdmin && canManageDeptMembers(userData.role);
+  const hasAccess = isFullAdmin || isDeptLead;
+
+  // For DEPARTMENT_LEAD, only show members in their departments
+  const leadDeptIds = userData?.leadsDepartmentIds || [];
 
   if (!hasAccess) {
     return (
@@ -157,12 +170,14 @@ export default function MembersPage() {
             Manage church members and their roles
           </p>
         </div>
-        <Link href="/manage/members/new">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Member
-          </Button>
-        </Link>
+        {isFullAdmin && (
+          <Link href="/manage/members/new">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Member
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

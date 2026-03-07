@@ -8,12 +8,25 @@ const roleHierarchy: Record<UserRole, number> = {
   MEMBER: 1,
 };
 
+const ALL_ROLES: UserRole[] = [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "DEPARTMENT_LEAD",
+  "YOUTH_LEADER",
+  "MEMBER",
+];
+
 export function hasMinRole(userRole: UserRole, requiredRole: UserRole): boolean {
   return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
 }
 
 export function canManageMembers(userRole: UserRole): boolean {
   return hasMinRole(userRole, "ADMIN");
+}
+
+/** DEPARTMENT_LEAD can manage members within their own departments */
+export function canManageDeptMembers(userRole: UserRole): boolean {
+  return hasMinRole(userRole, "DEPARTMENT_LEAD");
 }
 
 export function canAssignAnyRole(userRole: UserRole): boolean {
@@ -45,7 +58,18 @@ export function canDeleteMembers(userRole: UserRole): boolean {
 }
 
 export function canChangeUserRoles(userRole: UserRole): boolean {
-  return userRole === "SUPER_ADMIN";
+  return hasMinRole(userRole, "ADMIN");
+}
+
+/**
+ * Returns the list of roles that a given caller role is allowed to assign.
+ * Users can only assign roles at or below their own level.
+ * SUPER_ADMIN can assign all roles. ADMIN can assign ADMIN and below.
+ * DEPARTMENT_LEAD can assign DEPARTMENT_LEAD and below.
+ */
+export function getAssignableRoles(callerRole: UserRole): UserRole[] {
+  const callerLevel = roleHierarchy[callerRole];
+  return ALL_ROLES.filter((r) => roleHierarchy[r] <= callerLevel);
 }
 
 export function canCreateEvents(userRole: UserRole): boolean {
