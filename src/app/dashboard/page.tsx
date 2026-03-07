@@ -308,6 +308,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!nextEvent) {
       setNextService(null);
+      setLoadingData(false);
       return;
     }
 
@@ -533,11 +534,16 @@ export default function DashboardPage() {
 
   // ─── Loading / Guard ───
 
-  if (!userData || userData.role === "MEMBER") {
+  if (!userData) {
     return <PageLoader />;
   }
 
-  if (loadingData && !nextEvent && allRoles.length === 0) {
+  // MEMBER users are redirected to /my-schedule by the useEffect above
+  if (userData.role === "MEMBER") {
+    return <PageLoader />;
+  }
+
+  if (loadingData) {
     return <PageLoader />;
   }
 
