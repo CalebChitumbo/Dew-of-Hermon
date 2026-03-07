@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { auth } from "@/lib/firebase";
 
 export default function SeedPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -13,7 +14,20 @@ export default function SeedPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/seed", { method: "POST" });
+      // Get a fresh ID token from Firebase Auth client
+      const user = auth.currentUser;
+      if (!user) {
+        setStatus("error");
+        setError("You must be logged in. Please log in and try again.");
+        return;
+      }
+      const idToken = await user.getIdToken(true);
+
+      const res = await fetch("/api/seed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
