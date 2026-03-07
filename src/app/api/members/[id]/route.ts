@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { canManageMembers, canDeleteMembers, canChangeUserRoles, getAssignableRoles } from "@/lib/permissions";

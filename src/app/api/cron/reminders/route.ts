@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { sendEmail } from "@/lib/email";
@@ -28,30 +30,16 @@ function getTodayReminderDay(): ReminderDay | null {
 }
 
 // Replace template placeholders with actual values
+// Supports seed data format: {{Name}}, {{ServiceDate}}, {{Theme}}, {{Venue}}
 function replacePlaceholders(
   template: string,
-  data: {
-    memberName: string;
-    roleName: string;
-    serviceDate: string;
-    serviceTime: string;
-    arrivalTime: string;
-    venue: string;
-    theme: string;
-    eventTitle: string;
-    confirmLink: string;
-  }
+  data: Record<string, string>
 ): string {
-  return template
-    .replace(/\{\{memberName\}\}/g, data.memberName)
-    .replace(/\{\{roleName\}\}/g, data.roleName)
-    .replace(/\{\{serviceDate\}\}/g, data.serviceDate)
-    .replace(/\{\{serviceTime\}\}/g, data.serviceTime)
-    .replace(/\{\{arrivalTime\}\}/g, data.arrivalTime)
-    .replace(/\{\{venue\}\}/g, data.venue)
-    .replace(/\{\{theme\}\}/g, data.theme)
-    .replace(/\{\{eventTitle\}\}/g, data.eventTitle)
-    .replace(/\{\{confirmLink\}\}/g, data.confirmLink);
+  let result = template;
+  for (const [key, value] of Object.entries(data)) {
+    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+  }
+  return result;
 }
 
 export async function GET(request: NextRequest) {
@@ -201,25 +189,27 @@ export async function GET(request: NextRequest) {
         if (assignment.status === "DECLINED") continue;
 
         // Build email from role template
-        const placeholderData = {
-          memberName: assignment.userName,
-          roleName: role.name,
-          serviceDate: format(event.startDate, "EEEE, MMMM d, yyyy"),
-          serviceTime: service.serviceTime || "TBD",
-          arrivalTime: role.arrivalTime || service.serviceTime || "TBD",
-          venue: event.venue || "TBD",
-          theme: service.theme || "N/A",
-          eventTitle: event.title,
-          confirmLink: `${appUrl}/my-schedule`,
+        // Keys match seed data placeholders: {{Name}}, {{ServiceDate}}, {{Theme}}, {{Venue}}
+        const formattedDate = format(event.startDate, "EEEE, d MMMM yyyy");
+        const placeholderData: Record<string, string> = {
+          Name: assignment.userName,
+          Role: role.name,
+          ServiceDate: formattedDate,
+          ServiceTime: service.serviceTime || "TBD",
+          ArrivalTime: role.arrivalTime || service.serviceTime || "TBD",
+          Venue: event.venue || "TBD",
+          Theme: service.theme || "N/A",
+          EventTitle: event.title,
+          ConfirmLink: `${appUrl}/my-schedule`,
         };
 
         const emailSubject = replacePlaceholders(
-          role.emailSubject || `Reminder: ${role.name} - ${event.title}`,
+          role.emailSubject || `Reminder: {{Role}} - Potter's Wheel | {{ServiceDate}}`,
           placeholderData
         );
         const emailBody = replacePlaceholders(
           role.emailBody ||
-            `Dear {{memberName}},\n\nThis is a reminder that you are assigned as {{roleName}} for {{eventTitle}} on {{serviceDate}} at {{serviceTime}}.\n\nPlease arrive by {{arrivalTime}} at {{venue}}.\n\nTheme: {{theme}}\n\nPlease confirm your attendance: {{confirmLink}}\n\nBlessings,\nPotter's Wheel Team`,
+            `Greetings {{Name}},\n\nThis is a reminder that you are assigned as {{Role}} for Potter's Wheel Service on {{ServiceDate}} at {{ServiceTime}}.\n\nPlease arrive by {{ArrivalTime}} at {{Venue}}.\n\nTheme: {{Theme}}\n\nPlease confirm your attendance: {{ConfirmLink}}\n\nGod bless!\nDew of Hermon Youth Ministry`,
           placeholderData
         );
 

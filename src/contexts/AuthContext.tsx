@@ -11,8 +11,8 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
 } from "firebase/auth";
-import { onSnapshot, setDoc } from "firebase/firestore";
-import { auth, safeDoc } from "@/lib/firebase";
+import { doc, onSnapshot, setDoc, getDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { User } from "@/types";
 
 interface AuthContextType {
@@ -35,15 +35,31 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
 });
 
+async function setSessionCookie(user: FirebaseUser) {
+  try {
+    const idToken = await user.getIdToken();
+    await fetch("/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+  } catch (error) {
+    console.error("Failed to set session cookie:", error);
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
+    const unsubAuth = onAuthStateChanged(auth, async (user) => {
       setFirebaseUser(user);
-      if (!user) {
+      if (user) {
+        // Ensure session cookie stays fresh on auth state changes
+        await setSessionCookie(user);
+      } else {
         setUserData(null);
         setLoading(false);
       }
@@ -55,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!firebaseUser) return;
 
     const unsubUser = onSnapshot(
-      safeDoc("users", firebaseUser.uid),
+      doc(db, "users", firebaseUser.uid),
       (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
@@ -69,38 +85,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserData(null);
         }
         setLoading(false);
-      },
-      (error) => {
-        console.error("Error listening to user document:", error);
-        setUserData(null);
-        setLoading(false);
       }
     );
     return unsubUser;
   }, [firebaseUser]);
 
-  const createSession = async (user: FirebaseUser, isGoogleSignIn = false) => {
-    const idToken = await user.getIdToken();
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken, isGoogleSignIn }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error || "Login failed");
-    }
-  };
-
   const signIn = async (email: string, password: string) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
-    await createSession(cred.user);
+    await setSessionCookie(cred.user);
   };
 
   const signUp = async (email: string, password: string, name: string) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
-    await setDoc(safeDoc("users", cred.user.uid), {
+    await setDoc(doc(db, "users", cred.user.uid), {
       name,
       email,
       phone: null,
@@ -112,13 +110,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-    await createSession(cred.user);
+    await setSessionCookie(cred.user);
   };
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     const cred = await signInWithPopup(auth, provider);
-    await createSession(cred.user, true);
+    const userDoc = await getDoc(doc(db, "users", cred.user.uid));
+
+    if (!userDoc.exists()) {
+      await setDoc(doc(db, "users", cred.user.uid), {
+        name: cred.user.displayName || "User",
+        email: cred.user.email || "",
+        phone: null,
+        role: "MEMBER",
+        departmentIds: [],
+        leadsDepartmentIds: [],
+        profileImage: cred.user.photoURL || null,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+    await setSessionCookie(cred.user);
   };
 
   const signOut = async () => {

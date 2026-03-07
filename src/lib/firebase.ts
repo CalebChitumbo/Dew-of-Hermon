@@ -1,16 +1,6 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import {
-  getFirestore,
-  collection as firestoreCollection,
-  doc as firestoreDoc,
-  writeBatch as firestoreWriteBatch,
-  type Firestore,
-  type CollectionReference,
-  type DocumentReference,
-  type DocumentData,
-  type WriteBatch,
-} from "firebase/firestore";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,33 +11,33 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app: FirebaseApp =
-  getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-
-export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
-
-/**
- * Safe wrappers that guarantee collection()/doc() and getFirestore() come from
- * the same firebase/firestore module instance, avoiding the instanceof check
- * failure caused by Next.js chunk-splitting the Firebase SDK.
- */
-export function safeCollection(
-  path: string,
-  ...pathSegments: string[]
-): CollectionReference<DocumentData> {
-  return firestoreCollection(db, path, ...pathSegments);
+function getApp(): FirebaseApp {
+  if (getApps().length > 0) return getApps()[0];
+  return initializeApp(firebaseConfig);
 }
 
-export function safeDoc(
-  path: string,
-  ...pathSegments: string[]
-): DocumentReference<DocumentData> {
-  return firestoreDoc(db, path, ...pathSegments);
+let _app: FirebaseApp | null = null;
+let _auth: Auth | null = null;
+let _db: Firestore | null = null;
+
+export function getFirebaseApp(): FirebaseApp {
+  if (!_app) _app = getApp();
+  return _app;
 }
 
-export function safeWriteBatch(): WriteBatch {
-  return firestoreWriteBatch(db);
-}
+// Lazy getters that only initialize when actually called on the client
+export const auth: Auth = new Proxy({} as Auth, {
+  get(_, prop) {
+    if (!_auth) _auth = getAuth(getFirebaseApp());
+    return (_auth as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
 
-export default app;
+export const db: Firestore = new Proxy({} as Firestore, {
+  get(_, prop) {
+    if (!_db) _db = getFirestore(getFirebaseApp());
+    return (_db as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
+
+export default getFirebaseApp;
