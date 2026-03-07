@@ -176,6 +176,43 @@ export async function POST(
       );
     }
 
+    // Create in-app notification for the assigned user
+    try {
+      const assignment = result.assignment!;
+      // Fetch event info for the notification message
+      const serviceDoc = await adminDb.collection("services").doc(serviceId).get();
+      const serviceData = serviceDoc.data();
+      let eventDate = "";
+      if (serviceData?.eventId) {
+        const eventDoc = await adminDb.collection("events").doc(serviceData.eventId).get();
+        const eventData = eventDoc.data();
+        if (eventData?.startDate) {
+          const date = eventData.startDate.toDate?.() || new Date(eventData.startDate);
+          eventDate = date.toLocaleDateString("en-GB", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          });
+        }
+      }
+
+      await adminDb.collection("notifications").add({
+        userId: assignment.userId,
+        title: `New Assignment: ${assignment.roleName}`,
+        message: eventDate
+          ? `You have been assigned as ${assignment.roleName} for the service on ${eventDate}. Please confirm or decline.`
+          : `You have been assigned as ${assignment.roleName}. Please confirm or decline.`,
+        type: "assignment",
+        isRead: false,
+        link: "/my-schedule",
+        createdAt: new Date(),
+      });
+    } catch (notifError) {
+      // Don't fail the assignment if notification creation fails
+      console.error("Error creating notification:", notifError);
+    }
+
     return NextResponse.json(
       { assignment: result.assignment },
       { status: 201 }

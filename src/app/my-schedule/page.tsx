@@ -68,21 +68,28 @@ export default function MySchedulePage() {
       orderBy("createdAt", "desc")
     );
 
-    const unsubAssignments = onSnapshot(assignmentsQuery, (snapshot) => {
-      const assignmentData = snapshot.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-          emailSentAt: data.emailSentAt?.toDate?.() || null,
-          confirmedAt: data.confirmedAt?.toDate?.() || null,
-        } as EnrichedAssignment;
-      });
-      setAssignments(assignmentData);
-      setLoading(false);
-    });
+    const unsubAssignments = onSnapshot(
+      assignmentsQuery,
+      (snapshot) => {
+        const assignmentData = snapshot.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(),
+            emailSentAt: data.emailSentAt?.toDate?.() || null,
+            confirmedAt: data.confirmedAt?.toDate?.() || null,
+          } as EnrichedAssignment;
+        });
+        setAssignments(assignmentData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error listening to assignments:", error);
+        setLoading(false);
+      }
+    );
 
     return () => unsubAssignments();
   }, [firebaseUser]);
