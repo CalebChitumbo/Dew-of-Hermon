@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
@@ -62,12 +62,8 @@ interface MemberData {
   isActive: boolean;
 }
 
-export default function EditMemberPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function EditMemberPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { userData } = useAuth();
   const { toast } = useToast();
