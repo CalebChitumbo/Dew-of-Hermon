@@ -61,7 +61,7 @@ export function Header() {
 
       {/* Mobile slide-out menu */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-[60] lg:hidden">
           <div
             className="fixed inset-0 bg-black/50"
             onClick={() => setMobileMenuOpen(false)}
@@ -118,7 +118,7 @@ export function Header() {
               <MobileMenuItem href="/notifications" icon={Bell} label="Notifications" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
               <MobileMenuItem href="/profile" icon={UserCircle} label="Profile" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
             </nav>
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-clay-200">
+            <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 border-t border-clay-200">
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/20 text-gold-dark text-sm font-bold">
                   {userData.name.charAt(0).toUpperCase()}

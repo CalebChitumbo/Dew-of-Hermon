@@ -112,7 +112,6 @@ export default function NewMemberPage() {
           phone: phone.trim() || null,
           role,
           departmentIds: selectedDeptIds,
-          callerRole: userData.role,
         }),
       });
 

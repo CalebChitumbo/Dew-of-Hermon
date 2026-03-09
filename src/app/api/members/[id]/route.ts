@@ -1,9 +1,27 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { canManageMembers, canDeleteMembers, canChangeUserRoles, getAssignableRoles } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
+
+async function getCallerRole(): Promise<{ uid: string; role: UserRole } | null> {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session");
+    if (!session?.value) return null;
+
+    const decoded = await adminAuth.verifyIdToken(session.value);
+    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
+    if (!userDoc.exists) return null;
+
+    const data = userDoc.data()!;
+    return { uid: decoded.uid, role: data.role as UserRole };
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(
   request: Request,
@@ -49,9 +67,20 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, email, phone, role, departmentIds, leadsDepartmentIds, isActive, callerRole } = body;
+    const { name, email, phone, role, departmentIds, leadsDepartmentIds, isActive } = body;
 
-    if (!callerRole || !canManageMembers(callerRole)) {
+    // Verify the caller's role from their session instead of trusting client-sent callerRole
+    const caller = await getCallerRole();
+    if (!caller) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const callerRole = caller.role;
+
+    if (!canManageMembers(callerRole)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -151,10 +180,17 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const callerRole = searchParams.get("callerRole") as UserRole | null;
 
-    if (!callerRole || !canDeleteMembers(callerRole)) {
+    // Verify the caller's role from their session
+    const caller = await getCallerRole();
+    if (!caller) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    if (!canDeleteMembers(caller.role)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
