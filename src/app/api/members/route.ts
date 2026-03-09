@@ -1,16 +1,39 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { canManageMembers, getAssignableRoles } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
 
-export async function GET(request: Request) {
+async function getCallerRole(): Promise<{ uid: string; role: UserRole } | null> {
   try {
-    const { searchParams } = new URL(request.url);
-    const callerRole = searchParams.get("callerRole") as UserRole | null;
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session");
+    if (!session?.value) return null;
 
-    if (!callerRole || !canManageMembers(callerRole)) {
+    const decoded = await adminAuth.verifyIdToken(session.value);
+    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
+    if (!userDoc.exists) return null;
+
+    const data = userDoc.data()!;
+    return { uid: decoded.uid, role: data.role as UserRole };
+  } catch {
+    return null;
+  }
+}
+
+export async function GET() {
+  try {
+    const caller = await getCallerRole();
+    if (!caller) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    if (!canManageMembers(caller.role)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -48,9 +71,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, role, departmentIds, callerRole } = body;
+    const { name, email, phone, role, departmentIds } = body;
 
-    if (!callerRole || !canManageMembers(callerRole)) {
+    // Verify the caller's role from their session
+    const caller = await getCallerRole();
+    if (!caller) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    if (!canManageMembers(caller.role)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -66,7 +98,7 @@ export async function POST(request: Request) {
 
     // Enforce hierarchy: caller can only assign roles at or below their own level
     if (role) {
-      const assignable = getAssignableRoles(callerRole);
+      const assignable = getAssignableRoles(caller.role);
       if (!assignable.includes(role)) {
         return NextResponse.json(
           { error: "You cannot assign a role higher than your own" },

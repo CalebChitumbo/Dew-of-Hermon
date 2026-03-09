@@ -177,7 +177,6 @@ export default function EditMemberPage() {
           departmentIds: selectedDeptIds,
           leadsDepartmentIds: leadsDeptIds,
           isActive,
-          callerRole: userData.role,
         }),
       });
 
@@ -214,7 +213,7 @@ export default function EditMemberPage() {
 
     try {
       const response = await fetch(
-        `/api/members/${id}?callerRole=${userData.role}`,
+        `/api/members/${id}`,
         { method: "DELETE" }
       );
 
