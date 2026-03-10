@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { query, where, orderBy, onSnapshot, getDocs, documentId } from "firebase/firestore";
-import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
@@ -22,10 +20,32 @@ import {
   Users,
 } from "lucide-react";
 import { format, isPast, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
-import { Service, AppEvent } from "@/types";
 
-interface ServiceWithEvent extends Service {
-  event: AppEvent | null;
+interface ServiceEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  type: string;
+  startDate: string | null;
+  endDate: string | null;
+  venue: string;
+  isRecurring: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ServiceWithEvent {
+  id: string;
+  eventId: string;
+  theme: string | null;
+  serviceTime: string;
+  programNotes: string | null;
+  attendanceCount: number | null;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  event: ServiceEvent | null;
   assignmentCount: number;
 }
 
@@ -56,7 +76,7 @@ function getDateLabel(date: Date): { label: string; className: string } {
 
 function ServiceCard({ service }: { service: ServiceWithEvent }) {
   const eventDate = service.event?.startDate
-    ? new Date(service.event.startDate as unknown as string)
+    ? new Date(service.event.startDate)
     : null;
 
   const dateLabel = eventDate ? getDateLabel(eventDate) : null;
@@ -142,146 +162,60 @@ function ServicesListContent() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("upcoming");
 
+  const fetchServices = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const res = await fetch("/api/services?limit=100");
+      if (!res.ok) {
+        throw new Error(`Failed to fetch services: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const servicesData: ServiceWithEvent[] = data.services || [];
+
+      // Sort by event date, splitting into upcoming and past
+      const upcoming: ServiceWithEvent[] = [];
+      const past: ServiceWithEvent[] = [];
+
+      servicesData.forEach((s: ServiceWithEvent) => {
+        const eventDate = s.event?.startDate ? new Date(s.event.startDate) : null;
+        if (eventDate && isPast(eventDate) && !isToday(eventDate)) {
+          past.push(s);
+        } else {
+          upcoming.push(s);
+        }
+      });
+
+      // Sort upcoming by date ascending (nearest first)
+      upcoming.sort((a, b) => {
+        const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
+        const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
+        return dateA - dateB;
+      });
+
+      // Sort past by date descending (most recent first)
+      past.sort((a, b) => {
+        const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
+        const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      setUpcomingServices(upcoming);
+      setPastServices(past);
+    } catch (err) {
+      console.error("Error fetching services:", err);
+      setError("Failed to load services. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!userData) return;
-
-    // Listen to active (non-archived) services
-    const servicesRef = safeCollection("services");
-    const activeQuery = query(
-      servicesRef,
-      where("isArchived", "==", false),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubActive = onSnapshot(
-      activeQuery,
-      async (snapshot) => {
-        try {
-          const servicesData: ServiceWithEvent[] = [];
-          const eventIds = new Set<string>();
-
-          snapshot.docs.forEach((doc) => {
-            const data = doc.data();
-            if (data.eventId) eventIds.add(data.eventId);
-            servicesData.push({
-              id: doc.id,
-              eventId: data.eventId,
-              theme: data.theme || null,
-              serviceTime: data.serviceTime,
-              programNotes: data.programNotes || null,
-              attendanceCount: data.attendanceCount || null,
-              isArchived: data.isArchived || false,
-              createdAt: data.createdAt?.toDate?.() || new Date(),
-              updatedAt: data.updatedAt?.toDate?.() || new Date(),
-              event: null,
-              assignmentCount: 0,
-            });
-          });
-
-          // Fetch events for these services (client-side join)
-          if (eventIds.size > 0) {
-            const eventIdArray = Array.from(eventIds);
-            // Process in chunks of 30 (Firestore 'in' limit)
-            for (let i = 0; i < eventIdArray.length; i += 30) {
-              const chunk = eventIdArray.slice(i, i + 30);
-              const eventsQuery = query(
-                safeCollection("events"),
-                where(documentId(), "in", chunk)
-              );
-              const eventsSnap = await getDocs(eventsQuery);
-              eventsSnap.docs.forEach((eventDoc) => {
-                const eventData = eventDoc.data();
-                const event: AppEvent = {
-                  id: eventDoc.id,
-                  title: eventData.title,
-                  description: eventData.description || null,
-                  type: eventData.type,
-                  startDate: eventData.startDate?.toDate?.() || new Date(),
-                  endDate: eventData.endDate?.toDate?.() || null,
-                  venue: eventData.venue,
-                  isRecurring: eventData.isRecurring || false,
-                  createdBy: eventData.createdBy,
-                  createdAt: eventData.createdAt?.toDate?.() || new Date(),
-                  updatedAt: eventData.updatedAt?.toDate?.() || new Date(),
-                };
-                servicesData.forEach((s) => {
-                  if (s.eventId === eventDoc.id) {
-                    s.event = event;
-                  }
-                });
-              });
-            }
-          }
-
-          // Fetch assignment counts
-          const serviceIds = servicesData.map((s) => s.id);
-          if (serviceIds.length > 0) {
-            for (let i = 0; i < serviceIds.length; i += 30) {
-              const chunk = serviceIds.slice(i, i + 30);
-              const assignQuery = query(
-                safeCollection("serviceAssignments"),
-                where("serviceId", "in", chunk)
-              );
-              const assignSnap = await getDocs(assignQuery);
-              const counts: Record<string, number> = {};
-              assignSnap.docs.forEach((doc) => {
-                const sid = doc.data().serviceId;
-                counts[sid] = (counts[sid] || 0) + 1;
-              });
-              servicesData.forEach((s) => {
-                if (counts[s.id]) {
-                  s.assignmentCount = counts[s.id];
-                }
-              });
-            }
-          }
-
-          // Sort by event date, splitting into upcoming and past
-          const upcoming: ServiceWithEvent[] = [];
-          const past: ServiceWithEvent[] = [];
-
-          servicesData.forEach((s) => {
-            const eventDate = s.event?.startDate;
-            if (eventDate && isPast(eventDate) && !isToday(eventDate)) {
-              past.push(s);
-            } else {
-              upcoming.push(s);
-            }
-          });
-
-          // Sort upcoming by date ascending (nearest first)
-          upcoming.sort((a, b) => {
-            const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
-            const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
-            return dateA - dateB;
-          });
-
-          // Sort past by date descending (most recent first)
-          past.sort((a, b) => {
-            const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
-            const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
-            return dateB - dateA;
-          });
-
-          setUpcomingServices(upcoming);
-          setPastServices(past);
-          setError(null);
-        } catch (err) {
-          console.error("Error processing services data:", err);
-          setError("Failed to load services. Please try again.");
-        } finally {
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error("Firestore snapshot error:", err);
-        setError("Failed to load services. Please check your connection and try again.");
-        setLoading(false);
-      }
-    );
-
-    return () => unsubActive();
-  }, [userData]);
+    fetchServices();
+  }, [userData, fetchServices]);
 
   if (loading) {
     return (
@@ -299,7 +233,7 @@ function ServicesListContent() {
           Something went wrong
         </h3>
         <p className="text-sm text-clay-400 mb-4">{error}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>
+        <Button variant="outline" onClick={fetchServices}>
           Try Again
         </Button>
       </div>
