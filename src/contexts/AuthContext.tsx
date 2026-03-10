@@ -11,7 +11,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
 } from "firebase/auth";
-import { onSnapshot, setDoc } from "firebase/firestore";
+import { onSnapshot } from "firebase/firestore";
 import { auth, safeDoc } from "@/lib/firebase";
 import { User } from "@/types";
 
@@ -79,12 +79,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubUser;
   }, [firebaseUser]);
 
-  const createSession = async (user: FirebaseUser, isGoogleSignIn = false) => {
+  const createSession = async (user: FirebaseUser, isGoogleSignIn = false, registrationName?: string) => {
     const idToken = await user.getIdToken();
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken, isGoogleSignIn }),
+      body: JSON.stringify({ idToken, isGoogleSignIn, registrationName }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -99,20 +99,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName: name });
-    await setDoc(safeDoc("users", cred.user.uid), {
-      name,
-      email,
-      phone: null,
-      role: "MEMBER",
-      departmentIds: [],
-      leadsDepartmentIds: [],
-      profileImage: null,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    await createSession(cred.user);
+    try {
+      await updateProfile(cred.user, { displayName: name });
+      // User doc is created server-side in /api/auth/login to avoid
+      // client-side Firestore permission issues
+      await createSession(cred.user, false, name);
+    } catch (error) {
+      // If anything fails after auth user creation, delete the auth user
+      // so the user can retry registration without "email already in use"
+      await cred.user.delete();
+      throw error;
+    }
   };
 
   const signInWithGoogle = async () => {

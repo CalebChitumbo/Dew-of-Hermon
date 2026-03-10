@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { idToken, isGoogleSignIn } = await request.json();
+    const { idToken, isGoogleSignIn, registrationName } = await request.json();
 
     if (!idToken) {
       return NextResponse.json({ error: "Missing ID token" }, { status: 400 });
@@ -20,11 +20,11 @@ export async function POST(request: Request) {
     const userDoc = await adminDb.collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
-      // For Google sign-in, auto-create the user profile
-      if (isGoogleSignIn) {
+      // Auto-create user profile for Google sign-in or email/password registration
+      if (isGoogleSignIn || registrationName) {
         const now = new Date();
         const newUserData = {
-          name: decodedToken.name || "User",
+          name: registrationName || decodedToken.name || "User",
           email: decodedToken.email || "",
           phone: null,
           role: "MEMBER",
