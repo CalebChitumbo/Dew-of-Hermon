@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,7 +9,6 @@ import {
   orderBy,
   onSnapshot,
   getDocs,
-  documentId,
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -493,54 +492,43 @@ function AssignmentBoardContent() {
     return () => unsubRoles();
   }, []);
 
-  // ─── Load assignments (real-time) ───
+  // ─── Load assignments via API (bypasses client-side Firestore rules) ───
+
+  const fetchAssignments = useCallback(async () => {
+    if (!serviceId) return;
+    try {
+      const response = await fetch(`/api/services/${serviceId}/assignments`);
+      if (!response.ok) throw new Error("Failed to fetch assignments");
+      const data = await response.json();
+      setAssignments(
+        (data.assignments || []).map((a: Record<string, unknown>) => ({
+          ...a,
+          emailSentAt: a.emailSentAt ? new Date(a.emailSentAt as string) : null,
+          confirmedAt: a.confirmedAt ? new Date(a.confirmedAt as string) : null,
+          createdAt: a.createdAt ? new Date(a.createdAt as string) : new Date(),
+          updatedAt: a.updatedAt ? new Date(a.updatedAt as string) : new Date(),
+        })) as ServiceAssignment[]
+      );
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load assignments. Please refresh the page.",
+        variant: "destructive",
+      });
+    }
+  }, [serviceId, toast]);
+
+  // Initial fetch + polling every 10 seconds for real-time-like updates
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!serviceId) return;
-
-    const assignmentsRef = safeCollection("serviceAssignments");
-    const assignmentsQuery = query(
-      assignmentsRef,
-      where("serviceId", "==", serviceId)
-    );
-
-    const unsubAssignments = onSnapshot(
-      assignmentsQuery,
-      (snapshot) => {
-        const assignmentsData = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            serviceId: data.serviceId,
-            roleId: data.roleId,
-            roleName: data.roleName,
-            userId: data.userId,
-            userName: data.userName,
-            userEmail: data.userEmail,
-            userPhone: data.userPhone || null,
-            status: data.status,
-            emailSent: data.emailSent || false,
-            emailSentAt: data.emailSentAt?.toDate?.() || null,
-            confirmedAt: data.confirmedAt?.toDate?.() || null,
-            notes: data.notes || null,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-            updatedAt: data.updatedAt?.toDate?.() || new Date(),
-          } as ServiceAssignment;
-        });
-        setAssignments(assignmentsData);
-      },
-      (error) => {
-        console.error("Error listening to assignments:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load assignments. Please refresh the page.",
-          variant: "destructive",
-        });
-      }
-    );
-
-    return () => unsubAssignments();
-  }, [serviceId, toast]);
+    fetchAssignments();
+    pollRef.current = setInterval(fetchAssignments, 10000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [fetchAssignments]);
 
   // ─── Load departments ───
 
@@ -692,6 +680,9 @@ function AssignmentBoardContent() {
           variant: "success",
         });
 
+        // Refresh assignments immediately
+        fetchAssignments();
+
         setSelectorOpen(false);
         setSelectedRoleId(null);
       } catch (error: unknown) {
@@ -706,7 +697,7 @@ function AssignmentBoardContent() {
         setAssigning(false);
       }
     },
-    [selectedRoleId, serviceId, userData, toast]
+    [selectedRoleId, serviceId, userData, toast, fetchAssignments]
   );
 
   const handleRemoveAssignment = useCallback(
@@ -730,6 +721,9 @@ function AssignmentBoardContent() {
           title: "Assignment removed",
           description: "The role assignment has been removed.",
         });
+
+        // Refresh assignments immediately
+        fetchAssignments();
       } catch (error: unknown) {
         const message =
           error instanceof Error
@@ -744,7 +738,7 @@ function AssignmentBoardContent() {
         setRemovingId(null);
       }
     },
-    [serviceId, userData, toast]
+    [serviceId, userData, toast, fetchAssignments]
   );
 
   // ─── Render ───

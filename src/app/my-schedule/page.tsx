@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
-  query,
-  where,
   onSnapshot,
-  updateDoc,
-  orderBy,
-  Timestamp,
   setDoc,
   deleteDoc,
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { ServiceAssignment, Service, AppEvent, UserAvailability } from "@/types";
+import { ServiceAssignment, UserAvailability } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,8 +46,8 @@ export default function MySchedulePage() {
   const { firebaseUser, userData } = useAuth();
   const { toast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
-  const [services, setServices] = useState<Map<string, Service>>(new Map());
-  const [events, setEvents] = useState<Map<string, AppEvent>>(new Map());
+  const [servicesMap, setServicesMap] = useState<Record<string, Record<string, unknown>>>({});
+  const [eventsMap, setEventsMap] = useState<Record<string, Record<string, unknown>>>({});
   const [availability, setAvailability] = useState<UserAvailability[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -62,85 +57,42 @@ export default function MySchedulePage() {
   const [unavailableReason, setUnavailableReason] = useState("");
   const [savingAvailability, setSavingAvailability] = useState(false);
 
-  // Listen to user's assignments in real-time
-  useEffect(() => {
+  // Fetch assignments via API (bypasses client-side Firestore rules)
+  const fetchAssignments = useCallback(async () => {
     if (!firebaseUser) return;
+    try {
+      const response = await fetch(`/api/my-assignments?userId=${firebaseUser.uid}`);
+      if (!response.ok) throw new Error("Failed to fetch assignments");
+      const data = await response.json();
 
-    const assignmentsQuery = query(
-      safeCollection("serviceAssignments"),
-      where("userId", "==", firebaseUser.uid),
-      orderBy("createdAt", "desc")
-    );
+      const assignmentData = (data.assignments || []).map((a: Record<string, unknown>) => ({
+        ...a,
+        createdAt: a.createdAt ? new Date(a.createdAt as string) : new Date(),
+        updatedAt: a.updatedAt ? new Date(a.updatedAt as string) : new Date(),
+        emailSentAt: a.emailSentAt ? new Date(a.emailSentAt as string) : null,
+        confirmedAt: a.confirmedAt ? new Date(a.confirmedAt as string) : null,
+      })) as EnrichedAssignment[];
 
-    const unsubAssignments = onSnapshot(
-      assignmentsQuery,
-      (snapshot) => {
-        const assignmentData = snapshot.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id,
-            ...data,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-            updatedAt: data.updatedAt?.toDate?.() || new Date(),
-            emailSentAt: data.emailSentAt?.toDate?.() || null,
-            confirmedAt: data.confirmedAt?.toDate?.() || null,
-          } as EnrichedAssignment;
-        });
-        setAssignments(assignmentData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error listening to assignments:", error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubAssignments();
+      setAssignments(assignmentData);
+      setServicesMap(data.services || {});
+      setEventsMap(data.events || {});
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [firebaseUser]);
 
-  // Listen to services to enrich assignment data
+  // Initial fetch + polling for updates
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
-    const unsubServices = onSnapshot(safeCollection("services"), (snapshot) => {
-      const svcMap = new Map<string, Service>();
-      snapshot.docs.forEach((d) => {
-        const data = d.data();
-        svcMap.set(d.id, {
-          id: d.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        } as Service);
-      });
-      setServices(svcMap);
-    }, (error) => {
-      console.error("Error listening to services:", error);
-    });
-
-    return () => unsubServices();
-  }, []);
-
-  // Listen to events for date/venue info
-  useEffect(() => {
-    const unsubEvents = onSnapshot(safeCollection("events"), (snapshot) => {
-      const evtMap = new Map<string, AppEvent>();
-      snapshot.docs.forEach((d) => {
-        const data = d.data();
-        evtMap.set(d.id, {
-          id: d.id,
-          ...data,
-          startDate: data.startDate?.toDate?.() || new Date(),
-          endDate: data.endDate?.toDate?.() || null,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        } as AppEvent);
-      });
-      setEvents(evtMap);
-    }, (error) => {
-      console.error("Error listening to events:", error);
-    });
-
-    return () => unsubEvents();
-  }, []);
+    fetchAssignments();
+    pollRef.current = setInterval(fetchAssignments, 10000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [fetchAssignments]);
 
   // Listen to user availability
   useEffect(() => {
@@ -162,15 +114,15 @@ export default function MySchedulePage() {
 
   // Enrich assignments with service/event data
   const enrichedAssignments = assignments.map((assignment) => {
-    const service = services.get(assignment.serviceId);
-    const event = service ? events.get(service.eventId) : undefined;
+    const service = servicesMap[assignment.serviceId];
+    const event = service ? eventsMap[service.eventId as string] : undefined;
     return {
       ...assignment,
-      serviceDate: event?.startDate,
-      serviceTime: service?.serviceTime,
-      eventTitle: event?.title,
-      venue: event?.venue,
-      theme: service?.theme,
+      serviceDate: event?.startDate ? new Date(event.startDate as string) : undefined,
+      serviceTime: service?.serviceTime as string | undefined,
+      eventTitle: event?.title as string | undefined,
+      venue: event?.venue as string | undefined,
+      theme: service?.theme as string | null | undefined,
     };
   });
 
@@ -184,18 +136,28 @@ export default function MySchedulePage() {
     .slice(0, 5);
 
   const handleConfirm = async (assignmentId: string) => {
+    if (!firebaseUser) return;
     setActionLoading(assignmentId);
     try {
-      await updateDoc(safeDoc("serviceAssignments", assignmentId), {
-        status: "CONFIRMED",
-        confirmedAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+      const response = await fetch("/api/my-assignments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId,
+          status: "CONFIRMED",
+          userId: firebaseUser.uid,
+        }),
       });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to confirm");
+      }
       toast({
         title: "Assignment confirmed",
         description: "You have confirmed your assignment.",
         variant: "success",
       });
+      fetchAssignments();
     } catch (error) {
       console.error("Error confirming assignment:", error);
       toast({
@@ -208,16 +170,27 @@ export default function MySchedulePage() {
   };
 
   const handleDecline = async (assignmentId: string) => {
+    if (!firebaseUser) return;
     setActionLoading(assignmentId);
     try {
-      await updateDoc(safeDoc("serviceAssignments", assignmentId), {
-        status: "DECLINED",
-        updatedAt: Timestamp.now(),
+      const response = await fetch("/api/my-assignments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId,
+          status: "DECLINED",
+          userId: firebaseUser.uid,
+        }),
       });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to decline");
+      }
       toast({
         title: "Assignment declined",
         description: "You have declined this assignment.",
       });
+      fetchAssignments();
     } catch (error) {
       console.error("Error declining assignment:", error);
       toast({
