@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { onSnapshot, query, orderBy, where, Timestamp } from "firebase/firestore";
+import { onSnapshot, query, orderBy, where, Timestamp, getDocs, documentId } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
@@ -63,7 +63,6 @@ function CreateAffirmationForm() {
       const eventMap = new Map<string, Date>();
 
       if (eventIds.length > 0) {
-        const { getDocs, documentId } = await import("firebase/firestore");
         for (let i = 0; i < eventIds.length; i += 30) {
           const chunk = eventIds.slice(i, i + 30);
           const eventsQuery = query(

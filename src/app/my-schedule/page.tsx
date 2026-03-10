@@ -9,6 +9,8 @@ import {
   updateDoc,
   orderBy,
   Timestamp,
+  setDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -210,7 +212,6 @@ export default function MySchedulePage() {
     if (!firebaseUser || !unavailableDate) return;
     setSavingAvailability(true);
     try {
-      const { setDoc } = await import("firebase/firestore");
       await setDoc(
         safeDoc("users", firebaseUser.uid, "availability", unavailableDate),
         {
@@ -230,7 +231,6 @@ export default function MySchedulePage() {
   const handleRemoveUnavailable = async (date: string) => {
     if (!firebaseUser) return;
     try {
-      const { deleteDoc } = await import("firebase/firestore");
       await deleteDoc(safeDoc("users", firebaseUser.uid, "availability", date));
     } catch (error) {
       console.error("Error removing availability:", error);

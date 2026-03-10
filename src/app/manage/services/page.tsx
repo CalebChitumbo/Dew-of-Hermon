@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { query, where, orderBy, onSnapshot, getDocs, documentId } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
@@ -180,7 +180,6 @@ function ServicesListContent() {
 
           // Fetch events for these services (client-side join)
           if (eventIds.size > 0) {
-            const { getDocs, documentId } = await import("firebase/firestore");
             const eventIdArray = Array.from(eventIds);
             // Process in chunks of 30 (Firestore 'in' limit)
             for (let i = 0; i < eventIdArray.length; i += 30) {
@@ -217,7 +216,6 @@ function ServicesListContent() {
           // Fetch assignment counts
           const serviceIds = servicesData.map((s) => s.id);
           if (serviceIds.length > 0) {
-            const { getDocs } = await import("firebase/firestore");
             for (let i = 0; i < serviceIds.length; i += 30) {
               const chunk = serviceIds.slice(i, i + 30);
               const assignQuery = query(
