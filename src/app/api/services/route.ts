@@ -12,27 +12,15 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "20", 10);
 
-    let query = adminDb
+    // Use a simple equality filter only (no orderBy) to avoid
+    // requiring a composite Firestore index that may not be deployed.
+    // Sorting is done in JS below.
+    const servicesSnapshot = await adminDb
       .collection("services")
       .where("isArchived", "==", archived)
-      .orderBy("createdAt", "desc");
-
-    // For pagination, use offset-based approach
-    const offset = (page - 1) * limit;
-    if (offset > 0) {
-      query = query.offset(offset);
-    }
-    query = query.limit(limit);
-
-    const servicesSnapshot = await query.get();
-
-    // Get total count for pagination
-    const countSnapshot = await adminDb
-      .collection("services")
-      .where("isArchived", "==", archived)
-      .count()
       .get();
-    const totalCount = countSnapshot.data().count;
+
+    const totalCount = servicesSnapshot.size;
 
     // Collect all eventIds so we can batch-fetch linked events
     const eventIds = new Set<string>();
@@ -112,8 +100,15 @@ export async function GET(request: Request) {
       };
     });
 
+    // Sort by createdAt descending (newest first) in JS
+    services.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Apply pagination
+    const offset = (page - 1) * limit;
+    const paginatedServices = services.slice(offset, offset + limit);
+
     return NextResponse.json({
-      services,
+      services: paginatedServices,
       pagination: {
         page,
         limit,

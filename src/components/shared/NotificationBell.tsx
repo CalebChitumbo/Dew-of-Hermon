@@ -22,9 +22,16 @@ export function NotificationBell() {
         where("isRead", "==", false)
       );
 
-      const unsub = onSnapshot(q, (snapshot) => {
-        setUnreadCount(snapshot.size);
-      });
+      const unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          setUnreadCount(snapshot.size);
+        },
+        (error) => {
+          console.error("NotificationBell: snapshot error", error);
+          // Silently degrade — just show 0 unread
+        }
+      );
 
       return unsub;
     } catch (err) {
