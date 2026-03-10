@@ -82,8 +82,10 @@ service cloud.firestore {
     // ─── Service Assignments (top-level) ───
     match /serviceAssignments/{assignmentId} {
       allow read: if isSignedIn();
-      allow create, update: if isDeptLead();
-      allow delete: if isAdmin();
+      allow create: if isDeptLead();
+      // Allow dept leads to update any assignment, and users to confirm/decline their own
+      allow update: if isDeptLead() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isDeptLead();
     }
 
     // ─── Affirmations ───

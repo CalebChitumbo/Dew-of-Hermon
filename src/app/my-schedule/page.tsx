@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { useToast } from "@/hooks/use-toast";
 import {
   CalendarDays,
   Clock,
@@ -48,6 +49,7 @@ interface EnrichedAssignment extends ServiceAssignment {
 
 export default function MySchedulePage() {
   const { firebaseUser, userData } = useAuth();
+  const { toast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
   const [services, setServices] = useState<Map<string, Service>>(new Map());
   const [events, setEvents] = useState<Map<string, AppEvent>>(new Map());
@@ -189,8 +191,18 @@ export default function MySchedulePage() {
         confirmedAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       });
+      toast({
+        title: "Assignment confirmed",
+        description: "You have confirmed your assignment.",
+        variant: "success",
+      });
     } catch (error) {
       console.error("Error confirming assignment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to confirm assignment. Please try again.",
+        variant: "destructive",
+      });
     }
     setActionLoading(null);
   };
@@ -202,8 +214,17 @@ export default function MySchedulePage() {
         status: "DECLINED",
         updatedAt: Timestamp.now(),
       });
+      toast({
+        title: "Assignment declined",
+        description: "You have declined this assignment.",
+      });
     } catch (error) {
       console.error("Error declining assignment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to decline assignment. Please try again.",
+        variant: "destructive",
+      });
     }
     setActionLoading(null);
   };

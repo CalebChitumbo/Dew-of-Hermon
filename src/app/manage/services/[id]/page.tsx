@@ -504,32 +504,43 @@ function AssignmentBoardContent() {
       where("serviceId", "==", serviceId)
     );
 
-    const unsubAssignments = onSnapshot(assignmentsQuery, (snapshot) => {
-      const assignmentsData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          serviceId: data.serviceId,
-          roleId: data.roleId,
-          roleName: data.roleName,
-          userId: data.userId,
-          userName: data.userName,
-          userEmail: data.userEmail,
-          userPhone: data.userPhone || null,
-          status: data.status,
-          emailSent: data.emailSent || false,
-          emailSentAt: data.emailSentAt?.toDate?.() || null,
-          confirmedAt: data.confirmedAt?.toDate?.() || null,
-          notes: data.notes || null,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        } as ServiceAssignment;
-      });
-      setAssignments(assignmentsData);
-    });
+    const unsubAssignments = onSnapshot(
+      assignmentsQuery,
+      (snapshot) => {
+        const assignmentsData = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            serviceId: data.serviceId,
+            roleId: data.roleId,
+            roleName: data.roleName,
+            userId: data.userId,
+            userName: data.userName,
+            userEmail: data.userEmail,
+            userPhone: data.userPhone || null,
+            status: data.status,
+            emailSent: data.emailSent || false,
+            emailSentAt: data.emailSentAt?.toDate?.() || null,
+            confirmedAt: data.confirmedAt?.toDate?.() || null,
+            notes: data.notes || null,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(),
+          } as ServiceAssignment;
+        });
+        setAssignments(assignmentsData);
+      },
+      (error) => {
+        console.error("Error listening to assignments:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load assignments. Please refresh the page.",
+          variant: "destructive",
+        });
+      }
+    );
 
     return () => unsubAssignments();
-  }, [serviceId]);
+  }, [serviceId, toast]);
 
   // ─── Load departments ───
 
