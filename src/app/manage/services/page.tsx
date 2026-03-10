@@ -168,11 +168,10 @@ function ServicesListContent() {
       setError(null);
 
       const res = await fetch("/api/services?limit=100");
-      if (!res.ok) {
-        throw new Error(`Failed to fetch services: ${res.status}`);
-      }
-
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.details || data?.error || `HTTP ${res.status}`);
+      }
       const servicesData: ServiceWithEvent[] = data.services || [];
 
       // Sort by event date, splitting into upcoming and past
@@ -206,7 +205,8 @@ function ServicesListContent() {
       setPastServices(past);
     } catch (err) {
       console.error("Error fetching services:", err);
-      setError("Failed to load services. Please try again.");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(`Failed to load services: ${message}`);
     } finally {
       setLoading(false);
     }

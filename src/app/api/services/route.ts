@@ -118,8 +118,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error fetching services:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to fetch services" },
+      { error: "Failed to fetch services", details: message },
       { status: 500 }
     );
   }
