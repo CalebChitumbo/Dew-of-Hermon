@@ -180,61 +180,69 @@ function ServicesListContent() {
 
           // Fetch events for these services (client-side join)
           if (eventIds.size > 0) {
-            const { getDocs, documentId } = await import("firebase/firestore");
-            const eventIdArray = Array.from(eventIds);
-            // Process in chunks of 30 (Firestore 'in' limit)
-            for (let i = 0; i < eventIdArray.length; i += 30) {
-              const chunk = eventIdArray.slice(i, i + 30);
-              const eventsQuery = query(
-                safeCollection("events"),
-                where(documentId(), "in", chunk)
-              );
-              const eventsSnap = await getDocs(eventsQuery);
-              eventsSnap.docs.forEach((eventDoc) => {
-                const eventData = eventDoc.data();
-                const event: AppEvent = {
-                  id: eventDoc.id,
-                  title: eventData.title,
-                  description: eventData.description || null,
-                  type: eventData.type,
-                  startDate: eventData.startDate?.toDate?.() || new Date(),
-                  endDate: eventData.endDate?.toDate?.() || null,
-                  venue: eventData.venue,
-                  isRecurring: eventData.isRecurring || false,
-                  createdBy: eventData.createdBy,
-                  createdAt: eventData.createdAt?.toDate?.() || new Date(),
-                  updatedAt: eventData.updatedAt?.toDate?.() || new Date(),
-                };
-                servicesData.forEach((s) => {
-                  if (s.eventId === eventDoc.id) {
-                    s.event = event;
-                  }
+            try {
+              const { getDocs, documentId } = await import("firebase/firestore");
+              const eventIdArray = Array.from(eventIds);
+              // Process in chunks of 30 (Firestore 'in' limit)
+              for (let i = 0; i < eventIdArray.length; i += 30) {
+                const chunk = eventIdArray.slice(i, i + 30);
+                const eventsQuery = query(
+                  safeCollection("events"),
+                  where(documentId(), "in", chunk)
+                );
+                const eventsSnap = await getDocs(eventsQuery);
+                eventsSnap.docs.forEach((eventDoc) => {
+                  const eventData = eventDoc.data();
+                  const event: AppEvent = {
+                    id: eventDoc.id,
+                    title: eventData.title,
+                    description: eventData.description || null,
+                    type: eventData.type,
+                    startDate: eventData.startDate?.toDate?.() || new Date(),
+                    endDate: eventData.endDate?.toDate?.() || null,
+                    venue: eventData.venue,
+                    isRecurring: eventData.isRecurring || false,
+                    createdBy: eventData.createdBy,
+                    createdAt: eventData.createdAt?.toDate?.() || new Date(),
+                    updatedAt: eventData.updatedAt?.toDate?.() || new Date(),
+                  };
+                  servicesData.forEach((s) => {
+                    if (s.eventId === eventDoc.id) {
+                      s.event = event;
+                    }
+                  });
                 });
-              });
+              }
+            } catch (err) {
+              console.warn("Failed to fetch events for services:", err);
             }
           }
 
           // Fetch assignment counts
           const serviceIds = servicesData.map((s) => s.id);
           if (serviceIds.length > 0) {
-            const { getDocs } = await import("firebase/firestore");
-            for (let i = 0; i < serviceIds.length; i += 30) {
-              const chunk = serviceIds.slice(i, i + 30);
-              const assignQuery = query(
-                safeCollection("serviceAssignments"),
-                where("serviceId", "in", chunk)
-              );
-              const assignSnap = await getDocs(assignQuery);
-              const counts: Record<string, number> = {};
-              assignSnap.docs.forEach((doc) => {
-                const sid = doc.data().serviceId;
-                counts[sid] = (counts[sid] || 0) + 1;
-              });
-              servicesData.forEach((s) => {
-                if (counts[s.id]) {
-                  s.assignmentCount = counts[s.id];
-                }
-              });
+            try {
+              const { getDocs } = await import("firebase/firestore");
+              for (let i = 0; i < serviceIds.length; i += 30) {
+                const chunk = serviceIds.slice(i, i + 30);
+                const assignQuery = query(
+                  safeCollection("serviceAssignments"),
+                  where("serviceId", "in", chunk)
+                );
+                const assignSnap = await getDocs(assignQuery);
+                const counts: Record<string, number> = {};
+                assignSnap.docs.forEach((doc) => {
+                  const sid = doc.data().serviceId;
+                  counts[sid] = (counts[sid] || 0) + 1;
+                });
+                servicesData.forEach((s) => {
+                  if (counts[s.id]) {
+                    s.assignmentCount = counts[s.id];
+                  }
+                });
+              }
+            } catch (err) {
+              console.warn("Failed to fetch assignment counts:", err);
             }
           }
 
