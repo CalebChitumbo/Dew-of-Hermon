@@ -493,11 +493,35 @@ function AssignmentBoardContent() {
     return () => unsubRoles();
   }, []);
 
-  // ─── Load assignments (real-time) ───
+  // ─── Load assignments (API with real-time fallback) ───
+
+  const fetchAssignmentsViaApi = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/services/${serviceId}/assignments`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const assignmentsData = (data.assignments || []).map(
+        (a: Record<string, unknown>) => ({
+          ...a,
+          emailSentAt: a.emailSentAt ? new Date(a.emailSentAt as string) : null,
+          confirmedAt: a.confirmedAt ? new Date(a.confirmedAt as string) : null,
+          createdAt: a.createdAt ? new Date(a.createdAt as string) : new Date(),
+          updatedAt: a.updatedAt ? new Date(a.updatedAt as string) : new Date(),
+        })
+      ) as ServiceAssignment[];
+      setAssignments(assignmentsData);
+    } catch (err) {
+      console.error("Error fetching assignments via API:", err);
+    }
+  }, [serviceId]);
 
   useEffect(() => {
     if (!serviceId) return;
 
+    // Always load via API first (bypasses Firestore rules)
+    fetchAssignmentsViaApi();
+
+    // Then try real-time listener for live updates
     const assignmentsRef = safeCollection("serviceAssignments");
     const assignmentsQuery = query(
       assignmentsRef,
@@ -530,17 +554,14 @@ function AssignmentBoardContent() {
         setAssignments(assignmentsData);
       },
       (error) => {
-        console.error("Error listening to assignments:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load assignments. Please refresh the page.",
-          variant: "destructive",
-        });
+        // Real-time listener failed (likely Firestore rules not deployed)
+        // Data is already loaded via API, so just log the error
+        console.warn("Real-time assignment listener unavailable:", error.message);
       }
     );
 
     return () => unsubAssignments();
-  }, [serviceId, toast]);
+  }, [serviceId, fetchAssignmentsViaApi]);
 
   // ─── Load departments ───
 
@@ -694,6 +715,8 @@ function AssignmentBoardContent() {
 
         setSelectorOpen(false);
         setSelectedRoleId(null);
+        // Refresh assignments in case real-time listener isn't active
+        fetchAssignmentsViaApi();
       } catch (error: unknown) {
         const message =
           error instanceof Error ? error.message : "Failed to create assignment";
@@ -706,7 +729,7 @@ function AssignmentBoardContent() {
         setAssigning(false);
       }
     },
-    [selectedRoleId, serviceId, userData, toast]
+    [selectedRoleId, serviceId, userData, toast, fetchAssignmentsViaApi]
   );
 
   const handleRemoveAssignment = useCallback(
@@ -730,6 +753,8 @@ function AssignmentBoardContent() {
           title: "Assignment removed",
           description: "The role assignment has been removed.",
         });
+        // Refresh assignments in case real-time listener isn't active
+        fetchAssignmentsViaApi();
       } catch (error: unknown) {
         const message =
           error instanceof Error
@@ -744,7 +769,7 @@ function AssignmentBoardContent() {
         setRemovingId(null);
       }
     },
-    [serviceId, userData, toast]
+    [serviceId, userData, toast, fetchAssignmentsViaApi]
   );
 
   // ─── Render ───
