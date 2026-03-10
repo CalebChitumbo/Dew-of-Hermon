@@ -108,6 +108,8 @@ export default function MySchedulePage() {
         } as Service);
       });
       setServices(svcMap);
+    }, (error) => {
+      console.error("Error listening to services:", error);
     });
 
     return () => unsubServices();
@@ -129,6 +131,8 @@ export default function MySchedulePage() {
         } as AppEvent);
       });
       setEvents(evtMap);
+    }, (error) => {
+      console.error("Error listening to events:", error);
     });
 
     return () => unsubEvents();

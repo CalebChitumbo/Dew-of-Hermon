@@ -299,6 +299,8 @@ export default function DashboardPage() {
       } else {
         setNextEvent(null);
       }
+    }, (error) => {
+      console.error("Error listening to events:", error);
     });
 
     return unsub;
@@ -336,6 +338,9 @@ export default function DashboardPage() {
       } else {
         setNextService(null);
       }
+      setLoadingData(false);
+    }, (error) => {
+      console.error("Error listening to services:", error);
       setLoadingData(false);
     });
 
@@ -376,6 +381,8 @@ export default function DashboardPage() {
         };
       });
       setAssignments(items);
+    }, (error) => {
+      console.error("Error listening to assignments:", error);
     });
 
     return unsub;
@@ -407,6 +414,8 @@ export default function DashboardPage() {
         };
       });
       setAllRoles(items);
+    }, (error) => {
+      console.error("Error listening to service roles:", error);
     });
 
     return unsub;
@@ -438,6 +447,8 @@ export default function DashboardPage() {
         };
       });
       setRecentActivity(items);
+    }, (error) => {
+      console.error("Error listening to notifications:", error);
     });
 
     return unsub;
