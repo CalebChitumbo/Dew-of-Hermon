@@ -139,6 +139,7 @@ function ServicesListContent() {
   const [upcomingServices, setUpcomingServices] = useState<ServiceWithEvent[]>([]);
   const [pastServices, setPastServices] = useState<ServiceWithEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("upcoming");
 
   useEffect(() => {
@@ -152,120 +153,134 @@ function ServicesListContent() {
       orderBy("createdAt", "desc")
     );
 
-    const unsubActive = onSnapshot(activeQuery, async (snapshot) => {
-      const servicesData: ServiceWithEvent[] = [];
-      const eventIds = new Set<string>();
+    const unsubActive = onSnapshot(
+      activeQuery,
+      async (snapshot) => {
+        try {
+          const servicesData: ServiceWithEvent[] = [];
+          const eventIds = new Set<string>();
 
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data();
-        if (data.eventId) eventIds.add(data.eventId);
-        servicesData.push({
-          id: doc.id,
-          eventId: data.eventId,
-          theme: data.theme || null,
-          serviceTime: data.serviceTime,
-          programNotes: data.programNotes || null,
-          attendanceCount: data.attendanceCount || null,
-          isArchived: data.isArchived || false,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-          event: null,
-          assignmentCount: 0,
-        });
-      });
-
-      // Fetch events for these services (client-side join)
-      if (eventIds.size > 0) {
-        const { getDocs, documentId } = await import("firebase/firestore");
-        const eventIdArray = Array.from(eventIds);
-        // Process in chunks of 30 (Firestore 'in' limit)
-        for (let i = 0; i < eventIdArray.length; i += 30) {
-          const chunk = eventIdArray.slice(i, i + 30);
-          const eventsQuery = query(
-            safeCollection("events"),
-            where(documentId(), "in", chunk)
-          );
-          const eventsSnap = await getDocs(eventsQuery);
-          eventsSnap.docs.forEach((eventDoc) => {
-            const eventData = eventDoc.data();
-            const event: AppEvent = {
-              id: eventDoc.id,
-              title: eventData.title,
-              description: eventData.description || null,
-              type: eventData.type,
-              startDate: eventData.startDate?.toDate?.() || new Date(),
-              endDate: eventData.endDate?.toDate?.() || null,
-              venue: eventData.venue,
-              isRecurring: eventData.isRecurring || false,
-              createdBy: eventData.createdBy,
-              createdAt: eventData.createdAt?.toDate?.() || new Date(),
-              updatedAt: eventData.updatedAt?.toDate?.() || new Date(),
-            };
-            servicesData.forEach((s) => {
-              if (s.eventId === eventDoc.id) {
-                s.event = event;
-              }
+          snapshot.docs.forEach((doc) => {
+            const data = doc.data();
+            if (data.eventId) eventIds.add(data.eventId);
+            servicesData.push({
+              id: doc.id,
+              eventId: data.eventId,
+              theme: data.theme || null,
+              serviceTime: data.serviceTime,
+              programNotes: data.programNotes || null,
+              attendanceCount: data.attendanceCount || null,
+              isArchived: data.isArchived || false,
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+              updatedAt: data.updatedAt?.toDate?.() || new Date(),
+              event: null,
+              assignmentCount: 0,
             });
           });
-        }
-      }
 
-      // Fetch assignment counts
-      const serviceIds = servicesData.map((s) => s.id);
-      if (serviceIds.length > 0) {
-        const { getDocs } = await import("firebase/firestore");
-        for (let i = 0; i < serviceIds.length; i += 30) {
-          const chunk = serviceIds.slice(i, i + 30);
-          const assignQuery = query(
-            safeCollection("serviceAssignments"),
-            where("serviceId", "in", chunk)
-          );
-          const assignSnap = await getDocs(assignQuery);
-          const counts: Record<string, number> = {};
-          assignSnap.docs.forEach((doc) => {
-            const sid = doc.data().serviceId;
-            counts[sid] = (counts[sid] || 0) + 1;
-          });
+          // Fetch events for these services (client-side join)
+          if (eventIds.size > 0) {
+            const { getDocs, documentId } = await import("firebase/firestore");
+            const eventIdArray = Array.from(eventIds);
+            // Process in chunks of 30 (Firestore 'in' limit)
+            for (let i = 0; i < eventIdArray.length; i += 30) {
+              const chunk = eventIdArray.slice(i, i + 30);
+              const eventsQuery = query(
+                safeCollection("events"),
+                where(documentId(), "in", chunk)
+              );
+              const eventsSnap = await getDocs(eventsQuery);
+              eventsSnap.docs.forEach((eventDoc) => {
+                const eventData = eventDoc.data();
+                const event: AppEvent = {
+                  id: eventDoc.id,
+                  title: eventData.title,
+                  description: eventData.description || null,
+                  type: eventData.type,
+                  startDate: eventData.startDate?.toDate?.() || new Date(),
+                  endDate: eventData.endDate?.toDate?.() || null,
+                  venue: eventData.venue,
+                  isRecurring: eventData.isRecurring || false,
+                  createdBy: eventData.createdBy,
+                  createdAt: eventData.createdAt?.toDate?.() || new Date(),
+                  updatedAt: eventData.updatedAt?.toDate?.() || new Date(),
+                };
+                servicesData.forEach((s) => {
+                  if (s.eventId === eventDoc.id) {
+                    s.event = event;
+                  }
+                });
+              });
+            }
+          }
+
+          // Fetch assignment counts
+          const serviceIds = servicesData.map((s) => s.id);
+          if (serviceIds.length > 0) {
+            const { getDocs } = await import("firebase/firestore");
+            for (let i = 0; i < serviceIds.length; i += 30) {
+              const chunk = serviceIds.slice(i, i + 30);
+              const assignQuery = query(
+                safeCollection("serviceAssignments"),
+                where("serviceId", "in", chunk)
+              );
+              const assignSnap = await getDocs(assignQuery);
+              const counts: Record<string, number> = {};
+              assignSnap.docs.forEach((doc) => {
+                const sid = doc.data().serviceId;
+                counts[sid] = (counts[sid] || 0) + 1;
+              });
+              servicesData.forEach((s) => {
+                if (counts[s.id]) {
+                  s.assignmentCount = counts[s.id];
+                }
+              });
+            }
+          }
+
+          // Sort by event date, splitting into upcoming and past
+          const upcoming: ServiceWithEvent[] = [];
+          const past: ServiceWithEvent[] = [];
+
           servicesData.forEach((s) => {
-            if (counts[s.id]) {
-              s.assignmentCount = counts[s.id];
+            const eventDate = s.event?.startDate;
+            if (eventDate && isPast(eventDate) && !isToday(eventDate)) {
+              past.push(s);
+            } else {
+              upcoming.push(s);
             }
           });
+
+          // Sort upcoming by date ascending (nearest first)
+          upcoming.sort((a, b) => {
+            const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
+            const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
+            return dateA - dateB;
+          });
+
+          // Sort past by date descending (most recent first)
+          past.sort((a, b) => {
+            const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
+            const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
+            return dateB - dateA;
+          });
+
+          setUpcomingServices(upcoming);
+          setPastServices(past);
+          setError(null);
+        } catch (err) {
+          console.error("Error processing services data:", err);
+          setError("Failed to load services. Please try again.");
+        } finally {
+          setLoading(false);
         }
+      },
+      (err) => {
+        console.error("Firestore snapshot error:", err);
+        setError("Failed to load services. Please check your connection and try again.");
+        setLoading(false);
       }
-
-      // Sort by event date, splitting into upcoming and past
-      const now = new Date();
-      const upcoming: ServiceWithEvent[] = [];
-      const past: ServiceWithEvent[] = [];
-
-      servicesData.forEach((s) => {
-        const eventDate = s.event?.startDate;
-        if (eventDate && isPast(eventDate) && !isToday(eventDate)) {
-          past.push(s);
-        } else {
-          upcoming.push(s);
-        }
-      });
-
-      // Sort upcoming by date ascending (nearest first)
-      upcoming.sort((a, b) => {
-        const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
-        const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
-        return dateA - dateB;
-      });
-
-      // Sort past by date descending (most recent first)
-      past.sort((a, b) => {
-        const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
-        const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
-        return dateB - dateA;
-      });
-
-      setUpcomingServices(upcoming);
-      setPastServices(past);
-      setLoading(false);
-    });
+    );
 
     return () => unsubActive();
   }, [userData]);
@@ -274,6 +289,21 @@ function ServicesListContent() {
     return (
       <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+        <h3 className="text-lg font-display text-clay-600 mb-2">
+          Something went wrong
+        </h3>
+        <p className="text-sm text-clay-400 mb-4">{error}</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Try Again
+        </Button>
       </div>
     );
   }
