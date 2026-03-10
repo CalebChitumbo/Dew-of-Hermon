@@ -564,26 +564,27 @@ function AssignmentBoardContent() {
       const membersRef = safeCollection("users");
       const membersQuery = query(
         membersRef,
-        where("isActive", "==", true),
-        orderBy("name")
+        where("isActive", "==", true)
       );
       const snapshot = await getDocs(membersQuery);
-      const membersData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name,
-          email: data.email,
-          phone: data.phone || null,
-          role: data.role,
-          departmentIds: data.departmentIds || [],
-          leadsDepartmentIds: data.leadsDepartmentIds || [],
-          profileImage: data.profileImage || null,
-          isActive: data.isActive ?? true,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        } as User;
-      });
+      const membersData = snapshot.docs
+        .map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone || null,
+            role: data.role,
+            departmentIds: data.departmentIds || [],
+            leadsDepartmentIds: data.leadsDepartmentIds || [],
+            profileImage: data.profileImage || null,
+            isActive: data.isActive ?? true,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(),
+          } as User;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
       setMembers(membersData);
     } catch (error) {
       console.error("Error loading members:", error);
