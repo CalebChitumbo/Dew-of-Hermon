@@ -20,42 +20,36 @@ export async function POST(request: Request) {
     const userDoc = await adminDb.collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
-      // Auto-create user profile for Google sign-in or email/password registration
-      if (isGoogleSignIn || registrationName) {
-        const now = new Date();
-        const newUserData = {
-          name: registrationName || decodedToken.name || "User",
-          email: decodedToken.email || "",
-          phone: null,
-          role: "MEMBER",
-          departmentIds: [],
-          leadsDepartmentIds: [],
-          profileImage: decodedToken.picture || null,
-          isActive: true,
-          createdAt: now,
-          updatedAt: now,
-        };
-        await adminDb.collection("users").doc(uid).set(newUserData);
+      // Auto-create user profile if missing (handles Google sign-in,
+      // registration, and recovery for users whose profile wasn't created)
+      const now = new Date();
+      const newUserData = {
+        name: registrationName || decodedToken.name || "User",
+        email: decodedToken.email || "",
+        phone: null,
+        role: "MEMBER",
+        departmentIds: [],
+        leadsDepartmentIds: [],
+        profileImage: decodedToken.picture || null,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await adminDb.collection("users").doc(uid).set(newUserData);
 
-        // Set session cookie
-        const cookieStore = await cookies();
-        cookieStore.set("session", idToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          maxAge: 60 * 60 * 24 * 7,
-          path: "/",
-        });
+      // Set session cookie
+      const cookieStore = await cookies();
+      cookieStore.set("session", idToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7,
+        path: "/",
+      });
 
-        return NextResponse.json({
-          user: { id: uid, ...newUserData },
-        });
-      }
-
-      return NextResponse.json(
-        { error: "User profile not found. Please contact an admin." },
-        { status: 404 }
-      );
+      return NextResponse.json({
+        user: { id: uid, ...newUserData },
+      });
     }
 
     const userData = userDoc.data();
