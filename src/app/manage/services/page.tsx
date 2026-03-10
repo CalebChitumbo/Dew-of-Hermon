@@ -141,6 +141,13 @@ function ServicesListContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("upcoming");
+  const [retryCount, setRetryCount] = useState(0);
+
+  const retry = () => {
+    setError(null);
+    setLoading(true);
+    setRetryCount((c) => c + 1);
+  };
 
   useEffect(() => {
     if (!userData) return;
@@ -275,15 +282,24 @@ function ServicesListContent() {
           setLoading(false);
         }
       },
-      (err) => {
+      (err: unknown) => {
         console.error("Firestore snapshot error:", err);
-        setError("Failed to load services. Please check your connection and try again.");
+        const code = (err as { code?: string })?.code;
+        if (code === "failed-precondition") {
+          setError(
+            "A required database index is still building. Please wait a minute and try again."
+          );
+        } else if (code === "permission-denied") {
+          setError("You don't have permission to view services.");
+        } else {
+          setError("Failed to load services. Please check your connection and try again.");
+        }
         setLoading(false);
       }
     );
 
     return () => unsubActive();
-  }, [userData]);
+  }, [userData, retryCount]);
 
   if (loading) {
     return (
@@ -301,7 +317,7 @@ function ServicesListContent() {
           Something went wrong
         </h3>
         <p className="text-sm text-clay-400 mb-4">{error}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>
+        <Button variant="outline" onClick={retry}>
           Try Again
         </Button>
       </div>
