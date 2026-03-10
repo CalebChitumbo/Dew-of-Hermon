@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { canAssignAnyRole, canAssignOwnDeptRole } from "@/lib/permissions";
+import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
@@ -176,13 +177,17 @@ export async function POST(
       );
     }
 
-    // Create in-app notification for the assigned user
+    // Create in-app notification and send email for the assigned user
     try {
       const assignment = result.assignment!;
       // Fetch event info for the notification message
       const serviceDoc = await adminDb.collection("services").doc(serviceId).get();
       const serviceData = serviceDoc.data();
       let eventDate = "";
+      let venue = "";
+      let eventTitle = "";
+      let serviceTime = serviceData?.serviceTime || "";
+      let theme = serviceData?.theme || "";
       if (serviceData?.eventId) {
         const eventDoc = await adminDb.collection("events").doc(serviceData.eventId).get();
         const eventData = eventDoc.data();
@@ -195,22 +200,77 @@ export async function POST(
             year: "numeric",
           });
         }
+        venue = eventData?.venue || "";
+        eventTitle = eventData?.title || "";
       }
+
+      // Fetch role details for arrival time
+      const roleDoc = await adminDb.collection("serviceRoles").doc(body.roleId).get();
+      const roleData = roleDoc.data();
+      const arrivalTime = roleData?.arrivalTime || serviceTime || "TBD";
+
+      const notificationMessage = eventDate
+        ? `You have been assigned as ${assignment.roleName} for the service on ${eventDate}. Please confirm or decline.`
+        : `You have been assigned as ${assignment.roleName}. Please confirm or decline.`;
 
       await adminDb.collection("notifications").add({
         userId: assignment.userId,
         title: `New Assignment: ${assignment.roleName}`,
-        message: eventDate
-          ? `You have been assigned as ${assignment.roleName} for the service on ${eventDate}. Please confirm or decline.`
-          : `You have been assigned as ${assignment.roleName}. Please confirm or decline.`,
+        message: notificationMessage,
         type: "assignment",
         isRead: false,
         link: "/my-schedule",
         createdAt: new Date(),
       });
+
+      // Send assignment email notification
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
+      const confirmLink = `${appUrl}/my-schedule`;
+
+      const emailSubject = `New Assignment: ${assignment.roleName}${eventDate ? ` - ${eventDate}` : ""}`;
+      const emailTextLines = [
+        `Dear ${assignment.userName},`,
+        "",
+        `You have been assigned as ${assignment.roleName}${eventTitle ? ` for ${eventTitle}` : ""}${eventDate ? ` on ${eventDate}` : ""}.`,
+        "",
+        ...(serviceTime ? [`Service Time: ${serviceTime}`] : []),
+        ...(arrivalTime ? [`Arrival Time: ${arrivalTime}`] : []),
+        ...(venue ? [`Venue: ${venue}`] : []),
+        ...(theme ? [`Theme: ${theme}`] : []),
+        "",
+        "Please confirm or decline your assignment:",
+        confirmLink,
+        "",
+        "Blessings,",
+        "Potter's Wheel Team",
+      ];
+      const emailText = emailTextLines.join("\n");
+      const emailHtml = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #5C4033;">New Assignment: ${assignment.roleName}</h2>
+          <p>Dear ${assignment.userName},</p>
+          <p>You have been assigned as <strong>${assignment.roleName}</strong>${eventTitle ? ` for <strong>${eventTitle}</strong>` : ""}${eventDate ? ` on <strong>${eventDate}</strong>` : ""}.</p>
+          <table style="margin: 16px 0; border-collapse: collapse;">
+            ${serviceTime ? `<tr><td style="padding: 4px 12px 4px 0; color: #888;">Service Time</td><td style="padding: 4px 0;">${serviceTime}</td></tr>` : ""}
+            ${arrivalTime ? `<tr><td style="padding: 4px 12px 4px 0; color: #888;">Arrival Time</td><td style="padding: 4px 0;">${arrivalTime}</td></tr>` : ""}
+            ${venue ? `<tr><td style="padding: 4px 12px 4px 0; color: #888;">Venue</td><td style="padding: 4px 0;">${venue}</td></tr>` : ""}
+            ${theme ? `<tr><td style="padding: 4px 12px 4px 0; color: #888;">Theme</td><td style="padding: 4px 0;">${theme}</td></tr>` : ""}
+          </table>
+          <p>Please confirm or decline your assignment:</p>
+          <a href="${confirmLink}" style="display: inline-block; padding: 10px 24px; background-color: #14b8a6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">View My Schedule</a>
+          <p style="margin-top: 24px; color: #888;">Blessings,<br/>Potter's Wheel Team</p>
+        </div>
+      `;
+
+      await sendEmail({
+        to: assignment.userEmail,
+        subject: emailSubject,
+        text: emailText,
+        html: emailHtml,
+      });
     } catch (notifError) {
-      // Don't fail the assignment if notification creation fails
-      console.error("Error creating notification:", notifError);
+      // Don't fail the assignment if notification/email fails
+      console.error("Error creating notification or sending email:", notifError);
     }
 
     return NextResponse.json(
