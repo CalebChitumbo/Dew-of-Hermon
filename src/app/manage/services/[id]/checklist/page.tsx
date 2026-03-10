@@ -9,6 +9,7 @@ import {
   orderBy,
   onSnapshot,
   updateDoc,
+  getDoc,
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -154,7 +155,6 @@ function ChecklistContent() {
 
         // Fetch event
         if (data.eventId) {
-          const { getDoc } = await import("firebase/firestore");
           const eventDoc = await getDoc(safeDoc("events", data.eventId));
           if (eventDoc.exists()) {
             const eData = eventDoc.data();
