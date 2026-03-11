@@ -7,7 +7,6 @@ import {
   where,
   onSnapshot,
   updateDoc,
-  orderBy,
   Timestamp,
   setDoc,
   deleteDoc,
@@ -57,6 +56,7 @@ export default function MySchedulePage() {
   const [loading, setLoading] = useState(true);
   const [servicesLoaded, setServicesLoaded] = useState(false);
   const [eventsLoaded, setEventsLoaded] = useState(false);
+  const [queryError, setQueryError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Availability form state
@@ -68,10 +68,11 @@ export default function MySchedulePage() {
   useEffect(() => {
     if (!firebaseUser) return;
 
+    // Query without orderBy to avoid composite index requirement
+    // Sorting is done in JavaScript after enrichment
     const assignmentsQuery = query(
       safeCollection("serviceAssignments"),
-      where("userId", "==", firebaseUser.uid),
-      orderBy("createdAt", "desc")
+      where("userId", "==", firebaseUser.uid)
     );
 
     const unsubAssignments = onSnapshot(
@@ -89,10 +90,12 @@ export default function MySchedulePage() {
           } as EnrichedAssignment;
         });
         setAssignments(assignmentData);
+        setQueryError(null);
         setLoading(false);
       },
       (error) => {
         console.error("Error listening to assignments:", error);
+        setQueryError(error.message || "Failed to load assignments");
         setLoading(false);
       }
     );
@@ -160,6 +163,9 @@ export default function MySchedulePage() {
           date: d.id,
         })) as UserAvailability[];
         setAvailability(avail.sort((a, b) => a.date.localeCompare(b.date)));
+      },
+      (error) => {
+        console.error("Error listening to availability:", error);
       }
     );
 
@@ -317,7 +323,19 @@ export default function MySchedulePage() {
         <h2 className="text-lg font-display font-semibold text-clay-700 mb-4">
           Upcoming Assignments
         </h2>
-        {upcomingAssignments.length === 0 ? (
+        {queryError ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+              <h3 className="text-lg font-display font-semibold text-clay-600">
+                Unable to Load Assignments
+              </h3>
+              <p className="text-clay-400 text-sm mt-1 text-center max-w-md">
+                There was a problem loading your assignments. Please try refreshing the page.
+              </p>
+            </CardContent>
+          </Card>
+        ) : upcomingAssignments.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <CalendarDays className="h-12 w-12 text-clay-300 mb-4" />
