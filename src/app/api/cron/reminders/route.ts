@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, validateEmailConfig } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 import {
@@ -70,6 +70,19 @@ export async function GET(request: NextRequest) {
 
     if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Pre-flight check: validate email configuration
+    const configError = validateEmailConfig();
+    if (configError) {
+      console.error("Email config validation failed:", configError);
+      return NextResponse.json(
+        {
+          error: "Email configuration error",
+          message: configError,
+        },
+        { status: 500 }
+      );
     }
 
     // Determine today's reminder day
@@ -172,6 +185,8 @@ export async function GET(request: NextRequest) {
 
     // For each service, get assignments
     let totalSent = 0;
+    let totalSkipped = 0;
+    let totalNoEmail = 0;
     const errors: string[] = [];
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
 
@@ -198,7 +213,19 @@ export async function GET(request: NextRequest) {
         if (!role.reminderSchedule.includes(today)) continue;
 
         // Skip if already declined
-        if (assignment.status === "DECLINED") continue;
+        if (assignment.status === "DECLINED") {
+          totalSkipped++;
+          continue;
+        }
+
+        // Check for missing email
+        if (!assignment.userEmail) {
+          totalNoEmail++;
+          errors.push(
+            `${assignment.userName || "Unknown user"} has no email address on file`
+          );
+          continue;
+        }
 
         // Build email from role template
         const placeholderData = {
@@ -266,14 +293,20 @@ export async function GET(request: NextRequest) {
       reminderDay: today,
       sentAt: new Date(),
       recipientCount: totalSent,
+      skippedCount: totalSkipped,
+      noEmailCount: totalNoEmail,
       errors: errors.length > 0 ? errors.join("; ") : null,
+      errorDetails: errors.slice(0, 10),
       serviceIds,
     });
 
     return NextResponse.json({
       message: `Reminder batch completed for ${today}`,
       sent: totalSent,
+      skipped: totalSkipped,
+      noEmail: totalNoEmail,
       errors: errors.length,
+      errorDetails: errors.slice(0, 10),
     });
   } catch (error) {
     console.error("Cron reminder error:", error);
