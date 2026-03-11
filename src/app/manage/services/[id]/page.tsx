@@ -790,14 +790,32 @@ function AssignmentBoardContent() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to send reminders");
+        throw new Error(result.message || result.error || "Failed to send reminders");
       }
 
-      if (result.errors > 0) {
+      if (result.errors > 0 && result.sent === 0) {
+        // All emails failed
+        const detail = result.errorDetails?.[0] || "Check email configuration.";
+        toast({
+          title: "Reminders failed to send",
+          description: `Could not send to any of the ${result.total || "assigned"} member(s). ${detail}`,
+          variant: "destructive",
+        });
+      } else if (result.errors > 0) {
+        // Some emails failed
         toast({
           title: "Some reminders failed",
           description: `Sent to ${result.sent} member${result.sent !== 1 ? "s" : ""}, but ${result.errors} failed.${result.errorDetails?.[0] ? ` ${result.errorDetails[0]}` : ""}`,
           variant: "destructive",
+        });
+      } else if (result.sent === 0) {
+        // No emails were sent (e.g. all declined)
+        const reason = result.skipped > 0
+          ? `All ${result.skipped} assignment(s) have been declined.`
+          : "No eligible members to notify.";
+        toast({
+          title: "No reminders sent",
+          description: reason,
         });
       } else {
         toast({

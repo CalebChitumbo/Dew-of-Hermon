@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, validateEmailConfig } from "@/lib/email";
 import { hasMinRole } from "@/lib/permissions";
 import { UserRole } from "@/types";
 import { format } from "date-fns";
@@ -16,6 +16,19 @@ export async function POST(
 
     if (!callerRole || !hasMinRole(callerRole, "DEPARTMENT_LEAD")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    // Pre-flight check: validate email configuration
+    const configError = validateEmailConfig();
+    if (configError) {
+      console.error("Email config validation failed:", configError);
+      return NextResponse.json(
+        {
+          error: "Email configuration error",
+          message: configError,
+        },
+        { status: 500 }
+      );
     }
 
     // Fetch the service
@@ -76,13 +89,28 @@ export async function POST(
     const theme = serviceData.theme || "";
 
     let sentCount = 0;
+    let skippedCount = 0;
+    let noEmailCount = 0;
     const errors: string[] = [];
+    const totalAssignments = assignmentsSnapshot.docs.length;
 
     for (const assignDoc of assignmentsSnapshot.docs) {
       const assignment = assignDoc.data();
 
       // Skip declined assignments
-      if (assignment.status === "DECLINED") continue;
+      if (assignment.status === "DECLINED") {
+        skippedCount++;
+        continue;
+      }
+
+      // Check for missing email
+      if (!assignment.userEmail) {
+        noEmailCount++;
+        errors.push(
+          `${assignment.userName || "Unknown user"} has no email address on file`
+        );
+        continue;
+      }
 
       const subject = `Reminder: ${assignment.roleName} - ${eventTitle}`;
       const text = [
@@ -155,8 +183,11 @@ export async function POST(
     return NextResponse.json({
       message: `Reminders sent successfully`,
       sent: sentCount,
+      total: totalAssignments,
+      skipped: skippedCount,
+      noEmail: noEmailCount,
       errors: errors.length,
-      errorDetails: errors.slice(0, 5),
+      errorDetails: errors.slice(0, 10),
     });
   } catch (error) {
     console.error("Send reminder error:", error);
