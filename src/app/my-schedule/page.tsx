@@ -55,6 +55,8 @@ export default function MySchedulePage() {
   const [events, setEvents] = useState<Map<string, AppEvent>>(new Map());
   const [availability, setAvailability] = useState<UserAvailability[]>([]);
   const [loading, setLoading] = useState(true);
+  const [servicesLoaded, setServicesLoaded] = useState(false);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Availability form state
@@ -112,8 +114,10 @@ export default function MySchedulePage() {
         } as Service);
       });
       setServices(svcMap);
+      setServicesLoaded(true);
     }, (error) => {
       console.error("Error listening to services:", error);
+      setServicesLoaded(true);
     });
 
     return () => unsubServices();
@@ -135,8 +139,10 @@ export default function MySchedulePage() {
         } as AppEvent);
       });
       setEvents(evtMap);
+      setEventsLoaded(true);
     }, (error) => {
       console.error("Error listening to events:", error);
+      setEventsLoaded(true);
     });
 
     return () => unsubEvents();
@@ -175,8 +181,20 @@ export default function MySchedulePage() {
   });
 
   const upcomingAssignments = enrichedAssignments
-    .filter((a) => a.serviceDate && (isFuture(a.serviceDate) || isToday(a.serviceDate)))
-    .sort((a, b) => (a.serviceDate!.getTime() - b.serviceDate!.getTime()));
+    .filter((a) => {
+      // If enrichment data hasn't loaded yet, include all assignments
+      if (!servicesLoaded || !eventsLoaded) return true;
+      // If enrichment failed (missing service/event), still show the assignment
+      if (!a.serviceDate) return true;
+      return isFuture(a.serviceDate) || isToday(a.serviceDate);
+    })
+    .sort((a, b) => {
+      // Assignments without dates go to the top (need attention)
+      if (!a.serviceDate && !b.serviceDate) return 0;
+      if (!a.serviceDate) return -1;
+      if (!b.serviceDate) return 1;
+      return a.serviceDate.getTime() - b.serviceDate.getTime();
+    });
 
   const pastAssignments = enrichedAssignments
     .filter((a) => a.serviceDate && isPast(a.serviceDate) && !isToday(a.serviceDate))
@@ -258,7 +276,7 @@ export default function MySchedulePage() {
     }
   };
 
-  if (loading) {
+  if (loading || (!servicesLoaded && !eventsLoaded)) {
     return (
       <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />
