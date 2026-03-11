@@ -271,12 +271,13 @@ export async function POST(
 
       // Update emailSent status on the assignment
       const assignmentRef = adminDb.collection("serviceAssignments").doc(assignment.id);
+      const sentAt = new Date();
       await assignmentRef.update({
         emailSent: true,
-        emailSentAt: new Date(),
+        emailSentAt: sentAt,
       });
-      assignment.emailSent = true;
-      assignment.emailSentAt = new Date().toISOString();
+      (assignment as Record<string, unknown>).emailSent = true;
+      (assignment as Record<string, unknown>).emailSentAt = sentAt.toISOString();
     } catch (notifError) {
       // Don't fail the assignment if notification/email fails, but log clearly
       console.error("Error creating notification or sending email:", notifError);
