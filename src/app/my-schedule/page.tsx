@@ -6,6 +6,10 @@ import {
   onSnapshot,
   setDoc,
   deleteDoc,
+  query,
+  where,
+  getDocs,
+  updateDoc,
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -139,6 +143,28 @@ export default function MySchedulePage() {
     .sort((a, b) => (b.serviceDate!.getTime() - a.serviceDate!.getTime()))
     .slice(0, 5);
 
+  // Mark unread notifications related to an assignment as read
+  const markRelatedNotificationsAsRead = async (roleName: string) => {
+    if (!firebaseUser) return;
+    try {
+      const q = query(
+        safeCollection("notifications"),
+        where("userId", "==", firebaseUser.uid),
+        where("isRead", "==", false)
+      );
+      const snapshot = await getDocs(q);
+      const updatePromises = snapshot.docs
+        .filter((doc) => {
+          const title = doc.data().title as string;
+          return title?.includes(roleName);
+        })
+        .map((doc) => updateDoc(safeDoc("notifications", doc.id), { isRead: true }));
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error("Failed to mark related notifications as read:", error);
+    }
+  };
+
   const handleConfirm = async (assignmentId: string) => {
     if (!firebaseUser) return;
     setActionLoading(assignmentId);
@@ -174,6 +200,7 @@ export default function MySchedulePage() {
         description: "You have confirmed your assignment.",
         variant: "success",
       });
+      markRelatedNotificationsAsRead(assignment.roleName);
       // Refresh assignments from API
       fetchAssignments();
     } catch (error) {
@@ -220,6 +247,7 @@ export default function MySchedulePage() {
         title: "Assignment declined",
         description: "You have declined this assignment.",
       });
+      markRelatedNotificationsAsRead(assignment.roleName);
       fetchAssignments();
     } catch (error) {
       console.error("Error declining assignment:", error);
