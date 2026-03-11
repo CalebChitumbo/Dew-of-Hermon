@@ -793,11 +793,19 @@ function AssignmentBoardContent() {
         throw new Error(result.error || "Failed to send reminders");
       }
 
-      toast({
-        title: "Reminders sent",
-        description: `Notification reminders sent to ${result.sent} assigned member${result.sent !== 1 ? "s" : ""}.`,
-        variant: "success",
-      });
+      if (result.errors > 0) {
+        toast({
+          title: "Some reminders failed",
+          description: `Sent to ${result.sent} member${result.sent !== 1 ? "s" : ""}, but ${result.errors} failed.${result.errorDetails?.[0] ? ` ${result.errorDetails[0]}` : ""}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Reminders sent",
+          description: `Notification reminders sent to ${result.sent} assigned member${result.sent !== 1 ? "s" : ""}.`,
+          variant: "success",
+        });
+      }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "Failed to send reminders";

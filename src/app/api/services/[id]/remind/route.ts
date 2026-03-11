@@ -156,6 +156,7 @@ export async function POST(
       message: `Reminders sent successfully`,
       sent: sentCount,
       errors: errors.length,
+      errorDetails: errors.slice(0, 5),
     });
   } catch (error) {
     console.error("Send reminder error:", error);
