@@ -234,6 +234,15 @@ export async function GET(request: NextRequest) {
 
           totalSent++;
 
+          // Update emailSent status on the assignment
+          await adminDb
+            .collection("serviceAssignments")
+            .doc(assignDoc.id)
+            .update({
+              emailSent: true,
+              emailSentAt: new Date(),
+            });
+
           // Create in-app notification
           await adminDb.collection("notifications").add({
             userId: assignment.userId,
