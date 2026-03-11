@@ -31,6 +31,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
+  Bell,
   Calendar,
   MapPin,
   Clock,
@@ -404,6 +405,8 @@ function AssignmentBoardContent() {
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [reminderConfirmOpen, setReminderConfirmOpen] = useState(false);
 
   // ─── Load service data (real-time) ───
 
@@ -772,6 +775,42 @@ function AssignmentBoardContent() {
     [serviceId, userData, toast, fetchAssignmentsViaApi]
   );
 
+  const handleSendReminder = useCallback(async () => {
+    if (!userData) return;
+
+    setSendingReminder(true);
+    setReminderConfirmOpen(false);
+    try {
+      const response = await fetch(`/api/services/${serviceId}/remind`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ callerRole: userData.role }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to send reminders");
+      }
+
+      toast({
+        title: "Reminders sent",
+        description: `Notification reminders sent to ${result.sent} assigned member${result.sent !== 1 ? "s" : ""}.`,
+        variant: "success",
+      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to send reminders";
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingReminder(false);
+    }
+  }, [serviceId, userData, toast]);
+
   // ─── Render ───
 
   if (loading) return <PageLoader />;
@@ -835,12 +874,29 @@ function AssignmentBoardContent() {
             </span>
           </div>
         </div>
-        <Link href={`/manage/services/${serviceId}/checklist`}>
-          <Button variant="outline" className="gap-2">
-            <ClipboardList className="h-4 w-4" />
-            <span className="hidden sm:inline">Checklist</span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setReminderConfirmOpen(true)}
+            disabled={sendingReminder || assignments.length === 0}
+          >
+            {sendingReminder ? (
+              <LoadingSpinner size="sm" />
+            ) : (
+              <Bell className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">
+              {sendingReminder ? "Sending..." : "Remind"}
+            </span>
           </Button>
-        </Link>
+          <Link href={`/manage/services/${serviceId}/checklist`}>
+            <Button variant="outline" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Checklist</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Readiness Ring + Stats */}
@@ -921,6 +977,36 @@ function AssignmentBoardContent() {
           ))}
         </div>
       )}
+
+      {/* Reminder Confirmation Dialog */}
+      <Dialog
+        open={reminderConfirmOpen}
+        onOpenChange={(o) => !o && setReminderConfirmOpen(false)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Send Reminders</DialogTitle>
+            <DialogDescription>
+              This will send a notification reminder (email and in-app) to all{" "}
+              {assignments.filter((a) => a.status !== "DECLINED").length} assigned
+              member{assignments.filter((a) => a.status !== "DECLINED").length !== 1 ? "s" : ""}{" "}
+              for this service. Declined assignments will be skipped.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setReminderConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="teal" onClick={handleSendReminder}>
+              <Bell className="h-4 w-4 mr-2" />
+              Send Reminders
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Member Selector Dialog */}
       <MemberSelector
