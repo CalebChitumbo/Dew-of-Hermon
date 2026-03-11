@@ -1,24 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
-  query,
-  where,
   onSnapshot,
-  updateDoc,
-  Timestamp,
   setDoc,
   deleteDoc,
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { ServiceAssignment, Service, AppEvent, UserAvailability } from "@/types";
+import { UserAvailability } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -37,25 +32,32 @@ import {
 } from "lucide-react";
 import { format, isPast, isFuture, parseISO, isToday } from "date-fns";
 
-interface EnrichedAssignment extends ServiceAssignment {
-  serviceDate?: Date;
-  serviceTime?: string;
-  eventTitle?: string;
-  venue?: string;
+interface EnrichedAssignment {
+  id: string;
+  serviceId: string;
+  roleId: string;
+  roleName: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  status: string;
+  serviceDate?: Date | null;
+  serviceTime?: string | null;
+  eventTitle?: string | null;
+  venue?: string | null;
   theme?: string | null;
   arrivalTime?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt?: string | null;
 }
 
 export default function MySchedulePage() {
   const { firebaseUser, userData } = useAuth();
   const { toast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
-  const [services, setServices] = useState<Map<string, Service>>(new Map());
-  const [events, setEvents] = useState<Map<string, AppEvent>>(new Map());
   const [availability, setAvailability] = useState<UserAvailability[]>([]);
   const [loading, setLoading] = useState(true);
-  const [servicesLoaded, setServicesLoaded] = useState(false);
-  const [eventsLoaded, setEventsLoaded] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -64,92 +66,40 @@ export default function MySchedulePage() {
   const [unavailableReason, setUnavailableReason] = useState("");
   const [savingAvailability, setSavingAvailability] = useState(false);
 
-  // Listen to user's assignments in real-time
-  useEffect(() => {
+  // Fetch assignments via server-side API (bypasses Firestore rules)
+  const fetchAssignments = useCallback(async () => {
     if (!firebaseUser) return;
 
-    // Query without orderBy to avoid composite index requirement
-    // Sorting is done in JavaScript after enrichment
-    const assignmentsQuery = query(
-      safeCollection("serviceAssignments"),
-      where("userId", "==", firebaseUser.uid)
-    );
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const response = await fetch("/api/my-assignments", {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
 
-    const unsubAssignments = onSnapshot(
-      assignmentsQuery,
-      (snapshot) => {
-        const assignmentData = snapshot.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id,
-            ...data,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-            updatedAt: data.updatedAt?.toDate?.() || new Date(),
-            emailSentAt: data.emailSentAt?.toDate?.() || null,
-            confirmedAt: data.confirmedAt?.toDate?.() || null,
-          } as EnrichedAssignment;
-        });
-        setAssignments(assignmentData);
-        setQueryError(null);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error listening to assignments:", error);
-        setQueryError(error.message || "Failed to load assignments");
-        setLoading(false);
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to fetch assignments");
       }
-    );
 
-    return () => unsubAssignments();
+      const data = await response.json();
+      const enriched = data.assignments.map((a: EnrichedAssignment & { serviceDate?: string | null }) => ({
+        ...a,
+        serviceDate: a.serviceDate ? new Date(a.serviceDate) : null,
+      }));
+      setAssignments(enriched);
+      setQueryError(null);
+    } catch (error) {
+      console.error("Error fetching assignments:", error);
+      setQueryError(error instanceof Error ? error.message : "Failed to load assignments");
+    } finally {
+      setLoading(false);
+    }
   }, [firebaseUser]);
 
-  // Listen to services to enrich assignment data
+  // Fetch assignments on mount and when user changes
   useEffect(() => {
-    const unsubServices = onSnapshot(safeCollection("services"), (snapshot) => {
-      const svcMap = new Map<string, Service>();
-      snapshot.docs.forEach((d) => {
-        const data = d.data();
-        svcMap.set(d.id, {
-          id: d.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        } as Service);
-      });
-      setServices(svcMap);
-      setServicesLoaded(true);
-    }, (error) => {
-      console.error("Error listening to services:", error);
-      setServicesLoaded(true);
-    });
-
-    return () => unsubServices();
-  }, []);
-
-  // Listen to events for date/venue info
-  useEffect(() => {
-    const unsubEvents = onSnapshot(safeCollection("events"), (snapshot) => {
-      const evtMap = new Map<string, AppEvent>();
-      snapshot.docs.forEach((d) => {
-        const data = d.data();
-        evtMap.set(d.id, {
-          id: d.id,
-          ...data,
-          startDate: data.startDate?.toDate?.() || new Date(),
-          endDate: data.endDate?.toDate?.() || null,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        } as AppEvent);
-      });
-      setEvents(evtMap);
-      setEventsLoaded(true);
-    }, (error) => {
-      console.error("Error listening to events:", error);
-      setEventsLoaded(true);
-    });
-
-    return () => unsubEvents();
-  }, []);
+    fetchAssignments();
+  }, [fetchAssignments]);
 
   // Listen to user availability
   useEffect(() => {
@@ -172,54 +122,60 @@ export default function MySchedulePage() {
     return () => unsubAvailability();
   }, [firebaseUser]);
 
-  // Enrich assignments with service/event data
-  const enrichedAssignments = assignments.map((assignment) => {
-    const service = services.get(assignment.serviceId);
-    const event = service ? events.get(service.eventId) : undefined;
-    return {
-      ...assignment,
-      serviceDate: event?.startDate,
-      serviceTime: service?.serviceTime,
-      eventTitle: event?.title,
-      venue: event?.venue,
-      theme: service?.theme,
-    };
-  });
-
-  const upcomingAssignments = enrichedAssignments
+  const upcomingAssignments = assignments
     .filter((a) => {
-      // If enrichment data hasn't loaded yet, include all assignments
-      if (!servicesLoaded || !eventsLoaded) return true;
-      // If enrichment failed (missing service/event), still show the assignment
       if (!a.serviceDate) return true;
       return isFuture(a.serviceDate) || isToday(a.serviceDate);
     })
     .sort((a, b) => {
-      // Assignments without dates go to the top (need attention)
       if (!a.serviceDate && !b.serviceDate) return 0;
       if (!a.serviceDate) return -1;
       if (!b.serviceDate) return 1;
       return a.serviceDate.getTime() - b.serviceDate.getTime();
     });
 
-  const pastAssignments = enrichedAssignments
+  const pastAssignments = assignments
     .filter((a) => a.serviceDate && isPast(a.serviceDate) && !isToday(a.serviceDate))
     .sort((a, b) => (b.serviceDate!.getTime() - a.serviceDate!.getTime()))
     .slice(0, 5);
 
   const handleConfirm = async (assignmentId: string) => {
+    if (!firebaseUser) return;
     setActionLoading(assignmentId);
     try {
-      await updateDoc(safeDoc("serviceAssignments", assignmentId), {
-        status: "CONFIRMED",
-        confirmedAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-      });
+      const idToken = await firebaseUser.getIdToken();
+      // Find the assignment to get serviceId
+      const assignment = assignments.find((a) => a.id === assignmentId);
+      if (!assignment) throw new Error("Assignment not found");
+
+      const response = await fetch(
+        `/api/services/${assignment.serviceId}/assignments/${assignmentId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            status: "CONFIRMED",
+            callerRole: userData?.role,
+            callerId: firebaseUser.uid,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to confirm assignment");
+      }
+
       toast({
         title: "Assignment confirmed",
         description: "You have confirmed your assignment.",
         variant: "success",
       });
+      // Refresh assignments from API
+      fetchAssignments();
     } catch (error) {
       console.error("Error confirming assignment:", error);
       toast({
@@ -232,16 +188,39 @@ export default function MySchedulePage() {
   };
 
   const handleDecline = async (assignmentId: string) => {
+    if (!firebaseUser) return;
     setActionLoading(assignmentId);
     try {
-      await updateDoc(safeDoc("serviceAssignments", assignmentId), {
-        status: "DECLINED",
-        updatedAt: Timestamp.now(),
-      });
+      const idToken = await firebaseUser.getIdToken();
+      const assignment = assignments.find((a) => a.id === assignmentId);
+      if (!assignment) throw new Error("Assignment not found");
+
+      const response = await fetch(
+        `/api/services/${assignment.serviceId}/assignments/${assignmentId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            status: "DECLINED",
+            callerRole: userData?.role,
+            callerId: firebaseUser.uid,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to decline assignment");
+      }
+
       toast({
         title: "Assignment declined",
         description: "You have declined this assignment.",
       });
+      fetchAssignments();
     } catch (error) {
       console.error("Error declining assignment:", error);
       toast({
@@ -282,7 +261,7 @@ export default function MySchedulePage() {
     }
   };
 
-  if (loading || (!servicesLoaded && !eventsLoaded)) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />
