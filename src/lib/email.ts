@@ -32,13 +32,28 @@ export function validateEmailConfig(): string | null {
   }
   const from = process.env.EMAIL_FROM;
   if (!from) {
-    return "EMAIL_FROM environment variable is not set. Using default which may not work with your Resend account. Please set EMAIL_FROM to a verified domain address.";
+    console.warn("EMAIL_FROM is not set, will use default onboarding@resend.dev");
+  } else if (from.includes("yourdomain") || from.includes("example.com")) {
+    console.warn(
+      `EMAIL_FROM contains placeholder value "${from}". It will be overridden with the default.`
+    );
   }
   return null;
 }
 
 export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
-  const from = process.env.EMAIL_FROM || "Dew of Hermon Team <onboarding@resend.dev>";
+  const DEFAULT_FROM = "Dew of Hermon Team <onboarding@resend.dev>";
+  let from = process.env.EMAIL_FROM || DEFAULT_FROM;
+
+  // Guard against placeholder values from .env.example being deployed
+  if (from.includes("yourdomain") || from.includes("example.com")) {
+    console.warn(
+      `EMAIL_FROM contains placeholder value "${from}", falling back to default: ${DEFAULT_FROM}`
+    );
+    from = DEFAULT_FROM;
+  }
+
+  console.log(`[Email] Sending to: ${to}, from: ${from}`);
 
   if (!to) {
     throw new Error("Recipient email address is required");
