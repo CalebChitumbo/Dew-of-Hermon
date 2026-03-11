@@ -38,7 +38,7 @@ export function validateEmailConfig(): string | null {
 }
 
 export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
-  const from = process.env.EMAIL_FROM || "Potter's Wheel <noreply@potterswheel.com>";
+  const from = process.env.EMAIL_FROM || "Dew of Hermon Team <onboarding@resend.dev>";
 
   if (!to) {
     throw new Error("Recipient email address is required");
