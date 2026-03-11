@@ -9,7 +9,7 @@ import {
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserAvailability } from "@/types";
+import { UserAvailability, AssignmentStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,7 @@ interface EnrichedAssignment {
   userId: string;
   userName: string;
   userEmail: string;
-  status: string;
+  status: AssignmentStatus;
   serviceDate?: Date | null;
   serviceTime?: string | null;
   eventTitle?: string | null;

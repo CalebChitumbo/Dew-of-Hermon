@@ -66,9 +66,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Fetch services and events for enrichment
-    const serviceIds = [...new Set(assignments.map((a) => a.serviceId))];
+    const serviceIds = Array.from(new Set(assignments.map((a) => a.serviceId)));
     const servicesMap: Record<string, { eventId?: string; serviceTime?: string; theme?: string }> = {};
-    const eventIds = new Set<string>();
+    const eventIds: string[] = [];
 
     // Fetch services in batches of 10 (Firestore 'in' query limit)
     for (let i = 0; i < serviceIds.length; i += 10) {
@@ -84,15 +84,14 @@ export async function GET(request: NextRequest) {
           serviceTime: data.serviceTime,
           theme: data.theme,
         };
-        if (data.eventId) eventIds.add(data.eventId);
+        if (data.eventId && !eventIds.includes(data.eventId)) eventIds.push(data.eventId);
       });
     }
 
     // Fetch events
     const eventsMap: Record<string, { title?: string; startDate?: string; venue?: string }> = {};
-    const eventIdArr = [...eventIds];
-    for (let i = 0; i < eventIdArr.length; i += 10) {
-      const batch = eventIdArr.slice(i, i + 10);
+    for (let i = 0; i < eventIds.length; i += 10) {
+      const batch = eventIds.slice(i, i + 10);
       const eventsSnapshot = await adminDb
         .collection("events")
         .where("__name__", "in", batch)
