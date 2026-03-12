@@ -256,6 +256,7 @@ export async function GET(request: NextRequest) {
 
           const { emailSent } = await createNotificationWithEmail({
             userId: assignment.userId,
+            recipientEmail: assignment.userEmail,
             title: `Service Reminder: ${role.name}`,
             message: notificationMessage,
             type: "reminder",
