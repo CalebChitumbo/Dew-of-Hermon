@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { sendEmail, validateEmailConfig } from "@/lib/email";
+import { validateEmailConfig } from "@/lib/email";
+import { createNotificationWithEmail } from "@/lib/notifications";
 import { hasMinRole } from "@/lib/permissions";
 import { UserRole } from "@/types";
 import { format } from "date-fns";
@@ -151,28 +152,32 @@ export async function POST(
       `;
 
       try {
-        await sendEmail({ to: assignment.userEmail, subject, text, html });
-        sentCount++;
+        const notificationMessage = `Reminder: You are assigned as ${assignment.roleName} for ${eventTitle}${eventDate ? ` on ${eventDate}` : ""}.${assignment.status === "PENDING" ? " Please confirm your attendance." : ""}`;
 
-        // Update emailSent status on the assignment
-        await adminDb
-          .collection("serviceAssignments")
-          .doc(assignDoc.id)
-          .update({
-            emailSent: true,
-            emailSentAt: new Date(),
-          });
-
-        // Create in-app notification
-        await adminDb.collection("notifications").add({
+        const { emailSent } = await createNotificationWithEmail({
           userId: assignment.userId,
           title: `Service Reminder: ${assignment.roleName}`,
-          message: `Reminder: You are assigned as ${assignment.roleName} for ${eventTitle}${eventDate ? ` on ${eventDate}` : ""}.${assignment.status === "PENDING" ? " Please confirm your attendance." : ""}`,
+          message: notificationMessage,
           type: "reminder",
-          isRead: false,
           link: "/my-schedule",
-          createdAt: new Date(),
+          email: {
+            subject,
+            text,
+            html,
+          },
         });
+
+        if (emailSent) {
+          sentCount++;
+          // Update emailSent status on the assignment
+          await adminDb
+            .collection("serviceAssignments")
+            .doc(assignDoc.id)
+            .update({
+              emailSent: true,
+              emailSentAt: new Date(),
+            });
+        }
       } catch (emailError) {
         const errorMsg = `Failed to send to ${assignment.userEmail}: ${emailError instanceof Error ? emailError.message : "Unknown error"}`;
         console.error(errorMsg);

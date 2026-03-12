@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { canAssignAnyRole, canAssignOwnDeptRole } from "@/lib/permissions";
-import { sendEmail } from "@/lib/email";
+import { createNotificationWithEmail } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
@@ -177,7 +177,7 @@ export async function POST(
       );
     }
 
-    // Create in-app notification and send email for the assigned user
+    // Create in-app notification + send email for the assigned user
     try {
       const assignment = result.assignment!;
       // Fetch event info for the notification message
@@ -213,17 +213,6 @@ export async function POST(
         ? `You have been assigned as ${assignment.roleName} for the service on ${eventDate}. Please confirm or decline.`
         : `You have been assigned as ${assignment.roleName}. Please confirm or decline.`;
 
-      await adminDb.collection("notifications").add({
-        userId: assignment.userId,
-        title: `New Assignment: ${assignment.roleName}`,
-        message: notificationMessage,
-        type: "assignment",
-        isRead: false,
-        link: "/my-schedule",
-        createdAt: new Date(),
-      });
-
-      // Send assignment email notification
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
       const confirmLink = `${appUrl}/my-schedule`;
 
@@ -262,22 +251,30 @@ export async function POST(
         </div>
       `;
 
-      await sendEmail({
-        to: assignment.userEmail,
-        subject: emailSubject,
-        text: emailText,
-        html: emailHtml,
+      const { emailSent } = await createNotificationWithEmail({
+        userId: assignment.userId,
+        title: `New Assignment: ${assignment.roleName}`,
+        message: notificationMessage,
+        type: "assignment",
+        link: "/my-schedule",
+        email: {
+          subject: emailSubject,
+          text: emailText,
+          html: emailHtml,
+        },
       });
 
       // Update emailSent status on the assignment
-      const assignmentRef = adminDb.collection("serviceAssignments").doc(assignment.id);
-      const sentAt = new Date();
-      await assignmentRef.update({
-        emailSent: true,
-        emailSentAt: sentAt,
-      });
-      (assignment as Record<string, unknown>).emailSent = true;
-      (assignment as Record<string, unknown>).emailSentAt = sentAt.toISOString();
+      if (emailSent) {
+        const assignmentRef = adminDb.collection("serviceAssignments").doc(assignment.id);
+        const sentAt = new Date();
+        await assignmentRef.update({
+          emailSent: true,
+          emailSentAt: sentAt,
+        });
+        (assignment as Record<string, unknown>).emailSent = true;
+        (assignment as Record<string, unknown>).emailSentAt = sentAt.toISOString();
+      }
     } catch (notifError) {
       // Don't fail the assignment if notification/email fails, but log clearly
       console.error("Error creating notification or sending email:", notifError);
