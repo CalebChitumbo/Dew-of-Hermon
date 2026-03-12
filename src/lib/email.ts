@@ -1,19 +1,4 @@
-import { Resend } from "resend";
-
-let resend: Resend | null = null;
-
-function getResend(): Resend {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "RESEND_API_KEY is not configured. Please set it in your environment variables."
-    );
-  }
-  if (!resend) {
-    resend = new Resend(apiKey);
-  }
-  return resend;
-}
+import { adminDb } from "@/lib/firebase-admin";
 
 interface SendEmailParams {
   to: string;
@@ -24,21 +9,33 @@ interface SendEmailParams {
 
 /**
  * Validates that the email configuration is ready for sending.
+ * With the Firebase "Trigger Email from Firestore" extension,
+ * we only need Firestore (adminDb) to be configured, plus EMAIL_FROM.
  * Returns null if valid, or an error message string if not.
  */
 export function validateEmailConfig(): string | null {
-  if (!process.env.RESEND_API_KEY) {
-    return "RESEND_API_KEY environment variable is not set. Emails cannot be sent.";
-  }
-  const from = process.env.EMAIL_FROM;
-  if (!from) {
-    return "EMAIL_FROM environment variable is not set. Using default which may not work with your Resend account. Please set EMAIL_FROM to a verified domain address.";
+  if (!process.env.EMAIL_FROM) {
+    return "EMAIL_FROM environment variable is not set. Emails cannot be sent.";
   }
   return null;
 }
 
+/**
+ * Sends an email by writing a document to the Firestore `mail` collection.
+ * The Firebase "Trigger Email from Firestore" extension picks up these
+ * documents and delivers the email via the configured SMTP transport
+ * (e.g. Gmail SMTP — no custom domain required).
+ *
+ * @see https://extensions.dev/extensions/firebase/firestore-send-email
+ */
 export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
-  const from = process.env.EMAIL_FROM || "Dew of Hermon Team <onboarding@resend.dev>";
+  const from = process.env.EMAIL_FROM;
+
+  if (!from) {
+    throw new Error(
+      "EMAIL_FROM is not configured. Please set it in your environment variables."
+    );
+  }
 
   if (!to) {
     throw new Error("Recipient email address is required");
@@ -51,30 +48,23 @@ export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
   }
 
   try {
-    const { data, error } = await getResend().emails.send({
+    const mailRef = await adminDb.collection("mail").add({
       from,
       to: [to],
-      subject,
-      text,
-      html,
+      message: {
+        subject,
+        text,
+        html: html || text.replace(/\n/g, "<br/>"),
+      },
+      createdAt: new Date(),
     });
 
-    if (error) {
-      console.error(`Resend API error for ${to}:`, JSON.stringify(error));
-      throw new Error(`Resend API error for ${to}: ${error.message}`);
-    }
-
-    console.log(`Email sent successfully to ${to}, id: ${data?.id}`);
-    return data;
+    console.log(`Email queued successfully for ${to}, doc: ${mailRef.id}`);
+    return { id: mailRef.id };
   } catch (err) {
-    // Re-throw if it's already our formatted error
-    if (err instanceof Error && err.message.startsWith("Resend API error")) {
-      throw err;
-    }
-    // Network or SDK-level error
-    console.error(`Email send failed for ${to}:`, err);
+    console.error(`Email queue failed for ${to}:`, err);
     throw new Error(
-      `Failed to send email to ${to}: ${err instanceof Error ? err.message : "Unknown error"}`
+      `Failed to queue email for ${to}: ${err instanceof Error ? err.message : "Unknown error"}`
     );
   }
 }
