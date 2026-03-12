@@ -251,7 +251,7 @@ export async function GET(request: NextRequest) {
         );
 
         try {
-          // Send email via Resend
+          // Send email via Firebase mail collection
           await sendEmail({
             to: assignment.userEmail,
             subject: emailSubject,
