@@ -29,9 +29,7 @@ export function validateEmailConfig(): string | null {
  * @see https://extensions.dev/extensions/firebase/firestore-send-email
  */
 export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
-  const from = process.env.EMAIL_FROM;
-
-  if (!from) {
+  if (!process.env.EMAIL_FROM) {
     throw new Error(
       "EMAIL_FROM is not configured. Please set it in your environment variables."
     );
@@ -48,8 +46,11 @@ export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
   }
 
   try {
+    // Write to the "mail" collection — the Firebase "Trigger Email from Firestore"
+    // extension picks this up and sends via its configured SMTP transport.
+    // Do NOT include a "from" field here; the extension uses its own configured
+    // default sender which matches the SMTP credentials.
     const mailRef = await adminDb.collection("mail").add({
-      from,
       to: [to],
       message: {
         subject,

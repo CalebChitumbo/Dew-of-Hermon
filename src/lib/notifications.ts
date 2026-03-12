@@ -7,6 +7,8 @@ interface CreateNotificationParams {
   message: string;
   type: "reminder" | "assignment" | "event" | "announcement";
   link?: string | null;
+  /** Pass the recipient email directly to avoid an extra Firestore lookup */
+  recipientEmail?: string;
   email?: {
     subject: string;
     text: string;
@@ -28,6 +30,7 @@ export async function createNotificationWithEmail({
   message,
   type,
   link = null,
+  recipientEmail,
   email,
 }: CreateNotificationParams) {
   // 1. Create the in-app notification
@@ -50,13 +53,15 @@ export async function createNotificationWithEmail({
     return { notificationId: notificationRef.id, emailSent: false };
   }
 
-  // Look up the user's email address
-  let userEmail: string | null = null;
-  try {
-    const userDoc = await adminDb.collection("users").doc(userId).get();
-    userEmail = userDoc.data()?.email || null;
-  } catch (err) {
-    console.error(`Failed to fetch user ${userId} for email:`, err);
+  // Use the provided email or look it up from the users collection
+  let userEmail: string | null = recipientEmail || null;
+  if (!userEmail) {
+    try {
+      const userDoc = await adminDb.collection("users").doc(userId).get();
+      userEmail = userDoc.data()?.email || null;
+    } catch (err) {
+      console.error(`Failed to fetch user ${userId} for email:`, err);
+    }
   }
 
   if (!userEmail) {

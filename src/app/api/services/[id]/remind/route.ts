@@ -156,6 +156,7 @@ export async function POST(
 
         const { emailSent } = await createNotificationWithEmail({
           userId: assignment.userId,
+          recipientEmail: assignment.userEmail,
           title: `Service Reminder: ${assignment.roleName}`,
           message: notificationMessage,
           type: "reminder",
