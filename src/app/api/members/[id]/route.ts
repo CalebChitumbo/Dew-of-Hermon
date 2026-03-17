@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { canManageMembers, canDeleteMembers, canChangeUserRoles, getAssignableRoles } from "@/lib/permissions";
+import { UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
-import { UserRole } from "@/types";
 
 async function getCallerRole(): Promise<{ uid: string; role: UserRole } | null> {
   try {
