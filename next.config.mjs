@@ -5,7 +5,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   transpilePackages: ["firebase", "@firebase"],
-  serverExternalPackages: ["firebase-admin"],
+  experimental: {
+    serverComponentsExternalPackages: ["firebase-admin"],
+  },
 };
 
 export default nextConfig;
