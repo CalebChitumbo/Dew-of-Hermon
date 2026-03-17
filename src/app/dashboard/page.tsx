@@ -443,6 +443,9 @@ export default function DashboardPage() {
           type: data.type,
           isRead: data.isRead ?? false,
           link: data.link || null,
+          emailStatus: data.emailStatus ?? "not_sent",
+          emailDocId: data.emailDocId ?? null,
+          emailError: data.emailError ?? null,
           createdAt: toDate(data.createdAt),
         };
       });
