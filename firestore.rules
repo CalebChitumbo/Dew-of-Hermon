@@ -101,6 +101,13 @@ service cloud.firestore {
       allow create: if isAdmin();
     }
 
+    // ─── Mail (Firebase Trigger Email extension) ───
+    // Admin SDK handles writes; admins can read for delivery status monitoring
+    match /mail/{mailId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // ─── Reminder Logs ───
     match /reminderLogs/{logId} {
       allow read: if isAdmin();

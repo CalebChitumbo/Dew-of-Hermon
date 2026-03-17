@@ -59,6 +59,8 @@ export async function GET(request: NextRequest) {
         type: data.type,
         isRead: data.isRead ?? false,
         link: data.link || null,
+        emailStatus: data.emailStatus || null,
+        emailError: data.emailError || null,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
       };
     });

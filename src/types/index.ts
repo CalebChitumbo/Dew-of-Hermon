@@ -112,6 +112,8 @@ export interface Affirmation {
   updatedAt: Date;
 }
 
+export type EmailDeliveryStatus = "pending" | "queued" | "delivered" | "failed" | "skipped";
+
 export interface Notification {
   id: string;
   userId: string;
@@ -120,6 +122,9 @@ export interface Notification {
   type: "reminder" | "assignment" | "event" | "announcement";
   isRead: boolean;
   link: string | null;
+  emailStatus: EmailDeliveryStatus;
+  emailDocId: string | null;
+  emailError: string | null;
   createdAt: Date;
 }
 

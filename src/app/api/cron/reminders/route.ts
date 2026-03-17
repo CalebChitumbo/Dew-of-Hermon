@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { validateEmailConfig } from "@/lib/email";
 import { createNotificationWithEmail } from "@/lib/notifications";
-
-export const dynamic = "force-dynamic";
 import {
   ReminderDay,
   ServiceRole,
@@ -12,6 +10,8 @@ import {
   Service,
 } from "@/types";
 import { format, addDays, startOfDay, endOfDay } from "date-fns";
+
+export const dynamic = "force-dynamic";
 
 // Map day of week (0=Sun, 1=Mon ... 6=Sat) to ReminderDay
 function getTodayReminderDay(): ReminderDay | null {
