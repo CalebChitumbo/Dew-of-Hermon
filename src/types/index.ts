@@ -20,6 +20,7 @@ export interface User {
   leadsDepartmentIds: string[];
   profileImage: string | null;
   isActive: boolean;
+  pushEnabled?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

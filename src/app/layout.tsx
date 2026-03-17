@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
+import { PushNotificationPrompt } from "@/components/shared/PushNotificationPrompt";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <Toaster />
+          <PushNotificationPrompt />
         </AuthProvider>
       </body>
     </html>
