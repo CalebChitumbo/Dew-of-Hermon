@@ -133,6 +133,9 @@ export default function NotificationsPage() {
             type: data.type as Notification["type"],
             isRead: data.isRead ?? false,
             link: data.link || null,
+            emailStatus: data.emailStatus || "pending",
+            emailDocId: data.emailDocId || null,
+            emailError: data.emailError || null,
             createdAt: parseFirestoreDate(data.createdAt),
           };
         });
