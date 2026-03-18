@@ -40,14 +40,19 @@ export function PushNotificationPrompt() {
   useEffect(() => {
     if (!firebaseUser) return;
     if (typeof window === "undefined") return;
-    if (Notification.permission !== "granted") return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
 
-    const unsub = onForegroundMessage((payload) => {
-      toast({
-        title: payload.title,
-        description: payload.body,
+    let unsub: (() => void) | null = null;
+    try {
+      unsub = onForegroundMessage((payload) => {
+        toast({
+          title: payload.title,
+          description: payload.body,
+        });
       });
-    });
+    } catch {
+      // Firebase Messaging not supported on this browser — silently skip.
+    }
 
     return () => {
       unsub?.();
