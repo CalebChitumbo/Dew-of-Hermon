@@ -7,6 +7,11 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const handleRetry = () => {
+    reset();
+    window.location.reload();
+  };
+
   return (
     <html lang="en">
       <body className="font-sans bg-cream">
@@ -20,7 +25,7 @@ export default function GlobalError({
               An unexpected error occurred. Please try again.
             </p>
             <button
-              onClick={reset}
+              onClick={handleRetry}
               className="inline-flex items-center justify-center rounded-md bg-clay-700 px-4 py-2 text-sm font-medium text-white hover:bg-clay-800 transition-colors"
             >
               Try Again
