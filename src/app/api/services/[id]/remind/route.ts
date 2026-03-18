@@ -85,7 +85,7 @@ export async function POST(
     }
 
     const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
+      process.env.NEXT_PUBLIC_APP_URL || "https://dew-of-hermon-xy9h.vercel.app";
     const serviceTime = serviceData.serviceTime || "TBD";
     const theme = serviceData.theme || "";
 

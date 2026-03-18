@@ -213,7 +213,7 @@ export async function POST(
         ? `You have been assigned as ${assignment.roleName} for the service on ${eventDate}. Please confirm or decline.`
         : `You have been assigned as ${assignment.roleName}. Please confirm or decline.`;
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://dew-of-hermon-xy9h.vercel.app";
       const confirmLink = `${appUrl}/my-schedule`;
 
       const emailSubject = `New Assignment: ${assignment.roleName}${eventDate ? ` - ${eventDate}` : ""}`;
