@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
     let totalSkipped = 0;
     let totalNoEmail = 0;
     const errors: string[] = [];
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://dew-of-hermon-xy9h.vercel.app";
 
     for (const serviceId of serviceIds) {
       const service = serviceMap.get(serviceId);

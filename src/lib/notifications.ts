@@ -99,7 +99,7 @@ export async function createNotificationWithEmail({
 
   // 5. Build email content
   const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
+    process.env.NEXT_PUBLIC_APP_URL || "https://dew-of-hermon-xy9h.vercel.app";
   const linkUrl = link ? `${appUrl}${link}` : appUrl;
 
   const emailSubject = email?.subject || title;
@@ -221,7 +221,7 @@ export async function retryNotificationEmail(
     }
 
     const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
+      process.env.NEXT_PUBLIC_APP_URL || "https://dew-of-hermon-xy9h.vercel.app";
     const linkUrl = data.link ? `${appUrl}${data.link}` : appUrl;
 
     try {
