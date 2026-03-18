@@ -5,6 +5,7 @@ import {
   checkEmailDeliveryStatus,
   retryEmail,
 } from "@/lib/email";
+import { sendPushToUser } from "@/lib/push";
 import type { EmailDeliveryStatus } from "@/types";
 
 interface CreateNotificationParams {
@@ -50,7 +51,17 @@ export async function createNotificationWithEmail({
     createdAt: new Date(),
   });
 
-  // 2. Check email config
+  // 2. Send push notification (fire-and-forget; don't block email flow)
+  sendPushToUser(userId, {
+    title,
+    body: message,
+    link: link || undefined,
+    tag: notificationRef.id,
+  }).catch((err) =>
+    console.error(`Push failed for notification ${notificationRef.id}:`, err)
+  );
+
+  // 3. Check email config
   const configError = validateEmailConfig();
   if (configError) {
     console.warn(
@@ -63,7 +74,7 @@ export async function createNotificationWithEmail({
     return { notificationId: notificationRef.id, emailSent: false };
   }
 
-  // 3. Resolve recipient email
+  // 4. Resolve recipient email
   let userEmail: string | null = recipientEmail || null;
   if (!userEmail) {
     try {
@@ -86,7 +97,7 @@ export async function createNotificationWithEmail({
     return { notificationId: notificationRef.id, emailSent: false };
   }
 
-  // 4. Build email content
+  // 5. Build email content
   const appUrl =
     process.env.NEXT_PUBLIC_APP_URL || "https://app.potterswheel.com";
   const linkUrl = link ? `${appUrl}${link}` : appUrl;
@@ -104,7 +115,7 @@ export async function createNotificationWithEmail({
     </div>
   `;
 
-  // 5. Send email and track result
+  // 6. Send email and track result
   try {
     const { id: mailDocId } = await sendEmail({
       to: userEmail,
