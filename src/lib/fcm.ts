@@ -13,7 +13,13 @@ function getMessagingInstance(): Messaging | null {
   if (typeof window === "undefined") return null;
   if (!("Notification" in window)) return null;
   if (!messagingInstance) {
-    messagingInstance = getMessaging(app);
+    try {
+      messagingInstance = getMessaging(app);
+    } catch {
+      // Firebase Messaging is not supported on this browser (e.g. older iOS
+      // Safari, restricted WebView, or missing Push API / IndexedDB support).
+      return null;
+    }
   }
   return messagingInstance;
 }
