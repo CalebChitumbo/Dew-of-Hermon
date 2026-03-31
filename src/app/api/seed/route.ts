@@ -265,9 +265,9 @@ export async function POST(request: Request) {
     if (existingRoles.empty) {
       // Need to get department IDs first
       const deptSnapshot = await adminDb.collection("departments").get();
-      const deptMap: Record<string, string> = {};
+      const roleDeptMap: Record<string, string> = {};
       deptSnapshot.docs.forEach((doc) => {
-        deptMap[doc.data().name] = doc.id;
+        roleDeptMap[doc.data().name] = doc.id;
       });
 
       const roleBatch = adminDb.batch();
@@ -275,7 +275,7 @@ export async function POST(request: Request) {
         const ref = adminDb.collection("serviceRoles").doc();
         roleBatch.set(ref, {
           name: role.name,
-          departmentId: deptMap[role.department] || "",
+          departmentId: roleDeptMap[role.department] || "",
           description: null,
           emailSubject: role.emailSubject,
           emailBody: role.emailBody,
