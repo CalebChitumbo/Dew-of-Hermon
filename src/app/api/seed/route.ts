@@ -203,16 +203,23 @@ export async function POST(request: Request) {
 
     const results: string[] = [];
 
-    // 1. Check if departments already exist
-    const existingDepts = await adminDb.collection("departments").limit(1).get();
-    if (!existingDepts.empty) {
-      results.push("Departments already exist — skipping");
-    } else {
-      // Create departments
-      const deptMap: Record<string, string> = {};
-      const deptBatch = adminDb.batch();
+    // 1. Add any missing departments (instead of skipping if some exist)
+    const existingDeptSnapshot = await adminDb.collection("departments").get();
+    const existingDeptNames = new Set(
+      existingDeptSnapshot.docs.map((doc) => doc.data().name as string)
+    );
 
-      for (const dept of departments) {
+    const missingDepts = departments.filter((d) => !existingDeptNames.has(d.name));
+    const deptMap: Record<string, string> = {};
+
+    // Build map of existing department names to IDs
+    existingDeptSnapshot.docs.forEach((doc) => {
+      deptMap[doc.data().name] = doc.id;
+    });
+
+    if (missingDepts.length > 0) {
+      const deptBatch = adminDb.batch();
+      for (const dept of missingDepts) {
         const ref = adminDb.collection("departments").doc();
         deptBatch.set(ref, {
           name: dept.name,
@@ -223,11 +230,15 @@ export async function POST(request: Request) {
         });
         deptMap[dept.name] = ref.id;
       }
-
       await deptBatch.commit();
-      results.push(`Created ${departments.length} departments`);
+      results.push(`Created ${missingDepts.length} new departments: ${missingDepts.map((d) => d.name).join(", ")}`);
+    } else {
+      results.push("All departments already exist");
+    }
 
-      // 2. Create service roles (only if we just created departments, so we have the IDs)
+    // 2. Create service roles if none exist
+    if (existingDeptSnapshot.empty || missingDepts.length === departments.length) {
+      // All departments were just created — create service roles
       const roleBatch = adminDb.batch();
 
       for (const role of roles) {
