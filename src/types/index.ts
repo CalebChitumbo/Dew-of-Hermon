@@ -143,3 +143,25 @@ export interface UserAvailability {
   available: boolean;
   reason: string | null;
 }
+
+// ─── Department Tasks ───
+
+export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+export type TaskPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+export interface DepartmentTask {
+  id: string;
+  departmentId: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assigneeId: string | null;
+  assigneeName: string | null;
+  dueDate: Date | null;
+  createdBy: string;
+  createdByName: string;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}

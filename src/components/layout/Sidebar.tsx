@@ -34,6 +34,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, minRole: "YOUTH_LEADER" },
+  { label: "Departments", href: "/departments", icon: Building2, minRole: "ADMIN" },
   { label: "Members", href: "/manage/members", icon: Users, minRole: "ADMIN" },
   { label: "Services & Rotas", href: "/manage/services", icon: ClipboardList, minRole: "ADMIN" },
   { label: "Calendar", href: "/calendar", icon: Calendar, minRole: "MEMBER" },
@@ -44,7 +45,7 @@ const navItems: NavItem[] = [
 ];
 
 const deptLeadItems: NavItem[] = [
-  { label: "My Department", href: "/department", icon: Building2, minRole: "DEPARTMENT_LEAD" },
+  { label: "My Departments", href: "/departments", icon: Building2, minRole: "DEPARTMENT_LEAD" },
   { label: "Members", href: "/manage/members", icon: Users, minRole: "DEPARTMENT_LEAD" },
   { label: "Services", href: "/manage/services", icon: ClipboardList, minRole: "DEPARTMENT_LEAD" },
 ];
