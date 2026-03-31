@@ -108,6 +108,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── Department Tasks ───
+    match /departmentTasks/{taskId} {
+      allow read: if isSignedIn();
+      allow create, update: if isDeptLead();
+      allow delete: if isDeptLead();
+    }
+
     // ─── Reminder Logs ───
     match /reminderLogs/{logId} {
       allow read: if isAdmin();
