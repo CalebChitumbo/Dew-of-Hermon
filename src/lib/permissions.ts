@@ -80,6 +80,14 @@ export function canManageAffirmations(userRole: UserRole): boolean {
   return hasMinRole(userRole, "ADMIN");
 }
 
+export function canManageDepartmentTasks(userRole: UserRole): boolean {
+  return hasMinRole(userRole, "DEPARTMENT_LEAD");
+}
+
+export function canManageDepartments(userRole: UserRole): boolean {
+  return hasMinRole(userRole, "ADMIN");
+}
+
 export const roleLabels: Record<UserRole, string> = {
   SUPER_ADMIN: "Chairperson",
   ADMIN: "Secretary / Admin",

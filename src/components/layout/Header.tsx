@@ -86,6 +86,7 @@ export function Header() {
               {hasMinRole(userData.role, "ADMIN") && (
                 <>
                   <MobileMenuItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+                  <MobileMenuItem href="/departments" icon={Building2} label="Departments" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/manage/members" icon={Users} label="Members" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/manage/services" icon={ClipboardList} label="Services & Rotas" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/calendar" icon={Calendar} label="Calendar" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
@@ -99,7 +100,7 @@ export function Header() {
               {userData.role === "DEPARTMENT_LEAD" && (
                 <>
                   <MobileMenuItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/department" icon={Building2} label="My Department" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+                  <MobileMenuItem href="/departments" icon={Building2} label="My Departments" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/manage/services" icon={ClipboardList} label="Services" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/calendar" icon={Calendar} label="Calendar" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/affirmations" icon={Sparkles} label="Affirmations" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />

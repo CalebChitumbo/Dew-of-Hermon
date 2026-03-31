@@ -5,7 +5,8 @@ import { cookies } from "next/headers";
 export const dynamic = "force-dynamic";
 
 // ─── Departments ───
-const departments = [
+// Potter's Wheel service departments (for service role assignments)
+const serviceDepartments = [
   { name: "Administration", icon: "📋", order: 1, description: "Oversees service coordination and administrative functions" },
   { name: "Intercession", icon: "🙏", order: 2, description: "Leads prayer and intercession during services" },
   { name: "Teaching & Word", icon: "📖", order: 3, description: "Bible study coordination and preaching ministry" },
@@ -15,6 +16,21 @@ const departments = [
   { name: "Hospitality", icon: "☕", order: 7, description: "Hospitality, refreshments, and seating arrangements" },
   { name: "Visitor Engagement", icon: "🤗", order: 8, description: "First-time visitor welcome and follow-up" },
 ];
+
+// Youth Ministry Lodge departments (organizational)
+const ministryDepartments = [
+  { name: "Potter's Wheel", icon: "🏺", order: 9, description: "Youth service organization, scheduling, and role assignment for Sunday services" },
+  { name: "Compass Ministry", icon: "🧭", order: 10, description: "Guiding and mentoring young people in their spiritual journey and life direction" },
+  { name: "Discipleship & Follow-up", icon: "📘", order: 11, description: "New believer discipleship, follow-up programs, and spiritual growth tracking" },
+  { name: "Life Groups", icon: "👥", order: 12, description: "Small group fellowship, Bible study circles, and community building" },
+  { name: "Transport", icon: "🚐", order: 13, description: "Coordinating transport logistics for services, events, and outreach" },
+  { name: "Events & Fellowship", icon: "🎉", order: 14, description: "Planning and coordinating youth events, social gatherings, and fellowship activities" },
+  { name: "Fundraising", icon: "💰", order: 15, description: "Organizing fundraising initiatives, campaigns, and financial drives for the ministry" },
+  { name: "Food & Catering", icon: "🍽️", order: 16, description: "Coordinating meals, catering, and refreshments for ministry events and services" },
+  { name: "Media & Communication", icon: "📱", order: 17, description: "Managing social media, ministry communications, content creation, and publicity" },
+];
+
+const departments = [...serviceDepartments, ...ministryDepartments];
 
 // ─── Service Roles with Email Templates ───
 const roles = [
