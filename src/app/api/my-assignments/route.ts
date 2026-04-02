@@ -21,7 +21,7 @@ async function getAuthUid(request: NextRequest): Promise<string | null> {
   const session = cookieStore.get("session");
   if (session?.value) {
     try {
-      const decoded = await adminAuth.verifyIdToken(session.value);
+      const decoded = await adminAuth.verifySessionCookie(session.value);
       return decoded.uid;
     } catch {
       return null;

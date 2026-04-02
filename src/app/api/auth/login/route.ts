@@ -54,9 +54,11 @@ export async function POST(request: Request) {
       };
       await adminDb.collection("users").doc(uid).set(newUserData);
 
-      // Set session cookie
-      const cookieStore = await cookies();
-      cookieStore.set("session", idToken, {
+      // Create a Firebase session cookie (valid for 7 days)
+      const newUserExpiresIn = 60 * 60 * 24 * 7 * 1000;
+      const newUserSessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: newUserExpiresIn });
+      const newUserCookieStore = await cookies();
+      newUserCookieStore.set("session", newUserSessionCookie, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -78,9 +80,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Set session cookie
+    // Create a Firebase session cookie (valid for 7 days)
+    const expiresIn = 60 * 60 * 24 * 7 * 1000;
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
     const cookieStore = await cookies();
-    cookieStore.set("session", idToken, {
+    cookieStore.set("session", sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
