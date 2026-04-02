@@ -138,7 +138,7 @@ service cloud.firestore {
 
     // ─── Institutions ───
     match /institutions/{instId} {
-      allow read: if isSignedIn();
+      allow read: if true; // Public — needed for registration form (unauthenticated users)
       allow write: if isAdmin();
     }
 

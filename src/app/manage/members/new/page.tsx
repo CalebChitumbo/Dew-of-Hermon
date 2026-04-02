@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getDocs, query, orderBy, where } from "firebase/firestore";
+import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Department, UserRole, LifeGroup, Institution } from "@/types";
@@ -84,16 +84,17 @@ export default function NewMemberPage() {
       try {
         const q = query(
           safeCollection("institutions"),
-          where("isActive", "==", true),
           orderBy("order")
         );
         const snapshot = await getDocs(q);
         setInstitutions(
-          snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-          })) as Institution[]
+          snapshot.docs
+            .map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+            }) as Institution)
+            .filter((inst) => inst.isActive !== false)
         );
       } catch (error) {
         console.error("Error fetching institutions:", error);
