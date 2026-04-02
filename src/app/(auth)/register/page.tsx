@@ -33,6 +33,18 @@ const LIFE_GROUP_LABELS: Record<LifeGroup, string> = {
   CORNERSTONE: "Cornerstone (26+ years)",
 };
 
+const DEFAULT_INSTITUTIONS: Institution[] = [
+  { id: "unza", name: "UNZA", isActive: true, order: 1, createdAt: new Date() },
+  { id: "texila", name: "Texila American University", isActive: true, order: 2, createdAt: new Date() },
+  { id: "evelyn-hone", name: "Evelyn Hone College", isActive: true, order: 3, createdAt: new Date() },
+  { id: "apex", name: "Apex Medical University", isActive: true, order: 4, createdAt: new Date() },
+  { id: "nipa", name: "NIPA", isActive: true, order: 5, createdAt: new Date() },
+  { id: "zcas", name: "ZCAS University", isActive: true, order: 6, createdAt: new Date() },
+  { id: "chreso", name: "Chreso University", isActive: true, order: 7, createdAt: new Date() },
+  { id: "cavendish", name: "Cavendish University", isActive: true, order: 8, createdAt: new Date() },
+  { id: "eden", name: "Eden University", isActive: true, order: 9, createdAt: new Date() },
+];
+
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -69,9 +81,10 @@ export default function RegisterPage() {
             });
           }
         });
-        setInstitutions(fetched);
+        setInstitutions(fetched.length > 0 ? fetched : DEFAULT_INSTITUTIONS);
       } catch (error) {
         console.error("Error fetching institutions:", error);
+        setInstitutions(DEFAULT_INSTITUTIONS);
       } finally {
         setInstitutionsLoading(false);
       }
