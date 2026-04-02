@@ -12,7 +12,7 @@ async function getCaller(): Promise<{ uid: string; role: UserRole } | null> {
     const session = cookieStore.get("session");
     if (!session?.value) return null;
 
-    const decoded = await adminAuth.verifyIdToken(session.value);
+    const decoded = await adminAuth.verifySessionCookie(session.value);
     const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
     if (!userDoc.exists) return null;
 
