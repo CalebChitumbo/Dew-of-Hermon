@@ -55,15 +55,20 @@ export default function RegisterPage() {
           orderBy("order")
         );
         const snapshot = await getDocs(q);
-        setInstitutions(
-          snapshot.docs
-            .map((doc) => ({
+        const fetched: Institution[] = [];
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          if (data.isActive !== false) {
+            fetched.push({
               id: doc.id,
-              ...doc.data(),
-              createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-            }) as Institution)
-            .filter((inst) => inst.isActive !== false)
-        );
+              name: data.name,
+              isActive: data.isActive ?? true,
+              order: data.order || 0,
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+            });
+          }
+        });
+        setInstitutions(fetched);
       } catch (error) {
         console.error("Error fetching institutions:", error);
       }
