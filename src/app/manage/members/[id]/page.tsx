@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Department, UserRole } from "@/types";
+import { Department, UserRole, LifeGroup, Institution } from "@/types";
 import {
   roleLabels,
   canManageMembers,
@@ -51,6 +51,12 @@ import {
 
 // Roles are now filtered dynamically based on caller via getAssignableRoles
 
+const LIFE_GROUP_LABELS: Record<LifeGroup, string> = {
+  BRIDGE: "Bridge (15-20 years)",
+  ANCHOR: "Anchor (21-25 years)",
+  CORNERSTONE: "Cornerstone (26+ years)",
+};
+
 interface MemberData {
   id: string;
   name: string;
@@ -60,6 +66,9 @@ interface MemberData {
   departmentIds: string[];
   leadsDepartmentIds: string[];
   isActive: boolean;
+  lifeGroup: LifeGroup | null;
+  isStudent: boolean;
+  institutionId: string | null;
 }
 
 export default function EditMemberPage() {
@@ -70,6 +79,7 @@ export default function EditMemberPage() {
 
   const [member, setMember] = useState<MemberData | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -83,6 +93,9 @@ export default function EditMemberPage() {
   const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
   const [leadsDeptIds, setLeadsDeptIds] = useState<string[]>([]);
   const [isActive, setIsActive] = useState(true);
+  const [lifeGroup, setLifeGroup] = useState<LifeGroup | "">("");
+  const [isStudent, setIsStudent] = useState(false);
+  const [institutionId, setInstitutionId] = useState("");
 
   // Validation
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,6 +118,9 @@ export default function EditMemberPage() {
         setSelectedDeptIds(m.departmentIds || []);
         setLeadsDeptIds(m.leadsDepartmentIds || []);
         setIsActive(m.isActive);
+        setLifeGroup(m.lifeGroup || "");
+        setIsStudent(m.isStudent || false);
+        setInstitutionId(m.institutionId || "");
 
         // Fetch departments
         const deptsQuery = query(safeCollection("departments"), orderBy("order"));
@@ -121,6 +137,24 @@ export default function EditMemberPage() {
           } as Department;
         });
         setDepartments(deptsData);
+
+        // Fetch institutions
+        const instQuery = query(safeCollection("institutions"), orderBy("order"));
+        const instSnapshot = await getDocs(instQuery);
+        const instData: Institution[] = [];
+        instSnapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          if (data.isActive !== false) {
+            instData.push({
+              id: doc.id,
+              name: data.name,
+              isActive: data.isActive ?? true,
+              order: data.order || 0,
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+            });
+          }
+        });
+        setInstitutions(instData);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
@@ -177,6 +211,9 @@ export default function EditMemberPage() {
           departmentIds: selectedDeptIds,
           leadsDepartmentIds: leadsDeptIds,
           isActive,
+          lifeGroup: lifeGroup || null,
+          isStudent,
+          institutionId: isStudent ? institutionId || null : null,
         }),
       });
 
@@ -480,6 +517,84 @@ export default function EditMemberPage() {
                   )}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Life Group & Student Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Life Group &amp; Student Info</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Life Group */}
+              <div className="space-y-2">
+                <Label htmlFor="lifeGroup">Life Group</Label>
+                <Select
+                  value={lifeGroup || "none"}
+                  onValueChange={(value) =>
+                    setLifeGroup(value === "none" ? "" : (value as LifeGroup))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Life Group (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {(Object.keys(LIFE_GROUP_LABELS) as LifeGroup[]).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {LIFE_GROUP_LABELS[key]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Student Toggle */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <Label className="cursor-pointer">Is this member a student?</Label>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isStudent}
+                    onClick={() => {
+                      setIsStudent(!isStudent);
+                      if (isStudent) setInstitutionId("");
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      isStudent ? "bg-gold" : "bg-clay-300"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isStudent ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Institution (shown if student) */}
+              {isStudent && (
+                <div className="space-y-2">
+                  <Label htmlFor="institution">Institution</Label>
+                  <Select
+                    value={institutionId}
+                    onValueChange={setInstitutionId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select institution" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutions.map((inst) => (
+                        <SelectItem key={inst.id} value={inst.id}>
+                          {inst.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -124,6 +124,50 @@ async function createDepartmentRoleSkeletons(eventId: string) {
   await batch.commit();
 }
 
+// ─── Helper: Notify targeted members about an approved event ───
+// Sends notifications to members in the targeted Life Group (or all active members).
+
+async function notifyTargetedMembers(
+  eventId: string,
+  eventTitle: string,
+  lifeGroupTarget: string | null
+) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let usersQuery: any = adminDb.collection("users").where("isActive", "==", true);
+
+    if (lifeGroupTarget && lifeGroupTarget !== "ALL") {
+      usersQuery = usersQuery.where("lifeGroup", "==", lifeGroupTarget);
+    }
+
+    const usersSnap = await usersQuery.get();
+
+    const lifeGroupLabel =
+      lifeGroupTarget && lifeGroupTarget !== "ALL"
+        ? ` (${lifeGroupTarget.charAt(0) + lifeGroupTarget.slice(1).toLowerCase()} Life Group)`
+        : "";
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const doc of usersSnap.docs as any[]) {
+      const userData = doc.data();
+      await createNotificationWithEmail({
+        userId: doc.id,
+        title: `New Event: ${eventTitle}`,
+        message: `A new event "${eventTitle}"${lifeGroupLabel} has been scheduled. Check the calendar for details.`,
+        type: "event",
+        link: "/calendar",
+        recipientEmail: userData.email,
+        email: {
+          subject: `New Event: ${eventTitle}`,
+          text: `A new event "${eventTitle}"${lifeGroupLabel} has been scheduled. Log in to view the details on the calendar.`,
+        },
+      }).catch(console.error);
+    }
+  } catch (err) {
+    console.error("Failed to notify targeted members:", err);
+  }
+}
+
 // ─── Helper: Notify department managers about their role assignments ───
 
 async function notifyDepartmentManagers(eventId: string, eventTitle: string) {
@@ -220,6 +264,13 @@ export async function PATCH(
 
       // Notify department managers
       notifyDepartmentManagers(eventId, eventData.title).catch(console.error);
+
+      // Notify targeted members about the new event
+      notifyTargetedMembers(
+        eventId,
+        eventData.title,
+        eventData.lifeGroupTarget || null
+      ).catch(console.error);
 
       // Notify event creator
       const creatorId = eventData.createdBy;
