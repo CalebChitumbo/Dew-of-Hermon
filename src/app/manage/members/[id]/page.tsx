@@ -123,38 +123,46 @@ export default function EditMemberPage() {
         setInstitutionId(m.institutionId || "");
 
         // Fetch departments
-        const deptsQuery = query(safeCollection("departments"), orderBy("order"));
-        const deptsSnapshot = await getDocs(deptsQuery);
-        const deptsData = deptsSnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name,
-            description: data.description || null,
-            icon: data.icon || "Users",
-            order: data.order || 0,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-          } as Department;
-        });
-        setDepartments(deptsData);
-
-        // Fetch institutions
-        const instQuery = query(safeCollection("institutions"), orderBy("order"));
-        const instSnapshot = await getDocs(instQuery);
-        const instData: Institution[] = [];
-        instSnapshot.docs.forEach((doc) => {
-          const data = doc.data();
-          if (data.isActive !== false) {
-            instData.push({
+        try {
+          const deptsQuery = query(safeCollection("departments"), orderBy("order"));
+          const deptsSnapshot = await getDocs(deptsQuery);
+          const deptsData = deptsSnapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
               id: doc.id,
               name: data.name,
-              isActive: data.isActive ?? true,
+              description: data.description || null,
+              icon: data.icon || "Users",
               order: data.order || 0,
               createdAt: data.createdAt?.toDate?.() || new Date(),
-            });
-          }
-        });
-        setInstitutions(instData);
+            } as Department;
+          });
+          setDepartments(deptsData);
+        } catch (deptError) {
+          console.error("Error fetching departments:", deptError);
+        }
+
+        // Fetch institutions
+        try {
+          const instQuery = query(safeCollection("institutions"), orderBy("order"));
+          const instSnapshot = await getDocs(instQuery);
+          const instData: Institution[] = [];
+          instSnapshot.docs.forEach((doc) => {
+            const data = doc.data();
+            if (data.isActive !== false) {
+              instData.push({
+                id: doc.id,
+                name: data.name,
+                isActive: data.isActive ?? true,
+                order: data.order || 0,
+                createdAt: data.createdAt?.toDate?.() || new Date(),
+              });
+            }
+          });
+          setInstitutions(instData);
+        } catch (instError) {
+          console.error("Error fetching institutions:", instError);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
