@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getDoc, setDoc } from "firebase/firestore";
 import { safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +18,8 @@ import {
   Trash2,
   CheckSquare,
   GripVertical,
+  GraduationCap,
+  ChevronRight,
 } from "lucide-react";
 
 interface ChecklistTemplateItem {
@@ -116,6 +119,26 @@ function SettingsContent() {
         <p className="text-clay-500 mt-1">
           Manage system configuration and defaults
         </p>
+      </div>
+
+      {/* Quick Links */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link href="/manage/settings/institutions">
+          <Card className="hover:border-gold/50 hover:shadow-md transition-all cursor-pointer">
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-gold/10 flex items-center justify-center">
+                  <GraduationCap className="h-5 w-5 text-gold" />
+                </div>
+                <div>
+                  <p className="font-medium text-clay-700">Institutions</p>
+                  <p className="text-sm text-clay-500">Manage student institutions</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-clay-400" />
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Checklist Template */}
