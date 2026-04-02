@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
+import { getDocs, query, where, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -92,8 +92,7 @@ export default function EventApprovalsPage() {
       const eventsRef = safeCollection("events");
       const q = query(
         eventsRef,
-        where("approvalStatus", "==", "PENDING_APPROVAL"),
-        orderBy("createdAt", "asc")
+        where("approvalStatus", "==", "PENDING_APPROVAL")
       );
       const snapshot = await getDocs(q);
 
@@ -121,6 +120,7 @@ export default function EventApprovalsPage() {
         };
       });
 
+      events.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setPendingEvents(events);
     } catch (error) {
       console.error("Failed to fetch pending events:", error);
