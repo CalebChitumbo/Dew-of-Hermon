@@ -339,7 +339,7 @@ export default function EventApprovalsPage() {
                     {actionState.action !== "APPROVE" && (
                       <div className="space-y-1.5">
                         <Label htmlFor={`comments-${event.id}`} className="text-sm">
-                          Comments {actionState.action !== "APPROVE" && "*"}
+                          Comments *
                         </Label>
                         <Textarea
                           id={`comments-${event.id}`}
