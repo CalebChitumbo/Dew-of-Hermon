@@ -3,10 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { getDocs, query, where, orderBy } from "firebase/firestore";
+import { getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { canApproveEvents } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { AppEvent, EventType } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +26,6 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Timestamp } from "firebase/firestore";
 
 // ─── Event type labels ───
 
@@ -79,11 +77,7 @@ export default function EventApprovalsPage() {
   const [comments, setComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Check permission: Events & Fellowship Manager or ADMIN+
-  const efDeptId = userData?.leadsDepartmentIds || [];
-  // We'll determine canApprove by checking against all departments they lead
-  // The actual canApproveEvents needs the EF dept ID, but we check on the server
-  // For display, any ADMIN+ or DEPARTMENT_LEAD can visit; access denied shown if unauthorized
+  // Access: any ADMIN+ or DEPARTMENT_LEAD can visit; final permission enforced server-side
   const isAdmin = userData
     ? userData.role === "SUPER_ADMIN" || userData.role === "ADMIN"
     : false;

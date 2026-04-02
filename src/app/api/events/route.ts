@@ -141,7 +141,9 @@ export async function GET(request: Request) {
     const typeParam = searchParams.get("type");
     const approvalStatusParam = searchParams.get("approvalStatus");
 
-    let eventsQuery: FirebaseFirestore.Query = adminDb.collection("events");
+    // Build query conditionally to avoid FirebaseFirestore namespace typing issues
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let eventsQuery: any = adminDb.collection("events");
 
     if (startDateParam) {
       eventsQuery = eventsQuery.where("startDate", ">=", new Date(startDateParam));
@@ -160,7 +162,8 @@ export async function GET(request: Request) {
 
     const snapshot = await eventsQuery.get();
 
-    const events = snapshot.docs.map((doc) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const events = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         id: doc.id,
