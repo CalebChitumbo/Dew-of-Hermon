@@ -82,25 +82,17 @@ export default function NewMemberPage() {
 
     async function fetchInstitutions() {
       try {
-        const q = query(
-          safeCollection("institutions"),
-          orderBy("order")
-        );
-        const snapshot = await getDocs(q);
-        const fetched: Institution[] = [];
-        snapshot.docs.forEach((doc) => {
-          const data = doc.data();
-          if (data.isActive !== false) {
-            fetched.push({
-              id: doc.id,
-              name: data.name,
-              isActive: data.isActive ?? true,
-              order: data.order || 0,
-              createdAt: data.createdAt?.toDate?.() || new Date(),
-            });
-          }
-        });
-        setInstitutions(fetched);
+        const res = await fetch("/api/institutions");
+        if (res.ok) {
+          const json = await res.json();
+          const fetched: Institution[] = json.institutions
+            .filter((inst: Institution) => inst.isActive !== false)
+            .map((inst: Institution) => ({
+              ...inst,
+              createdAt: new Date(inst.createdAt),
+            }));
+          setInstitutions(fetched);
+        }
       } catch (error) {
         console.error("Error fetching institutions:", error);
       }
