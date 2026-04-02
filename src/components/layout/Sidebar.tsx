@@ -20,6 +20,8 @@ import {
   UserCircle,
   CalendarDays,
   LogOut,
+  CalendarPlus,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -38,6 +40,8 @@ const navItems: NavItem[] = [
   { label: "Members", href: "/manage/members", icon: Users, minRole: "ADMIN" },
   { label: "Services & Rotas", href: "/manage/services", icon: ClipboardList, minRole: "ADMIN" },
   { label: "Calendar", href: "/calendar", icon: Calendar, minRole: "MEMBER" },
+  { label: "Create Event", href: "/manage/events/new", icon: CalendarPlus, minRole: "ADMIN" },
+  { label: "Event Approvals", href: "/manage/events/approvals", icon: ClipboardCheck, minRole: "ADMIN" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, minRole: "MEMBER" },
   { label: "Templates", href: "/manage/templates", icon: Mail, minRole: "ADMIN" },
   { label: "Reports", href: "/manage/reports", icon: BarChart3, minRole: "ADMIN" },
@@ -48,6 +52,8 @@ const deptLeadItems: NavItem[] = [
   { label: "My Departments", href: "/departments", icon: Building2, minRole: "DEPARTMENT_LEAD" },
   { label: "Members", href: "/manage/members", icon: Users, minRole: "DEPARTMENT_LEAD" },
   { label: "Services", href: "/manage/services", icon: ClipboardList, minRole: "DEPARTMENT_LEAD" },
+  { label: "Create Event", href: "/manage/events/new", icon: CalendarPlus, minRole: "DEPARTMENT_LEAD" },
+  { label: "Event Approvals", href: "/manage/events/approvals", icon: ClipboardCheck, minRole: "DEPARTMENT_LEAD" },
 ];
 
 const memberItems: NavItem[] = [
