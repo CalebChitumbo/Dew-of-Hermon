@@ -293,6 +293,13 @@ export default function DashboardPage() {
           venue: data.venue,
           isRecurring: data.isRecurring ?? false,
           createdBy: data.createdBy,
+          lifeGroupTarget: data.lifeGroupTarget || null,
+          approvalStatus: data.approvalStatus || "APPROVED",
+          approvalComments: data.approvalComments || null,
+          approvedBy: data.approvedBy || null,
+          approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
+          createdByDepartmentId: data.createdByDepartmentId || null,
+          coreRoles: data.coreRoles || [],
           createdAt: toDate(data.createdAt),
           updatedAt: toDate(data.updatedAt),
         });

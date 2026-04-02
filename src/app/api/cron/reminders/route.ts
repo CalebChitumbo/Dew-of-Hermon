@@ -127,6 +127,13 @@ export async function GET(request: NextRequest) {
         venue: data.venue,
         isRecurring: data.isRecurring,
         createdBy: data.createdBy,
+        lifeGroupTarget: data.lifeGroupTarget || null,
+        approvalStatus: data.approvalStatus || "APPROVED",
+        approvalComments: data.approvalComments || null,
+        approvedBy: data.approvedBy || null,
+        approvedAt: data.approvedAt?.toDate?.() || null,
+        createdByDepartmentId: data.createdByDepartmentId || null,
+        coreRoles: data.coreRoles || [],
         createdAt: data.createdAt?.toDate?.() || new Date(),
         updatedAt: data.updatedAt?.toDate?.() || new Date(),
       });
