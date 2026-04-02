@@ -144,22 +144,17 @@ export default function EditMemberPage() {
 
         // Fetch institutions
         try {
-          const instQuery = query(safeCollection("institutions"), orderBy("order"));
-          const instSnapshot = await getDocs(instQuery);
-          const instData: Institution[] = [];
-          instSnapshot.docs.forEach((doc) => {
-            const data = doc.data();
-            if (data.isActive !== false) {
-              instData.push({
-                id: doc.id,
-                name: data.name,
-                isActive: data.isActive ?? true,
-                order: data.order || 0,
-                createdAt: data.createdAt?.toDate?.() || new Date(),
-              });
-            }
-          });
-          setInstitutions(instData);
+          const instRes = await fetch("/api/institutions");
+          if (instRes.ok) {
+            const instJson = await instRes.json();
+            const instData: Institution[] = instJson.institutions
+              .filter((inst: Institution) => inst.isActive !== false)
+              .map((inst: Institution) => ({
+                ...inst,
+                createdAt: new Date(inst.createdAt),
+              }));
+            setInstitutions(instData);
+          }
         } catch (instError) {
           console.error("Error fetching institutions:", instError);
         }
