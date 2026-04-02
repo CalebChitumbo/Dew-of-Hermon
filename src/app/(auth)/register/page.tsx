@@ -42,6 +42,7 @@ export default function RegisterPage() {
   const [isStudent, setIsStudent] = useState(false);
   const [institutionId, setInstitutionId] = useState("");
   const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [institutionsLoading, setInstitutionsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signUp, signInWithGoogle } = useAuth();
@@ -71,6 +72,8 @@ export default function RegisterPage() {
         setInstitutions(fetched);
       } catch (error) {
         console.error("Error fetching institutions:", error);
+      } finally {
+        setInstitutionsLoading(false);
       }
     }
     fetchInstitutions();
@@ -241,14 +244,24 @@ export default function RegisterPage() {
                 onValueChange={setInstitutionId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select your institution" />
+                  <SelectValue placeholder={institutionsLoading ? "Loading institutions..." : "Select your institution"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {institutions.map((inst) => (
-                    <SelectItem key={inst.id} value={inst.id}>
-                      {inst.name}
+                  {institutionsLoading ? (
+                    <SelectItem value="__loading" disabled>
+                      Loading...
                     </SelectItem>
-                  ))}
+                  ) : institutions.length === 0 ? (
+                    <SelectItem value="__empty" disabled>
+                      No institutions available
+                    </SelectItem>
+                  ) : (
+                    institutions.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.id}>
+                        {inst.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
