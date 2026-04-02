@@ -46,6 +46,9 @@ export async function GET(
       leadsDepartmentIds: data.leadsDepartmentIds || [],
       profileImage: data.profileImage || null,
       isActive: data.isActive ?? true,
+      lifeGroup: data.lifeGroup || null,
+      isStudent: data.isStudent || false,
+      institutionId: data.institutionId || null,
       createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
     };
@@ -67,7 +70,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, email, phone, role, departmentIds, leadsDepartmentIds, isActive } = body;
+    const { name, email, phone, role, departmentIds, leadsDepartmentIds, isActive, lifeGroup, isStudent, institutionId } = body;
 
     // Verify the caller's role from their session instead of trusting client-sent callerRole
     const caller = await getCallerRole();
@@ -130,6 +133,9 @@ export async function PUT(
     if (departmentIds !== undefined) updateData.departmentIds = departmentIds;
     if (leadsDepartmentIds !== undefined) updateData.leadsDepartmentIds = leadsDepartmentIds;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (lifeGroup !== undefined) updateData.lifeGroup = lifeGroup || null;
+    if (isStudent !== undefined) updateData.isStudent = isStudent || false;
+    if (institutionId !== undefined) updateData.institutionId = isStudent ? (institutionId || null) : null;
 
     await adminDb.collection("users").doc(id).update(updateData);
 
@@ -162,6 +168,9 @@ export async function PUT(
         leadsDepartmentIds: updatedData.leadsDepartmentIds || [],
         profileImage: updatedData.profileImage || null,
         isActive: updatedData.isActive ?? true,
+        lifeGroup: updatedData.lifeGroup || null,
+        isStudent: updatedData.isStudent || false,
+        institutionId: updatedData.institutionId || null,
         createdAt: updatedData.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: updatedData.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       },
