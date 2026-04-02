@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { idToken, isGoogleSignIn, registrationName } = await request.json();
+    const { idToken, isGoogleSignIn, registrationName, lifeGroup, isStudent, institutionId } = await request.json();
 
     if (!idToken) {
       return NextResponse.json({ error: "Missing ID token" }, { status: 400 });
@@ -23,15 +23,32 @@ export async function POST(request: Request) {
       // Auto-create user profile if missing (handles Google sign-in,
       // registration, and recovery for users whose profile wasn't created)
       const now = new Date();
+
+      // If student, auto-add Campus Ministry department
+      const userDepartmentIds: string[] = [];
+      if (isStudent) {
+        const campusDeptSnapshot = await adminDb
+          .collection("departments")
+          .where("name", "==", "Campus Ministry")
+          .limit(1)
+          .get();
+        if (!campusDeptSnapshot.empty) {
+          userDepartmentIds.push(campusDeptSnapshot.docs[0].id);
+        }
+      }
+
       const newUserData = {
         name: registrationName || decodedToken.name || "User",
         email: decodedToken.email || "",
         phone: null,
         role: "MEMBER",
-        departmentIds: [],
+        departmentIds: userDepartmentIds,
         leadsDepartmentIds: [],
         profileImage: decodedToken.picture || null,
         isActive: true,
+        lifeGroup: lifeGroup || null,
+        isStudent: isStudent || false,
+        institutionId: isStudent ? (institutionId || null) : null,
         createdAt: now,
         updatedAt: now,
       };

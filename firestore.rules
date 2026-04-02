@@ -120,5 +120,32 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // ─── Event Department Roles ───
+    match /eventDepartmentRoles/{roleId} {
+      allow read: if isSignedIn();
+      allow create, update: if isDeptLead();
+      allow delete: if isAdmin();
+    }
+
+    // ─── Follow-Up Cards ───
+    match /followUpCards/{cardId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isDeptLead();
+      allow delete: if isAdmin();
+    }
+
+    // ─── Institutions ───
+    match /institutions/{instId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ─── Settings (Life Groups, etc.) ───
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
   }
 }

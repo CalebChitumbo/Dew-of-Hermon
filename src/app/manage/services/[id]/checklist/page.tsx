@@ -168,6 +168,13 @@ function ChecklistContent() {
               venue: eData.venue,
               isRecurring: eData.isRecurring || false,
               createdBy: eData.createdBy,
+              lifeGroupTarget: eData.lifeGroupTarget || null,
+              approvalStatus: eData.approvalStatus || "APPROVED",
+              approvalComments: eData.approvalComments || null,
+              approvedBy: eData.approvedBy || null,
+              approvedAt: eData.approvedAt?.toDate?.() || null,
+              createdByDepartmentId: eData.createdByDepartmentId || null,
+              coreRoles: eData.coreRoles || [],
               createdAt: eData.createdAt?.toDate?.() || new Date(),
               updatedAt: eData.updatedAt?.toDate?.() || new Date(),
             });

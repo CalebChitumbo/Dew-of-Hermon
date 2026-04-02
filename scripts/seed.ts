@@ -27,6 +27,7 @@ const auth = getAuth(app);
 
 // ─── Departments ───
 const departments = [
+  // Service departments
   { name: "Administration", icon: "📋", order: 1, description: "Oversees service coordination and administrative functions" },
   { name: "Intercession", icon: "🙏", order: 2, description: "Leads prayer and intercession during services" },
   { name: "Teaching & Word", icon: "📖", order: 3, description: "Bible study coordination and preaching ministry" },
@@ -35,6 +36,26 @@ const departments = [
   { name: "Ushering & Protocol", icon: "🚪", order: 6, description: "Ushering, protocol, and guest management" },
   { name: "Hospitality", icon: "☕", order: 7, description: "Hospitality, refreshments, and seating arrangements" },
   { name: "Visitor Engagement", icon: "🤗", order: 8, description: "First-time visitor welcome and follow-up" },
+  // Ministry departments
+  { name: "Events & Fellowship", icon: "🎪", order: 9, description: "Planning and coordinating youth events, approval gateway, and fellowship activities" },
+  { name: "Campus Ministry", icon: "🎓", order: 10, description: "Student outreach, campus evangelism, and student registration" },
+  { name: "Discipleship & Follow-Up", icon: "🤝", order: 11, description: "New believer discipleship, follow-up programs, and spiritual growth tracking" },
+  { name: "Life Groups", icon: "👥", order: 12, description: "Small group fellowship, Bible study circles, and community building" },
+  { name: "Transport & Logistics", icon: "🚐", order: 13, description: "Coordinating transport logistics for services, events, and outreach" },
+  { name: "Youth Ablaze", icon: "🔥", order: 14, description: "Intercession and prayer warfare for youth events" },
+];
+
+// ─── Institutions ───
+const institutions = [
+  { name: "UNZA", order: 1 },
+  { name: "Texila American University", order: 2 },
+  { name: "Evelyn Hone College", order: 3 },
+  { name: "Apex Medical University", order: 4 },
+  { name: "NIPA", order: 5 },
+  { name: "ZCAS University", order: 6 },
+  { name: "Chreso University", order: 7 },
+  { name: "Cavendish University", order: 8 },
+  { name: "Eden University", order: 9 },
 ];
 
 // ─── Service Roles with Email Templates ───
@@ -445,6 +466,31 @@ async function seed() {
   });
   console.log(`  ✅ ${defaultChecklist.length} checklist items stored`);
 
+  // 5. Seed institutions
+  console.log("\n🎓 Seeding institutions...");
+  for (const inst of institutions) {
+    const ref = db.collection("institutions").doc();
+    await ref.set({
+      name: inst.name,
+      isActive: true,
+      order: inst.order,
+      createdAt: new Date(),
+    });
+    console.log(`  ✅ ${inst.name}`);
+  }
+
+  // 6. Seed Life Group settings
+  console.log("\n👥 Seeding Life Group settings...");
+  await db.collection("settings").doc("lifeGroups").set({
+    groups: [
+      { key: "BRIDGE", name: "Bridge", ageRange: "15-20 years", order: 1 },
+      { key: "ANCHOR", name: "Anchor", ageRange: "21-25 years", order: 2 },
+      { key: "CORNERSTONE", name: "Cornerstone", ageRange: "26+ years", order: 3 },
+    ],
+    updatedAt: new Date(),
+  });
+  console.log("  ✅ Life Group settings stored");
+
   console.log("\n🎉 Seed complete!");
   console.log("\n═══════════════════════════════════════════");
   console.log("  📊 Summary:");
@@ -452,6 +498,8 @@ async function seed() {
   console.log(`  • ${roles.length} service roles created`);
   console.log(`  • 1 super admin user created`);
   console.log(`  • ${defaultChecklist.length} checklist items templated`);
+  console.log(`  • ${institutions.length} institutions created`);
+  console.log(`  • Life Group settings stored`);
   console.log("═══════════════════════════════════════════");
   console.log("\n⚠️  IMPORTANT: Change the admin password on first login!");
   console.log("📧 Login with: admin@potterswheel.com / ChangeMeOnFirstLogin!\n");

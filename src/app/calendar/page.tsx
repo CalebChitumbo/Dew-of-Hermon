@@ -161,6 +161,13 @@ export default function CalendarPage() {
           venue: data.venue || "",
           isRecurring: data.isRecurring || false,
           createdBy: data.createdBy || "",
+          lifeGroupTarget: data.lifeGroupTarget || null,
+          approvalStatus: data.approvalStatus || "APPROVED",
+          approvalComments: data.approvalComments || null,
+          approvedBy: data.approvedBy || null,
+          approvedAt: data.approvedAt ? parseFirestoreDate(data.approvedAt) : null,
+          createdByDepartmentId: data.createdByDepartmentId || null,
+          coreRoles: data.coreRoles || [],
           createdAt: parseFirestoreDate(data.createdAt),
           updatedAt: parseFirestoreDate(data.updatedAt),
         };
