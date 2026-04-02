@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
+import {
+  createDepartmentRoleSkeletons,
+  notifyTargetedMembers,
+  notifyDepartmentManagers,
+} from "@/lib/event-helpers";
 import { EventType, UserRole, LifeGroup } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -291,6 +296,19 @@ export async function POST(request: Request) {
     // Notify Events & Fellowship managers if event needs approval
     if (approvalStatus === "PENDING_APPROVAL") {
       notifyEventsFellowshipManagers(docRef.id, title).catch(console.error);
+    }
+
+    // Auto-approved events: notify targeted life group members (or all members),
+    // create department role skeletons, and notify department managers
+    if (autoApproved) {
+      notifyTargetedMembers(
+        docRef.id,
+        title,
+        lifeGroupTarget || null
+      ).catch(console.error);
+
+      createDepartmentRoleSkeletons(docRef.id).catch(console.error);
+      notifyDepartmentManagers(docRef.id, title).catch(console.error);
     }
 
     return NextResponse.json(
