@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { canAssignAnyRole, canAssignOwnDeptRole } from "@/lib/permissions";
 import { createNotificationWithEmail } from "@/lib/notifications";
+import { UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
-import { UserRole } from "@/types";
 
 export async function GET(
   request: Request,

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { canCreateService } from "@/lib/permissions";
+import { UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
-import { UserRole } from "@/types";
 
 export async function GET(request: Request) {
   try {
