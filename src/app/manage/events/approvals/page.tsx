@@ -73,6 +73,7 @@ export default function EventApprovalsPage() {
 
   const [pendingEvents, setPendingEvents] = useState<PendingEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [actionState, setActionState] = useState<ActionState>(null);
   const [comments, setComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -86,6 +87,7 @@ export default function EventApprovalsPage() {
 
   const fetchPendingEvents = useCallback(async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const eventsRef = safeCollection("events");
       const q = query(
@@ -122,6 +124,7 @@ export default function EventApprovalsPage() {
       setPendingEvents(events);
     } catch (error) {
       console.error("Failed to fetch pending events:", error);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -225,6 +228,25 @@ export default function EventApprovalsPage() {
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner size="lg" />
         </div>
+      ) : fetchError ? (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <XCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h3 className="font-display font-semibold text-clay-700 text-lg">
+              Failed to load pending events
+            </h3>
+            <p className="text-clay-500 mt-2">
+              There was a problem fetching events. Please try again.
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={fetchPendingEvents}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       ) : pendingEvents.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
