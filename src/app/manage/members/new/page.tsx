@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useAuth } from "@/contexts/AuthContext";
 import { Department, UserRole, LifeGroup, Institution } from "@/types";
 import { roleLabels, canManageMembers, getAssignableRoles } from "@/lib/permissions";
@@ -82,7 +83,7 @@ export default function NewMemberPage() {
 
     async function fetchInstitutions() {
       try {
-        const res = await fetch("/api/institutions");
+        const res = await fetchWithAuth("/api/institutions");
         if (res.ok) {
           const json = await res.json();
           const fetched: Institution[] = json.institutions
@@ -132,7 +133,7 @@ export default function NewMemberPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/members", {
+      const response = await fetchWithAuth("/api/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

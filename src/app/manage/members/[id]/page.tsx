@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useAuth } from "@/contexts/AuthContext";
 import { Department, UserRole, LifeGroup, Institution } from "@/types";
 import {
@@ -104,7 +105,7 @@ export default function EditMemberPage() {
     async function fetchData() {
       try {
         // Fetch member
-        const memberRes = await fetch(`/api/members/${id}`);
+        const memberRes = await fetchWithAuth(`/api/members/${id}`);
         if (!memberRes.ok) {
           throw new Error("Member not found");
         }
@@ -144,7 +145,7 @@ export default function EditMemberPage() {
 
         // Fetch institutions
         try {
-          const instRes = await fetch("/api/institutions");
+          const instRes = await fetchWithAuth("/api/institutions");
           if (instRes.ok) {
             const instJson = await instRes.json();
             const instData: Institution[] = instJson.institutions
@@ -203,7 +204,7 @@ export default function EditMemberPage() {
     setSubmitting(true);
 
     try {
-      const response = await fetch(`/api/members/${id}`, {
+      const response = await fetchWithAuth(`/api/members/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -252,7 +253,7 @@ export default function EditMemberPage() {
     setDeleting(true);
 
     try {
-      const response = await fetch(
+      const response = await fetchWithAuth(
         `/api/members/${id}`,
         { method: "DELETE" }
       );

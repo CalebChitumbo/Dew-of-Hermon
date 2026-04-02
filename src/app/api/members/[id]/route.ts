@@ -28,6 +28,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const caller = await getCallerRole();
+    if (!caller) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const doc = await adminDb.collection("users").doc(id).get();
 
