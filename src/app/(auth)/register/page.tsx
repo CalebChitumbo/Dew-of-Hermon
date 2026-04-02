@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getDocs, query, where, orderBy } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { LifeGroup, Institution } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,17 +18,57 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+
+const LIFE_GROUP_LABELS: Record<LifeGroup, string> = {
+  BRIDGE: "Bridge (15-20 years)",
+  ANCHOR: "Anchor (21-25 years)",
+  CORNERSTONE: "Cornerstone (26+ years)",
+};
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [lifeGroup, setLifeGroup] = useState<LifeGroup | "">("");
+  const [isStudent, setIsStudent] = useState(false);
+  const [institutionId, setInstitutionId] = useState("");
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signUp, signInWithGoogle } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    async function fetchInstitutions() {
+      try {
+        const q = query(
+          safeCollection("institutions"),
+          where("isActive", "==", true),
+          orderBy("order")
+        );
+        const snapshot = await getDocs(q);
+        setInstitutions(
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+          })) as Institution[]
+        );
+      } catch (error) {
+        console.error("Error fetching institutions:", error);
+      }
+    }
+    fetchInstitutions();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +87,11 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await signUp(email, password, name);
+      await signUp(email, password, name, {
+        lifeGroup: lifeGroup || undefined,
+        isStudent,
+        institutionId: isStudent ? institutionId || undefined : undefined,
+      });
       router.push("/dashboard");
     } catch (err: unknown) {
       const message =
@@ -131,6 +178,76 @@ export default function RegisterPage() {
               required
             />
           </div>
+
+          {/* Life Group Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="lifeGroup">Life Group</Label>
+            <Select
+              value={lifeGroup}
+              onValueChange={(value) => setLifeGroup(value as LifeGroup)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select your Life Group" />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(LIFE_GROUP_LABELS) as LifeGroup[]).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {LIFE_GROUP_LABELS[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Student Toggle */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Label htmlFor="isStudent" className="cursor-pointer">
+                Are you a student?
+              </Label>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isStudent}
+                onClick={() => {
+                  setIsStudent(!isStudent);
+                  if (isStudent) setInstitutionId("");
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  isStudent ? "bg-gold" : "bg-clay-300"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    isStudent ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Institution Dropdown (shown only if student) */}
+          {isStudent && (
+            <div className="space-y-2">
+              <Label htmlFor="institution">Institution</Label>
+              <Select
+                value={institutionId}
+                onValueChange={setInstitutionId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your institution" />
+                </SelectTrigger>
+                <SelectContent>
+                  {institutions.map((inst) => (
+                    <SelectItem key={inst.id} value={inst.id}>
+                      {inst.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? <LoadingSpinner size="sm" /> : "Create Account"}
           </Button>

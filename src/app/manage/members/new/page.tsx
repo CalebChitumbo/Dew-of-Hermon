@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getDocs, query, orderBy } from "firebase/firestore";
+import { getDocs, query, orderBy, where } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Department, UserRole } from "@/types";
+import { Department, UserRole, LifeGroup, Institution } from "@/types";
 import { roleLabels, canManageMembers, getAssignableRoles } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,12 @@ import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { ArrowLeft, Save, Shield, X } from "lucide-react";
 
+const LIFE_GROUP_LABELS: Record<LifeGroup, string> = {
+  BRIDGE: "Bridge (15-20 years)",
+  ANCHOR: "Anchor (21-25 years)",
+  CORNERSTONE: "Cornerstone (26+ years)",
+};
+
 // Roles are filtered dynamically based on caller via getAssignableRoles
 
 export default function NewMemberPage() {
@@ -33,6 +39,7 @@ export default function NewMemberPage() {
   const { toast } = useToast();
 
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,6 +49,9 @@ export default function NewMemberPage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<UserRole>("MEMBER");
   const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
+  const [lifeGroup, setLifeGroup] = useState<LifeGroup | "">("");
+  const [isStudent, setIsStudent] = useState(false);
+  const [institutionId, setInstitutionId] = useState("");
 
   // Validation
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -70,7 +80,28 @@ export default function NewMemberPage() {
       }
     }
 
+    async function fetchInstitutions() {
+      try {
+        const q = query(
+          safeCollection("institutions"),
+          where("isActive", "==", true),
+          orderBy("order")
+        );
+        const snapshot = await getDocs(q);
+        setInstitutions(
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+          })) as Institution[]
+        );
+      } catch (error) {
+        console.error("Error fetching institutions:", error);
+      }
+    }
+
     fetchDepartments();
+    fetchInstitutions();
   }, []);
 
   function validate(): boolean {
@@ -112,6 +143,9 @@ export default function NewMemberPage() {
           phone: phone.trim() || null,
           role,
           departmentIds: selectedDeptIds,
+          lifeGroup: lifeGroup || null,
+          isStudent,
+          institutionId: isStudent ? institutionId || null : null,
         }),
       });
 
@@ -275,6 +309,77 @@ export default function NewMemberPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <Separator />
+
+            {/* Life Group */}
+            <div className="space-y-2">
+              <Label htmlFor="lifeGroup">Life Group</Label>
+              <Select
+                value={lifeGroup}
+                onValueChange={(value) => setLifeGroup(value as LifeGroup)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Life Group (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(LIFE_GROUP_LABELS) as LifeGroup[]).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {LIFE_GROUP_LABELS[key]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Student Toggle */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Label htmlFor="isStudent" className="cursor-pointer">
+                  Is this member a student?
+                </Label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isStudent}
+                  onClick={() => {
+                    setIsStudent(!isStudent);
+                    if (isStudent) setInstitutionId("");
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isStudent ? "bg-gold" : "bg-clay-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isStudent ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Institution (shown if student) */}
+            {isStudent && (
+              <div className="space-y-2">
+                <Label htmlFor="institution">Institution</Label>
+                <Select
+                  value={institutionId}
+                  onValueChange={setInstitutionId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select institution" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {institutions.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.id}>
+                        {inst.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <Separator />
 

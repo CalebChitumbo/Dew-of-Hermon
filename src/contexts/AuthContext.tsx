@@ -20,7 +20,7 @@ interface AuthContextType {
   userData: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, extra?: { lifeGroup?: string; isStudent?: boolean; institutionId?: string }) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -79,12 +79,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubUser;
   }, [firebaseUser]);
 
-  const createSession = async (user: FirebaseUser, isGoogleSignIn = false, registrationName?: string) => {
+  const createSession = async (
+    user: FirebaseUser,
+    isGoogleSignIn = false,
+    registrationName?: string,
+    extra?: { lifeGroup?: string; isStudent?: boolean; institutionId?: string }
+  ) => {
     const idToken = await user.getIdToken();
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken, isGoogleSignIn, registrationName }),
+      body: JSON.stringify({
+        idToken,
+        isGoogleSignIn,
+        registrationName,
+        ...extra,
+      }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -97,13 +107,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await createSession(cred.user);
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    name: string,
+    extra?: { lifeGroup?: string; isStudent?: boolean; institutionId?: string }
+  ) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     try {
       await updateProfile(cred.user, { displayName: name });
       // User doc is created server-side in /api/auth/login to avoid
       // client-side Firestore permission issues
-      await createSession(cred.user, false, name);
+      await createSession(cred.user, false, name, extra);
     } catch (error) {
       // If anything fails after auth user creation, delete the auth user
       // so the user can retry registration without "email already in use"

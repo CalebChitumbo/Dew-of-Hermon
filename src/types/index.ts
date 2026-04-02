@@ -8,6 +8,18 @@ export type EventType = "POTTERS_WHEEL_SERVICE" | "ROPS_CAMP" | "RETREAT" | "SPE
 
 export type ReminderDay = "MONDAY" | "THURSDAY" | "SATURDAY";
 
+export type LifeGroup = "BRIDGE" | "ANCHOR" | "CORNERSTONE";
+
+export type EventApprovalStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
+
+export type FollowUpStatus = "NEW_CONTACT" | "CONTACTED" | "FIRST_VISIT" | "REGULAR_ATTENDEE" | "MEMBER";
+
+export type FollowUpSource = "CAMPUS_MINISTRY" | "LIFE_GROUPS";
+
+export type FollowUpReason = "NEW_VISITOR" | "RETURNING_AFTER_ABSENCE" | "NEEDS_PASTORAL_SUPPORT" | "OTHER";
+
+export type EventRoleTier = "CORE" | "DEPARTMENT";
+
 // ─── Document Types ───
 
 export interface User {
@@ -21,6 +33,9 @@ export interface User {
   profileImage: string | null;
   isActive: boolean;
   pushEnabled?: boolean;
+  lifeGroup: LifeGroup | null;
+  isStudent: boolean;
+  institutionId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,6 +72,13 @@ export interface AppEvent {
   venue: string;
   isRecurring: boolean;
   createdBy: string;
+  lifeGroupTarget: LifeGroup | "ALL" | null;
+  approvalStatus: EventApprovalStatus;
+  approvalComments: string | null;
+  approvedBy: string | null;
+  approvedAt: Date | null;
+  createdByDepartmentId: string | null;
+  coreRoles: EventCoreRole[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -164,4 +186,55 @@ export interface DepartmentTask {
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// ─── Event Roles ───
+
+export interface EventCoreRole {
+  role: string;
+  assignedUserId: string | null;
+  assignedUserName: string | null;
+}
+
+export interface EventDepartmentRole {
+  id: string;
+  eventId: string;
+  departmentId: string;
+  departmentName: string;
+  role: string;
+  assignedUserId: string | null;
+  assignedUserName: string | null;
+  assignedAt: Date | null;
+  createdAt: Date;
+}
+
+// ─── Follow-Up Pipeline ───
+
+export interface FollowUpCard {
+  id: string;
+  name: string;
+  phone: string;
+  source: FollowUpSource;
+  sourceDetail: string;
+  status: FollowUpStatus;
+  reason: FollowUpReason | null;
+  notes: string;
+  dateOfContact: Date;
+  assigneeId: string | null;
+  assigneeName: string | null;
+  createdBy: string;
+  createdByName: string;
+  statusHistory: { status: FollowUpStatus; changedBy: string; changedAt: Date }[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Institutions ───
+
+export interface Institution {
+  id: string;
+  name: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Date;
 }

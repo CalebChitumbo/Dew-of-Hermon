@@ -19,15 +19,30 @@ const serviceDepartments = [
 
 // Youth Ministry Lodge departments (organizational)
 const ministryDepartments = [
-  { name: "Potter's Wheel", icon: "🏺", order: 9, description: "Youth service organization, scheduling, and role assignment for Sunday services" },
-  { name: "Compass Ministry", icon: "🧭", order: 10, description: "Guiding and mentoring young people in their spiritual journey and life direction" },
-  { name: "Discipleship & Follow-up", icon: "📘", order: 11, description: "New believer discipleship, follow-up programs, and spiritual growth tracking" },
+  { name: "Events & Fellowship", icon: "🎪", order: 9, description: "Planning and coordinating youth events, approval gateway, and fellowship activities" },
+  { name: "Campus Ministry", icon: "🎓", order: 10, description: "Student outreach, campus evangelism, and student registration" },
+  { name: "Discipleship & Follow-Up", icon: "🤝", order: 11, description: "New believer discipleship, follow-up programs, and spiritual growth tracking" },
   { name: "Life Groups", icon: "👥", order: 12, description: "Small group fellowship, Bible study circles, and community building" },
-  { name: "Transport", icon: "🚐", order: 13, description: "Coordinating transport logistics for services, events, and outreach" },
-  { name: "Events & Fellowship", icon: "🎉", order: 14, description: "Planning and coordinating youth events, social gatherings, and fellowship activities" },
-  { name: "Fundraising", icon: "💰", order: 15, description: "Organizing fundraising initiatives, campaigns, and financial drives for the ministry" },
-  { name: "Food & Catering", icon: "🍽️", order: 16, description: "Coordinating meals, catering, and refreshments for ministry events and services" },
-  { name: "Media & Communication", icon: "📱", order: 17, description: "Managing social media, ministry communications, content creation, and publicity" },
+  { name: "Transport & Logistics", icon: "🚐", order: 13, description: "Coordinating transport logistics for services, events, and outreach" },
+  { name: "Youth Ablaze", icon: "🔥", order: 14, description: "Intercession and prayer warfare for youth events" },
+  { name: "Potter's Wheel", icon: "🏺", order: 15, description: "Youth service organization, scheduling, and role assignment for Sunday services" },
+  { name: "Compass Ministry", icon: "🧭", order: 16, description: "Guiding and mentoring young people in their spiritual journey and life direction" },
+  { name: "Fundraising", icon: "💰", order: 17, description: "Organizing fundraising initiatives, campaigns, and financial drives for the ministry" },
+  { name: "Food & Catering", icon: "🍽️", order: 18, description: "Coordinating meals, catering, and refreshments for ministry events and services" },
+  { name: "Media & Communication", icon: "📱", order: 19, description: "Managing social media, ministry communications, content creation, and publicity" },
+];
+
+// ─── Institutions ───
+const seedInstitutions = [
+  { name: "UNZA", order: 1 },
+  { name: "Texila American University", order: 2 },
+  { name: "Evelyn Hone College", order: 3 },
+  { name: "Apex Medical University", order: 4 },
+  { name: "NIPA", order: 5 },
+  { name: "ZCAS University", order: 6 },
+  { name: "Chreso University", order: 7 },
+  { name: "Cavendish University", order: 8 },
+  { name: "Eden University", order: 9 },
 ];
 
 const departments = [...serviceDepartments, ...ministryDepartments];
@@ -320,7 +335,42 @@ export async function POST(request: Request) {
       results.push("Created your user profile with SUPER_ADMIN role");
     }
 
-    // 5. Store default checklist template
+    // 5. Seed institutions if none exist
+    const existingInstitutions = await adminDb.collection("institutions").limit(1).get();
+    if (existingInstitutions.empty) {
+      const instBatch = adminDb.batch();
+      for (const inst of seedInstitutions) {
+        const ref = adminDb.collection("institutions").doc();
+        instBatch.set(ref, {
+          name: inst.name,
+          isActive: true,
+          order: inst.order,
+          createdAt: new Date(),
+        });
+      }
+      await instBatch.commit();
+      results.push(`Created ${seedInstitutions.length} institutions`);
+    } else {
+      results.push("Institutions already exist");
+    }
+
+    // 6. Seed Life Group settings if not exist
+    const lifeGroupsDoc = await adminDb.collection("settings").doc("lifeGroups").get();
+    if (!lifeGroupsDoc.exists) {
+      await adminDb.collection("settings").doc("lifeGroups").set({
+        groups: [
+          { key: "BRIDGE", name: "Bridge", ageRange: "15-20 years", order: 1 },
+          { key: "ANCHOR", name: "Anchor", ageRange: "21-25 years", order: 2 },
+          { key: "CORNERSTONE", name: "Cornerstone", ageRange: "26+ years", order: 3 },
+        ],
+        updatedAt: new Date(),
+      });
+      results.push("Created Life Group settings");
+    } else {
+      results.push("Life Group settings already exist");
+    }
+
+    // 7. Store default checklist template
     const settingsDoc = await adminDb.collection("settings").doc("checklistTemplate").get();
     if (!settingsDoc.exists) {
       const defaultChecklist = [

@@ -88,6 +88,73 @@ export function canManageDepartments(userRole: UserRole): boolean {
   return hasMinRole(userRole, "ADMIN");
 }
 
+/**
+ * Events & Fellowship Manager (DEPARTMENT_LEAD of Events & Fellowship dept) or ADMIN+
+ * can approve events.
+ */
+export function canApproveEvents(
+  userRole: UserRole,
+  leadsDepartmentIds: string[],
+  eventsFellowshipDeptId: string
+): boolean {
+  if (hasMinRole(userRole, "ADMIN")) return true;
+  return (
+    userRole === "DEPARTMENT_LEAD" &&
+    leadsDepartmentIds.includes(eventsFellowshipDeptId)
+  );
+}
+
+/**
+ * Members of Campus Ministry or Life Groups departments can submit follow-up cards.
+ */
+export function canSubmitFollowUp(
+  userRole: UserRole,
+  departmentIds: string[],
+  campusMinistryDeptId: string,
+  lifeGroupsDeptId: string
+): boolean {
+  if (hasMinRole(userRole, "ADMIN")) return true;
+  return (
+    departmentIds.includes(campusMinistryDeptId) ||
+    departmentIds.includes(lifeGroupsDeptId)
+  );
+}
+
+/**
+ * Discipleship & Follow-Up dept lead or ADMIN+ can manage follow-up cards.
+ */
+export function canManageFollowUps(
+  userRole: UserRole,
+  leadsDepartmentIds: string[],
+  discipleshipDeptId: string
+): boolean {
+  if (hasMinRole(userRole, "ADMIN")) return true;
+  return leadsDepartmentIds.includes(discipleshipDeptId);
+}
+
+/**
+ * Life Group leaders (DEPARTMENT_LEAD or YOUTH_LEADER in Life Groups dept)
+ * can submit life group follow-up leads.
+ */
+export function canSubmitLifeGroupLead(
+  userRole: UserRole,
+  departmentIds: string[],
+  lifeGroupsDeptId: string
+): boolean {
+  if (hasMinRole(userRole, "ADMIN")) return true;
+  return (
+    (userRole === "DEPARTMENT_LEAD" || userRole === "YOUTH_LEADER") &&
+    departmentIds.includes(lifeGroupsDeptId)
+  );
+}
+
+/**
+ * Only ADMIN+ can manage institutions.
+ */
+export function canManageInstitutions(userRole: UserRole): boolean {
+  return hasMinRole(userRole, "ADMIN");
+}
+
 export const roleLabels: Record<UserRole, string> = {
   SUPER_ADMIN: "Chairperson",
   ADMIN: "Secretary / Admin",

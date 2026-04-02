@@ -53,6 +53,9 @@ export async function GET() {
         leadsDepartmentIds: data.leadsDepartmentIds || [],
         profileImage: data.profileImage || null,
         isActive: data.isActive ?? true,
+        lifeGroup: data.lifeGroup || null,
+        isStudent: data.isStudent || false,
+        institutionId: data.institutionId || null,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       };
@@ -71,7 +74,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, role, departmentIds } = body;
+    const { name, email, phone, role, departmentIds, isStudent, institutionId, lifeGroup } = body;
 
     // Verify the caller's role from their session
     const caller = await getCallerRole();
@@ -115,16 +118,36 @@ export async function POST(request: Request) {
       password: tempPassword,
     });
 
+    // If student, auto-add Campus Ministry department
+    let finalDepartmentIds = departmentIds || [];
+    if (isStudent) {
+      // Find Campus Ministry department ID
+      const campusDeptSnapshot = await adminDb
+        .collection("departments")
+        .where("name", "==", "Campus Ministry")
+        .limit(1)
+        .get();
+      if (!campusDeptSnapshot.empty) {
+        const campusDeptId = campusDeptSnapshot.docs[0].id;
+        if (!finalDepartmentIds.includes(campusDeptId)) {
+          finalDepartmentIds = [...finalDepartmentIds, campusDeptId];
+        }
+      }
+    }
+
     // Create Firestore document
     const userData = {
       name,
       email,
       phone: phone || null,
       role: role || "MEMBER",
-      departmentIds: departmentIds || [],
+      departmentIds: finalDepartmentIds,
       leadsDepartmentIds: [],
       profileImage: null,
       isActive: true,
+      lifeGroup: lifeGroup || null,
+      isStudent: isStudent || false,
+      institutionId: isStudent ? (institutionId || null) : null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
