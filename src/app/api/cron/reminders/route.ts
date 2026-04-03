@@ -119,7 +119,7 @@ async function sendDepartmentRoleReminders(appUrl: string): Promise<{
 
       if (daysUntil >= 3) {
         // First reminder: notify each department lead about their unfilled roles
-        for (const [deptId, info] of byDept.entries()) {
+        for (const [deptId, info] of Array.from(byDept.entries())) {
           const leadsSnap = await adminDb
             .collection("users")
             .where("leadsDepartmentIds", "array-contains", deptId)
