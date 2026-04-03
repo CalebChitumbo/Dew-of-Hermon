@@ -9,7 +9,7 @@ import {
   AppEvent,
   Service,
 } from "@/types";
-import { format, addDays, startOfDay, endOfDay } from "date-fns";
+import { format, addDays, startOfDay, endOfDay, differenceInDays } from "date-fns";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +53,197 @@ function replacePlaceholders(
     .replace(/\{\{theme\}\}/g, data.theme)
     .replace(/\{\{eventTitle\}\}/g, data.eventTitle)
     .replace(/\{\{confirmLink\}\}/g, data.confirmLink);
+}
+
+// ─── Department role reminder logic ───
+// Runs alongside the service assignment reminders.
+// For each APPROVED event in the next 7 days:
+//   - 3-7 days away: notify each department manager about their unfilled roles (first reminder)
+//   - 1-2 days away: notify Events & Fellowship Manager / ADMINs as escalation
+
+async function sendDepartmentRoleReminders(appUrl: string): Promise<{
+  sent: number;
+  errors: string[];
+}> {
+  const results = { sent: 0, errors: [] as string[] };
+
+  try {
+    const now = new Date();
+    const sevenDaysFromNow = addDays(now, 7);
+
+    // Query approved events in the next 7 days
+    const eventsSnap = await adminDb
+      .collection("events")
+      .where("approvalStatus", "==", "APPROVED")
+      .where("startDate", ">=", startOfDay(now))
+      .where("startDate", "<=", endOfDay(sevenDaysFromNow))
+      .get();
+
+    if (eventsSnap.empty) return results;
+
+    for (const eventDoc of eventsSnap.docs) {
+      const event = eventDoc.data();
+      const eventId = eventDoc.id;
+      const eventTitle = event.title || "Upcoming Event";
+      const eventStart = event.startDate?.toDate?.() || now;
+      const daysUntil = differenceInDays(eventStart, now);
+
+      // Fetch unfilled department roles for this event
+      const unfilledSnap = await adminDb
+        .collection("eventDepartmentRoles")
+        .where("eventId", "==", eventId)
+        .where("assignedUserId", "==", null)
+        .get();
+
+      if (unfilledSnap.empty) continue;
+
+      // Group unfilled roles by department
+      const byDept = new Map<
+        string,
+        { departmentId: string; departmentName: string; roles: string[] }
+      >();
+      for (const roleDoc of unfilledSnap.docs) {
+        const r = roleDoc.data();
+        if (!byDept.has(r.departmentId)) {
+          byDept.set(r.departmentId, {
+            departmentId: r.departmentId,
+            departmentName: r.departmentName,
+            roles: [],
+          });
+        }
+        byDept.get(r.departmentId)!.roles.push(r.role);
+      }
+
+      const eventDateStr = format(eventStart, "EEE, d MMM yyyy");
+      const rolesLink = `/manage/events/${eventId}/roles`;
+
+      if (daysUntil >= 3) {
+        // First reminder: notify each department lead about their unfilled roles
+        for (const [deptId, info] of Array.from(byDept.entries())) {
+          const leadsSnap = await adminDb
+            .collection("users")
+            .where("leadsDepartmentIds", "array-contains", deptId)
+            .where("isActive", "==", true)
+            .get();
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          for (const lead of leadsSnap.docs as any[]) {
+            const leadData = lead.data();
+            const roleList = info.roles.join(", ");
+            try {
+              await createNotificationWithEmail({
+                userId: lead.id,
+                title: "Unfilled Event Roles — Action Needed",
+                message: `${info.departmentName} has ${info.roles.length} unfilled role(s) for "${eventTitle}" on ${eventDateStr}: ${roleList}.`,
+                type: "reminder",
+                link: rolesLink,
+                recipientEmail: leadData.email,
+                email: {
+                  subject: `Action Required: Unfilled roles for "${eventTitle}"`,
+                  text: `Your department (${info.departmentName}) has ${info.roles.length} unfilled role(s) for the event "${eventTitle}" on ${eventDateStr}.\n\nUnfilled roles: ${roleList}\n\nPlease assign team members as soon as possible.\n\nView the role board: ${appUrl}${rolesLink}`,
+                },
+              });
+              results.sent++;
+            } catch (err) {
+              const msg = `Dept role reminder failed for ${leadData.email}: ${err instanceof Error ? err.message : "Unknown"}`;
+              console.error(msg);
+              results.errors.push(msg);
+            }
+          }
+        }
+      } else if (daysUntil >= 0 && daysUntil < 3) {
+        // Escalation: notify Events & Fellowship Manager + ADMINs about all unfilled roles
+        const totalUnfilled = unfilledSnap.size;
+        const unfilledSummary = Array.from(byDept.values())
+          .map((info) => `${info.departmentName}: ${info.roles.join(", ")}`)
+          .join(" | ");
+
+        // Find Events & Fellowship dept
+        const efSnap = await adminDb
+          .collection("departments")
+          .where("name", "==", "Events & Fellowship")
+          .limit(1)
+          .get();
+        const efDeptId = efSnap.empty ? null : efSnap.docs[0].id;
+
+        const notified = new Set<string>();
+
+        // Notify E&F managers
+        if (efDeptId) {
+          const managersSnap = await adminDb
+            .collection("users")
+            .where("leadsDepartmentIds", "array-contains", efDeptId)
+            .where("isActive", "==", true)
+            .get();
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          for (const mgr of managersSnap.docs as any[]) {
+            if (notified.has(mgr.id)) continue;
+            notified.add(mgr.id);
+            const mgrData = mgr.data();
+            try {
+              await createNotificationWithEmail({
+                userId: mgr.id,
+                title: "Escalation: Unfilled Event Roles",
+                message: `"${eventTitle}" on ${eventDateStr} has ${totalUnfilled} unfilled role(s) with ${daysUntil} day(s) remaining.`,
+                type: "reminder",
+                link: rolesLink,
+                recipientEmail: mgrData.email,
+                email: {
+                  subject: `Escalation: ${totalUnfilled} unfilled roles for "${eventTitle}"`,
+                  text: `ESCALATION: "${eventTitle}" is in ${daysUntil} day(s) (${eventDateStr}) and has ${totalUnfilled} unfilled role(s).\n\nUnfilled roles by department:\n${unfilledSummary}\n\nPlease coordinate with department leads immediately.\n\nView the role board: ${appUrl}${rolesLink}`,
+                },
+              });
+              results.sent++;
+            } catch (err) {
+              const msg = `Escalation failed for ${mgrData.email}: ${err instanceof Error ? err.message : "Unknown"}`;
+              console.error(msg);
+              results.errors.push(msg);
+            }
+          }
+        }
+
+        // Also notify ADMINs/SUPER_ADMINs
+        const adminsSnap = await adminDb
+          .collection("users")
+          .where("role", "in", ["ADMIN", "SUPER_ADMIN"])
+          .where("isActive", "==", true)
+          .get();
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for (const admin of adminsSnap.docs as any[]) {
+          if (notified.has(admin.id)) continue;
+          notified.add(admin.id);
+          const adminData = admin.data();
+          try {
+            await createNotificationWithEmail({
+              userId: admin.id,
+              title: "Escalation: Unfilled Event Roles",
+              message: `"${eventTitle}" on ${eventDateStr} has ${totalUnfilled} unfilled role(s) with ${daysUntil} day(s) remaining.`,
+              type: "reminder",
+              link: rolesLink,
+              recipientEmail: adminData.email,
+              email: {
+                subject: `Escalation: ${totalUnfilled} unfilled roles for "${eventTitle}"`,
+                text: `ESCALATION: "${eventTitle}" is in ${daysUntil} day(s) (${eventDateStr}) and has ${totalUnfilled} unfilled role(s).\n\nUnfilled roles by department:\n${unfilledSummary}\n\nPlease coordinate with department leads immediately.\n\nView the role board: ${appUrl}${rolesLink}`,
+              },
+            });
+            results.sent++;
+          } catch (err) {
+            const msg = `Escalation (admin) failed for ${adminData.email}: ${err instanceof Error ? err.message : "Unknown"}`;
+            console.error(msg);
+            results.errors.push(msg);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    const msg = `Department role reminder batch failed: ${err instanceof Error ? err.message : "Unknown"}`;
+    console.error(msg);
+    results.errors.push(msg);
+  }
+
+  return results;
 }
 
 export async function GET(request: NextRequest) {
@@ -294,6 +485,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Run department role reminders in parallel with the log write
+    const deptRoleResults = await sendDepartmentRoleReminders(appUrl);
+
     // Log the batch to reminderLogs collection
     await adminDb.collection("reminderLogs").add({
       reminderDay: today,
@@ -304,6 +498,8 @@ export async function GET(request: NextRequest) {
       errors: errors.length > 0 ? errors.join("; ") : null,
       errorDetails: errors.slice(0, 10),
       serviceIds,
+      deptRoleRemindersSent: deptRoleResults.sent,
+      deptRoleReminderErrors: deptRoleResults.errors.slice(0, 10),
     });
 
     return NextResponse.json({
@@ -313,6 +509,8 @@ export async function GET(request: NextRequest) {
       noEmail: totalNoEmail,
       errors: errors.length,
       errorDetails: errors.slice(0, 10),
+      deptRoleRemindersSent: deptRoleResults.sent,
+      deptRoleReminderErrors: deptRoleResults.errors.length,
     });
   } catch (error) {
     console.error("Cron reminder error:", error);
