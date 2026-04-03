@@ -117,8 +117,8 @@ async function sendDepartmentRoleReminders(appUrl: string): Promise<{
       const eventDateStr = format(eventStart, "EEE, d MMM yyyy");
       const rolesLink = `/manage/events/${eventId}/roles`;
 
-      if (daysUntil >= 3) {
-        // First reminder: notify each department lead about their unfilled roles
+      if (daysUntil >= 3 && daysUntil <= 6) {
+        // First reminder (~5 days before): notify each department lead about their unfilled roles
         for (const [deptId, info] of Array.from(byDept.entries())) {
           const leadsSnap = await adminDb
             .collection("users")
@@ -151,8 +151,8 @@ async function sendDepartmentRoleReminders(appUrl: string): Promise<{
             }
           }
         }
-      } else if (daysUntil >= 0 && daysUntil < 3) {
-        // Escalation: notify Events & Fellowship Manager + ADMINs about all unfilled roles
+      } else if (daysUntil >= 0 && daysUntil <= 2) {
+        // Escalation (~2 days before): notify Events & Fellowship Manager + ADMINs about all unfilled roles
         const totalUnfilled = unfilledSnap.size;
         const unfilledSummary = Array.from(byDept.values())
           .map((info) => `${info.departmentName}: ${info.roles.join(", ")}`)

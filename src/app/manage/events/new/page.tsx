@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getDocs, query, orderBy } from "firebase/firestore";
+import { getDocs, query, orderBy, where } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Department, EventType, LifeGroup } from "@/types";
+import { Department, EventType, LifeGroup, User } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,8 +66,11 @@ export default function NewEventPage() {
   const { toast } = useToast();
 
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [activeUsers, setActiveUsers] = useState<User[]>([]);
   const [loadingDepts, setLoadingDepts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [coreRolePickerIdx, setCoreRolePickerIdx] = useState<number | null>(null);
+  const [coreRoleSearch, setCoreRoleSearch] = useState("");
   const [submitted, setSubmitted] = useState<{
     approvalStatus: string;
     title: string;
@@ -118,14 +121,50 @@ export default function NewEventPage() {
         setLoadingDepts(false);
       }
     }
+
+    async function loadUsers() {
+      try {
+        const snap = await getDocs(
+          query(
+            safeCollection("users"),
+            where("isActive", "==", true),
+            orderBy("name", "asc")
+          )
+        );
+        const users: User[] = snap.docs.map((doc) => {
+          const u = doc.data();
+          return {
+            id: doc.id,
+            name: u.name || "",
+            email: u.email || "",
+            phone: u.phone || null,
+            role: u.role,
+            departmentIds: u.departmentIds || [],
+            leadsDepartmentIds: u.leadsDepartmentIds || [],
+            profileImage: u.profileImage || null,
+            isActive: true,
+            lifeGroup: u.lifeGroup || null,
+            isStudent: u.isStudent || false,
+            institutionId: u.institutionId || null,
+            createdAt: u.createdAt?.toDate?.() || new Date(),
+            updatedAt: u.updatedAt?.toDate?.() || new Date(),
+          };
+        });
+        setActiveUsers(users);
+      } catch (err) {
+        console.error("Failed to load users:", err);
+      }
+    }
+
     loadDepartments();
+    loadUsers();
   }, []);
 
-  function updateCoreRole(index: number, userName: string) {
+  function updateCoreRole(index: number, userId: string | null, userName: string | null) {
     setCoreRoles((prev) =>
       prev.map((role, i) =>
         i === index
-          ? { ...role, assignedUserName: userName || null, assignedUserId: null }
+          ? { ...role, assignedUserName: userName || null, assignedUserId: userId || null }
           : role
       )
     );
@@ -448,7 +487,7 @@ export default function NewEventPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-clay-500">
-              These are the key coordination roles for this event. You can enter names now or leave them for later assignment.
+              These are the key coordination roles for this event. You can assign members now or leave them for later assignment.
             </p>
             <div className="space-y-2">
               {coreRoles.map((role, idx) => (
@@ -457,12 +496,78 @@ export default function NewEventPage() {
                     <Label className="text-xs text-clay-500 mb-1 block">
                       {role.role}
                     </Label>
-                    <Input
-                      placeholder="Assigned member name (optional)"
-                      value={role.assignedUserName || ""}
-                      onChange={(e) => updateCoreRole(idx, e.target.value)}
-                      className="h-9"
-                    />
+                    <div className="relative">
+                      {role.assignedUserName ? (
+                        <div className="flex items-center gap-2 h-9 px-3 border rounded-md bg-green-50 border-green-200">
+                          <span className="text-sm text-clay-800 flex-1 truncate">
+                            {role.assignedUserName}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-xs text-red-400 hover:text-red-600"
+                            onClick={() => updateCoreRole(idx, null, null)}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <Input
+                            placeholder="Search member to assign..."
+                            value={coreRolePickerIdx === idx ? coreRoleSearch : ""}
+                            onFocus={() => {
+                              setCoreRolePickerIdx(idx);
+                              setCoreRoleSearch("");
+                            }}
+                            onChange={(e) => {
+                              setCoreRolePickerIdx(idx);
+                              setCoreRoleSearch(e.target.value);
+                            }}
+                            className="h-9"
+                          />
+                          {coreRolePickerIdx === idx && (
+                            <div className="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto bg-white border border-clay-200 rounded-md shadow-lg">
+                              {activeUsers
+                                .filter(
+                                  (u) =>
+                                    u.name.toLowerCase().includes(coreRoleSearch.toLowerCase()) ||
+                                    u.email.toLowerCase().includes(coreRoleSearch.toLowerCase())
+                                )
+                                .slice(0, 8)
+                                .map((user) => (
+                                  <button
+                                    key={user.id}
+                                    type="button"
+                                    className="w-full px-3 py-2 text-left text-sm hover:bg-clay-50 flex items-center gap-2"
+                                    onClick={() => {
+                                      updateCoreRole(idx, user.id, user.name);
+                                      setCoreRolePickerIdx(null);
+                                      setCoreRoleSearch("");
+                                    }}
+                                  >
+                                    <div className="h-6 w-6 rounded-full bg-[#C8963E]/20 flex items-center justify-center flex-shrink-0">
+                                      <span className="text-xs font-bold text-[#C8963E]">
+                                        {user.name.charAt(0).toUpperCase()}
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-sm text-clay-800 truncate">{user.name}</p>
+                                      <p className="text-xs text-clay-400 truncate">{user.email}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                              {activeUsers.filter(
+                                (u) =>
+                                  u.name.toLowerCase().includes(coreRoleSearch.toLowerCase()) ||
+                                  u.email.toLowerCase().includes(coreRoleSearch.toLowerCase())
+                              ).length === 0 && (
+                                <p className="px-3 py-2 text-xs text-clay-400">No members found</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
