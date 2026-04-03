@@ -26,10 +26,16 @@ export { DEPT_ROLE_TEMPLATES };
 
 /**
  * Auto-create eventDepartmentRoles skeleton for an approved event.
+ * Returns a summary of created roles and any missing departments.
  */
-export async function createDepartmentRoleSkeletons(eventId: string) {
+export async function createDepartmentRoleSkeletons(eventId: string): Promise<{
+  created: number;
+  missingDepartments: string[];
+}> {
   const batch = adminDb.batch();
   const now = new Date();
+  let created = 0;
+  const missingDepartments: string[] = [];
 
   for (const template of DEPT_ROLE_TEMPLATES) {
     const deptSnap = await adminDb
@@ -39,7 +45,12 @@ export async function createDepartmentRoleSkeletons(eventId: string) {
       .get();
 
     if (deptSnap.empty) {
-      console.warn(`Department not found: ${template.deptName}`);
+      console.warn(
+        `[createDepartmentRoleSkeletons] Department not found: "${template.deptName}" — ` +
+        `${template.roles.length} role(s) skipped for event ${eventId}. ` +
+        `Ensure this department exists in the departments collection.`
+      );
+      missingDepartments.push(template.deptName);
       continue;
     }
 
@@ -58,10 +69,20 @@ export async function createDepartmentRoleSkeletons(eventId: string) {
         assignedAt: null,
         createdAt: now,
       });
+      created++;
     }
   }
 
   await batch.commit();
+
+  if (missingDepartments.length > 0) {
+    console.warn(
+      `[createDepartmentRoleSkeletons] Event ${eventId}: Created ${created} role(s), ` +
+      `but ${missingDepartments.length} department(s) were missing: ${missingDepartments.join(", ")}`
+    );
+  }
+
+  return { created, missingDepartments };
 }
 
 /**

@@ -107,6 +107,12 @@ interface AssignTarget {
   currentUserId: string | null;
 }
 
+interface CoreAssignTarget {
+  index: number;
+  roleName: string;
+  currentUserName: string | null;
+}
+
 // ─── Component ───
 
 export default function EventRoleBoardPage() {
@@ -119,6 +125,7 @@ export default function EventRoleBoardPage() {
   const [activeUsers, setActiveUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
+  const [coreAssignTarget, setCoreAssignTarget] = useState<CoreAssignTarget | null>(null);
   const [userSearch, setUserSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
 
@@ -333,6 +340,82 @@ export default function EventRoleBoardPage() {
     }
   }
 
+  // ─── Core Role Assignment ───
+
+  async function handleCoreAssign(user: User) {
+    if (!coreAssignTarget || !event) return;
+    setAssigning(true);
+    try {
+      const updatedCoreRoles = event.coreRoles.map((role, i) =>
+        i === coreAssignTarget.index
+          ? { ...role, assignedUserId: user.id, assignedUserName: user.name }
+          : role
+      );
+
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coreRoles: updatedCoreRoles }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to assign core role");
+      }
+
+      setEvent((prev) =>
+        prev ? { ...prev, coreRoles: updatedCoreRoles } : prev
+      );
+
+      toast({
+        title: "Core role assigned",
+        description: `${user.name} assigned as ${coreAssignTarget.roleName}.`,
+        variant: "success",
+      });
+      setCoreAssignTarget(null);
+      setUserSearch("");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  async function handleCoreClear(index: number, roleName: string) {
+    if (!event) return;
+    try {
+      const updatedCoreRoles = event.coreRoles.map((role, i) =>
+        i === index
+          ? { ...role, assignedUserId: null, assignedUserName: null }
+          : role
+      );
+
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coreRoles: updatedCoreRoles }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to clear core role");
+      }
+
+      setEvent((prev) =>
+        prev ? { ...prev, coreRoles: updatedCoreRoles } : prev
+      );
+
+      toast({
+        title: "Assignment cleared",
+        description: `${roleName} is now unassigned.`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    }
+  }
+
   // ─── Derived stats ───
 
   const allRoles = deptSections.flatMap((s) => s.roles);
@@ -479,16 +562,16 @@ export default function EventRoleBoardPage() {
                   <div
                     key={idx}
                     className={cn(
-                      "flex items-center justify-between rounded-lg border px-3 py-2.5",
+                      "flex items-center justify-between rounded-lg border px-3 py-2.5 gap-2",
                       isFilled
                         ? "border-green-200 bg-green-50"
                         : "border-clay-200 bg-clay-50"
                     )}
                   >
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-xs text-clay-500">{role.role}</p>
                       {isFilled ? (
-                        <p className="text-sm font-medium text-clay-800">
+                        <p className="text-sm font-medium text-clay-800 truncate">
                           {role.assignedUserName}
                         </p>
                       ) : (
@@ -497,7 +580,36 @@ export default function EventRoleBoardPage() {
                         </p>
                       )}
                     </div>
-                    {isFilled ? (
+                    {isAdmin ? (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-clay-500 hover:text-clay-700"
+                          onClick={() => {
+                            setCoreAssignTarget({
+                              index: idx,
+                              roleName: role.role,
+                              currentUserName: role.assignedUserName,
+                            });
+                            setUserSearch("");
+                          }}
+                        >
+                          <UserPlus className="h-3.5 w-3.5 mr-1" />
+                          {isFilled ? "Change" : "Assign"}
+                        </Button>
+                        {isFilled && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => handleCoreClear(idx, role.role)}
+                          >
+                            <UserMinus className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    ) : isFilled ? (
                       <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     ) : (
                       <div className="h-4 w-4 rounded-full border-2 border-clay-300 flex-shrink-0" />
@@ -506,9 +618,6 @@ export default function EventRoleBoardPage() {
                 );
               })}
             </div>
-            <p className="text-xs text-clay-400 mt-3">
-              Core roles are assigned at event creation. Edit the event to update these.
-            </p>
           </CardContent>
         </Card>
       )}
@@ -634,7 +743,7 @@ export default function EventRoleBoardPage() {
         })
       )}
 
-      {/* Assignment Dialog */}
+      {/* Assignment Dialog (Department Roles) */}
       <Dialog
         open={!!assignTarget}
         onOpenChange={(open) => {
@@ -722,6 +831,104 @@ export default function EventRoleBoardPage() {
               variant="outline"
               onClick={() => {
                 setAssignTarget(null);
+                setUserSearch("");
+              }}
+              disabled={assigning}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assignment Dialog (Core Roles) */}
+      <Dialog
+        open={!!coreAssignTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setCoreAssignTarget(null);
+            setUserSearch("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign Core Role</DialogTitle>
+            <DialogDescription>
+              Assigning:{" "}
+              <span className="font-medium text-clay-800">
+                {coreAssignTarget?.roleName}
+              </span>{" "}
+              &mdash; Core Role
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-clay-400" />
+            <Input
+              placeholder="Search by name or email..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="pl-9"
+              autoFocus
+            />
+          </div>
+
+          <div className="max-h-64 overflow-y-auto space-y-1 -mx-1 px-1">
+            {filteredUsers.length === 0 ? (
+              <p className="text-sm text-clay-400 text-center py-6">
+                No members found
+              </p>
+            ) : (
+              filteredUsers.map((user) => {
+                const isCurrentAssignee =
+                  user.name === coreAssignTarget?.currentUserName;
+                return (
+                  <button
+                    key={user.id}
+                    onClick={() => handleCoreAssign(user)}
+                    disabled={assigning}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
+                      isCurrentAssignee
+                        ? "bg-green-50 border border-green-200"
+                        : "hover:bg-clay-50 border border-transparent"
+                    )}
+                  >
+                    <div className="h-8 w-8 rounded-full bg-[#C8963E]/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-[#C8963E]">
+                        {user.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-clay-800 truncate">
+                        {user.name}
+                        {isCurrentAssignee && (
+                          <span className="ml-2 text-xs text-green-600 font-normal">
+                            (currently assigned)
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-clay-400 truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                    {assigning ? (
+                      <LoadingSpinner size="sm" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 text-clay-300 flex-shrink-0" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCoreAssignTarget(null);
                 setUserSearch("");
               }}
               disabled={assigning}
