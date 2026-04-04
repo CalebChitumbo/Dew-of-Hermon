@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
-import { safeCollection, safeDoc } from "@/lib/firebase";
+import { Timestamp } from "firebase/firestore";
+import { safeDoc } from "@/lib/firebase";
 import { getDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -209,34 +209,23 @@ export default function EventRoleBoardPage() {
         setDeptSections(sections);
       }
 
-      // Fetch active users for assignment picker
-      const usersSnap = await getDocs(
-        query(
-          safeCollection("users"),
-          where("isActive", "==", true),
-          orderBy("name", "asc")
-        )
-      );
-      const users: User[] = usersSnap.docs.map((doc) => {
-        const u = doc.data();
-        return {
-          id: doc.id,
-          name: u.name || "",
-          email: u.email || "",
-          phone: u.phone || null,
-          role: u.role,
-          departmentIds: u.departmentIds || [],
-          leadsDepartmentIds: u.leadsDepartmentIds || [],
-          profileImage: u.profileImage || null,
-          isActive: u.isActive ?? true,
-          lifeGroup: u.lifeGroup || null,
-          isStudent: u.isStudent || false,
-          institutionId: u.institutionId || null,
-          createdAt: parseFirestoreDate(u.createdAt),
-          updatedAt: parseFirestoreDate(u.updatedAt),
-        };
-      });
-      setActiveUsers(users);
+      // Fetch active users for assignment picker via API (avoids Firestore client-side permission issues)
+      const membersRes = await fetch(`/api/events/${eventId}/assignable-members`);
+      if (membersRes.ok) {
+        const { users } = await membersRes.json();
+        setActiveUsers(
+          users.map((u: User & { createdAt: string; updatedAt: string }) => ({
+            ...u,
+            createdAt: new Date(u.createdAt),
+            updatedAt: new Date(u.updatedAt),
+          }))
+        );
+      } else {
+        const errData = await membersRes.json().catch(() => ({}));
+        throw new Error(
+          errData.error || `Failed to load members (${membersRes.status})`
+        );
+      }
     } catch (err) {
       console.error("Failed to load role board data:", err);
       toast({
@@ -426,10 +415,18 @@ export default function EventRoleBoardPage() {
   const totalFilled = filledCoreRoles + filledDeptRoles;
   const overallPct = totalRoles > 0 ? Math.round((totalFilled / totalRoles) * 100) : 0;
 
-  const filteredUsers = activeUsers.filter((u) =>
-    u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.email.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  // For department role assignment, only show members of that department.
+  // For core role assignment, show all active members.
+  const filteredUsers = activeUsers.filter((u) => {
+    const matchesSearch =
+      u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.email.toLowerCase().includes(userSearch.toLowerCase());
+    if (!matchesSearch) return false;
+    if (assignTarget) {
+      return (u.departmentIds || []).includes(assignTarget.departmentId);
+    }
+    return true;
+  });
 
   // ─── Access guard ───
 
