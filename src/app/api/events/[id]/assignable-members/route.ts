@@ -58,32 +58,33 @@ export async function GET(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const snap = await adminDb
-      .collection("users")
-      .where("isActive", "==", true)
-      .orderBy("name", "asc")
-      .get();
+    // Fetch all users and filter/sort in application code to avoid
+    // composite index dependencies and handle missing isActive fields.
+    const snap = await adminDb.collection("users").get();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const users = snap.docs.map((doc: any) => {
-      const u = doc.data();
-      return {
-        id: doc.id,
-        name: u.name || "",
-        email: u.email || "",
-        phone: u.phone || null,
-        role: u.role,
-        departmentIds: u.departmentIds || [],
-        leadsDepartmentIds: u.leadsDepartmentIds || [],
-        profileImage: u.profileImage || null,
-        isActive: u.isActive ?? true,
-        lifeGroup: u.lifeGroup || null,
-        isStudent: u.isStudent || false,
-        institutionId: u.institutionId || null,
-        createdAt: u.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-        updatedAt: u.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-      };
-    });
+    const users = snap.docs
+      .map((doc: any) => {
+        const u = doc.data();
+        return {
+          id: doc.id,
+          name: u.name || "",
+          email: u.email || "",
+          phone: u.phone || null,
+          role: u.role,
+          departmentIds: u.departmentIds || [],
+          leadsDepartmentIds: u.leadsDepartmentIds || [],
+          profileImage: u.profileImage || null,
+          isActive: u.isActive ?? true,
+          lifeGroup: u.lifeGroup || null,
+          isStudent: u.isStudent || false,
+          institutionId: u.institutionId || null,
+          createdAt: u.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          updatedAt: u.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        };
+      })
+      .filter((u) => u.isActive !== false)
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     return NextResponse.json({ users });
   } catch (error) {

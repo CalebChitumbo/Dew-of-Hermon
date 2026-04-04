@@ -220,6 +220,11 @@ export default function EventRoleBoardPage() {
             updatedAt: new Date(u.updatedAt),
           }))
         );
+      } else {
+        const errData = await membersRes.json().catch(() => ({}));
+        throw new Error(
+          errData.error || `Failed to load members (${membersRes.status})`
+        );
       }
     } catch (err) {
       console.error("Failed to load role board data:", err);
