@@ -415,10 +415,18 @@ export default function EventRoleBoardPage() {
   const totalFilled = filledCoreRoles + filledDeptRoles;
   const overallPct = totalRoles > 0 ? Math.round((totalFilled / totalRoles) * 100) : 0;
 
-  const filteredUsers = activeUsers.filter((u) =>
-    u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-    u.email.toLowerCase().includes(userSearch.toLowerCase())
-  );
+  // For department role assignment, only show members of that department.
+  // For core role assignment, show all active members.
+  const filteredUsers = activeUsers.filter((u) => {
+    const matchesSearch =
+      u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.email.toLowerCase().includes(userSearch.toLowerCase());
+    if (!matchesSearch) return false;
+    if (assignTarget) {
+      return (u.departmentIds || []).includes(assignTarget.departmentId);
+    }
+    return true;
+  });
 
   // ─── Access guard ───
 
