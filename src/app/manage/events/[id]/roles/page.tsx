@@ -416,16 +416,21 @@ export default function EventRoleBoardPage() {
   const overallPct = totalRoles > 0 ? Math.round((totalFilled / totalRoles) * 100) : 0;
 
   // For department role assignment, only show members of that department.
-  // For core role assignment, show all active members.
-  const filteredUsers = activeUsers.filter((u) => {
+  const deptFilteredUsers = activeUsers.filter((u) => {
     const matchesSearch =
       u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
       u.email.toLowerCase().includes(userSearch.toLowerCase());
     if (!matchesSearch) return false;
-    if (assignTarget) {
-      return (u.departmentIds || []).includes(assignTarget.departmentId);
-    }
-    return true;
+    if (!assignTarget?.departmentId) return false;
+    return (u.departmentIds || []).includes(assignTarget.departmentId);
+  });
+
+  // For core role assignment, show all active members.
+  const coreFilteredUsers = activeUsers.filter((u) => {
+    return (
+      u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.email.toLowerCase().includes(userSearch.toLowerCase())
+    );
   });
 
   // ─── Access guard ───
@@ -774,12 +779,12 @@ export default function EventRoleBoardPage() {
           </div>
 
           <div className="max-h-64 overflow-y-auto space-y-1 -mx-1 px-1">
-            {filteredUsers.length === 0 ? (
+            {deptFilteredUsers.length === 0 ? (
               <p className="text-sm text-clay-400 text-center py-6">
-                No members found
+                No members found in this department
               </p>
             ) : (
-              filteredUsers.map((user) => {
+              deptFilteredUsers.map((user) => {
                 const isCurrentAssignee =
                   user.id === assignTarget?.currentUserId;
                 return (
@@ -872,12 +877,12 @@ export default function EventRoleBoardPage() {
           </div>
 
           <div className="max-h-64 overflow-y-auto space-y-1 -mx-1 px-1">
-            {filteredUsers.length === 0 ? (
+            {coreFilteredUsers.length === 0 ? (
               <p className="text-sm text-clay-400 text-center py-6">
                 No members found
               </p>
             ) : (
-              filteredUsers.map((user) => {
+              coreFilteredUsers.map((user) => {
                 const isCurrentAssignee =
                   user.name === coreAssignTarget?.currentUserName;
                 return (
