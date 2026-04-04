@@ -73,7 +73,7 @@ export function getAssignableRoles(callerRole: UserRole): UserRole[] {
 }
 
 export function canCreateEvents(userRole: UserRole): boolean {
-  return hasMinRole(userRole, "ADMIN");
+  return hasMinRole(userRole, "DEPARTMENT_LEAD");
 }
 
 export function canManageAffirmations(userRole: UserRole): boolean {
