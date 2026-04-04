@@ -25,7 +25,7 @@ import {
 } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { canCreateEvents } from "@/lib/permissions";
+import { canCreateEvents, hasMinRole } from "@/lib/permissions";
 import { AppEvent, EventType, LifeGroup } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   MapPin,
   Clock,
   CalendarDays,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
@@ -121,7 +122,8 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const isAdmin = userData ? canCreateEvents(userData.role) : false;
+  const canCreate = userData ? canCreateEvents(userData.role) : false;
+  const isDeptLead = userData ? hasMinRole(userData.role, "DEPARTMENT_LEAD") : false;
 
   // ─── Fetch events for current month range ───
 
@@ -221,7 +223,7 @@ export default function CalendarPage() {
             View upcoming events and services
           </p>
         </div>
-        {isAdmin && (
+        {canCreate && (
           <Link href="/manage/events/new">
             <Button className="bg-[#C8963E] hover:bg-[#B8862E] text-white">
               <Plus className="h-4 w-4 mr-2" />
@@ -297,7 +299,7 @@ export default function CalendarPage() {
                         inCurrentMonth && "bg-white",
                         today && "bg-[#C8963E]/5",
                         isSelected && "bg-[#C8963E]/10 ring-2 ring-inset ring-[#C8963E]",
-                        (dayEvents.length > 0 || (isAdmin && inCurrentMonth)) &&
+                        (dayEvents.length > 0 || (canCreate && inCurrentMonth)) &&
                           "cursor-pointer hover:bg-clay-50"
                       )}
                     >
@@ -419,6 +421,16 @@ export default function CalendarPage() {
                       <p className="text-sm text-clay-600 mt-1">
                         {event.description}
                       </p>
+                    )}
+
+                    {isDeptLead && (
+                      <Link
+                        href={`/manage/events/${event.id}/roles`}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-[#C8963E] hover:text-[#B8862E] mt-2"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        View Role Board
+                      </Link>
                     )}
                   </div>
                 </div>
