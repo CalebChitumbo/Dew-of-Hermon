@@ -42,11 +42,14 @@ function hasMinRole(role: string, required: string): boolean {
 // Access: DEPARTMENT_LEAD+
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   // params is required by Next.js route signature even if unused here
   await params;
+
+  const { searchParams } = new URL(request.url);
+  const departmentId = searchParams.get("departmentId");
 
   try {
     const caller = await getCaller();
@@ -84,6 +87,7 @@ export async function GET(
         };
       })
       .filter((u) => u.isActive !== false)
+      .filter((u) => !departmentId || u.departmentIds.includes(departmentId))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return NextResponse.json({ users });
