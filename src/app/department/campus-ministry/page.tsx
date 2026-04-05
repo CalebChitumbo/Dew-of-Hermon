@@ -53,6 +53,18 @@ import {
 import { format } from "date-fns";
 import { Department, Institution, User, FollowUpCard } from "@/types";
 
+const DEFAULT_INSTITUTIONS: Institution[] = [
+  { id: "unza", name: "UNZA", isActive: true, order: 1, createdAt: new Date() },
+  { id: "texila", name: "Texila American University", isActive: true, order: 2, createdAt: new Date() },
+  { id: "evelyn-hone", name: "Evelyn Hone College", isActive: true, order: 3, createdAt: new Date() },
+  { id: "apex", name: "Apex Medical University", isActive: true, order: 4, createdAt: new Date() },
+  { id: "nipa", name: "NIPA", isActive: true, order: 5, createdAt: new Date() },
+  { id: "zcas", name: "ZCAS University", isActive: true, order: 6, createdAt: new Date() },
+  { id: "chreso", name: "Chreso University", isActive: true, order: 7, createdAt: new Date() },
+  { id: "cavendish", name: "Cavendish University", isActive: true, order: 8, createdAt: new Date() },
+  { id: "eden", name: "Eden University", isActive: true, order: 9, createdAt: new Date() },
+];
+
 const STATUS_LABELS: Record<string, string> = {
   NEW_CONTACT: "New Contact",
   CONTACTED: "Contacted",
@@ -122,7 +134,7 @@ export default function CampusMinistryPage() {
           ...d.data(),
           createdAt: d.data().createdAt?.toDate?.() || new Date(),
         })) as Institution[]).filter((inst) => inst.isActive !== false);
-      setInstitutions(insts);
+      setInstitutions(insts.length > 0 ? insts : DEFAULT_INSTITUTIONS);
     });
     return () => unsub();
   }, []);
