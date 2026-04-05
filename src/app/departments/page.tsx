@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  ArrowLeft,
   Building2,
   Users,
   ChevronRight,
@@ -168,15 +169,22 @@ function DepartmentsContent() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Departments
-          </h1>
-          <p className="text-clay-500 mt-1">
-            {isAdmin
-              ? "Manage all youth ministry departments"
-              : "Your departments"}
-          </p>
+        <div className="flex items-start gap-3">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon" className="mt-1">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
+              Departments
+            </h1>
+            <p className="text-clay-500 mt-1">
+              {isAdmin
+                ? "Manage all youth ministry departments"
+                : "Your departments"}
+            </p>
+          </div>
         </div>
         {isAdmin && (
           <div className="flex gap-2">
