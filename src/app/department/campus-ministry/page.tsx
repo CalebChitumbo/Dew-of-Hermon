@@ -51,6 +51,7 @@ import {
   Users,
 } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import { Department, Institution, User, FollowUpCard } from "@/types";
 
 const DEFAULT_INSTITUTIONS: Institution[] = [
@@ -83,6 +84,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "succ
 
 export default function CampusMinistryPage() {
   const { userData } = useAuth();
+  const { toast } = useToast();
   const [institutions, setInstitutions] = useState<Institution[]>(DEFAULT_INSTITUTIONS);
   const [myCards, setMyCards] = useState<FollowUpCard[]>([]);
   const [studentMembers, setStudentMembers] = useState<User[]>([]);
@@ -256,15 +258,24 @@ export default function CampusMinistryPage() {
       }
 
       // Reset form
+      const savedName = formName;
       setFormName("");
       setFormPhone("");
       setFormInstitution("");
       setFormDate(new Date().toISOString().split("T")[0]);
       setFormNotes("");
       setDialogOpen(false);
+      toast({
+        title: "Contact logged",
+        description: `${savedName} has been sent to the Discipleship team for follow-up.`,
+      });
     } catch (error) {
       console.error("Error creating follow-up card:", error);
-      alert(error instanceof Error ? error.message : "Failed to create contact");
+      toast({
+        title: "Failed to log contact",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
     }
     setSubmitting(false);
   };
