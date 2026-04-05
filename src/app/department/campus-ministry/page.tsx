@@ -114,15 +114,16 @@ export default function CampusMinistryPage() {
   useEffect(() => {
     const q = query(
       safeCollection("institutions"),
-      where("isActive", "==", true),
       orderBy("order", "asc")
     );
     const unsub = onSnapshot(q, (snapshot) => {
-      const insts = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: d.data().createdAt?.toDate?.() || new Date(),
-      })) as Institution[];
+      const insts = snapshot.docs
+        .map((d) => ({
+          id: d.id,
+          ...d.data(),
+          createdAt: d.data().createdAt?.toDate?.() || new Date(),
+        }))
+        .filter((inst) => inst.isActive !== false) as Institution[];
       setInstitutions(insts);
     });
     return () => unsub();
