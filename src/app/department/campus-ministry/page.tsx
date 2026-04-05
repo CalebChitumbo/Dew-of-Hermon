@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import {
   query,
   where,
@@ -144,6 +144,40 @@ export default function CampusMinistryPage() {
     return () => unsub();
   }, []);
 
+  // Fetch my cards from API (fallback when onSnapshot fails)
+  const fetchMyCardsFromApi = useCallback(async () => {
+    try {
+      const res = await fetch("/api/follow-up-cards?source=CAMPUS_MINISTRY");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiCards = (data.cards || [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((c: any) => c.createdBy === userData?.id)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((c: any) => ({
+          ...c,
+          dateOfContact: c.dateOfContact ? new Date(c.dateOfContact) : new Date(),
+          createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+          updatedAt: c.updatedAt ? new Date(c.updatedAt) : new Date(),
+          statusHistory: (c.statusHistory || []).map(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (h: any) => ({
+              ...h,
+              changedAt: h.changedAt ? new Date(h.changedAt) : new Date(),
+            })
+          ),
+        }))
+        .sort(
+          (a: FollowUpCard, b: FollowUpCard) =>
+            b.createdAt.getTime() - a.createdAt.getTime()
+        ) as FollowUpCard[];
+      setMyCards(apiCards);
+    } catch (err) {
+      console.error("API fallback also failed:", err);
+    }
+  }, [userData?.id]);
+
   // Load my follow-up cards (created by me, from campus ministry)
   useEffect(() => {
     if (!userData) {
@@ -186,12 +220,13 @@ export default function CampusMinistryPage() {
       },
       (error) => {
         console.error("Error loading follow-up cards:", error);
-        setLoading(false);
+        // Fallback: fetch via API when real-time listener fails
+        fetchMyCardsFromApi().finally(() => setLoading(false));
       }
     );
 
     return () => unsub();
-  }, [userData?.id]);
+  }, [userData?.id, fetchMyCardsFromApi]);
 
   // Load student members for sub-register
   useEffect(() => {
