@@ -82,6 +82,9 @@ export function Sidebar() {
       return [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, minRole: "YOUTH_LEADER" as const },
         ...deptLeadItems,
+        { label: "Campus Ministry", href: "/department/campus-ministry", icon: GraduationCap, minRole: "MEMBER" as const },
+        { label: "Life Groups", href: "/department/life-groups", icon: UsersRound, minRole: "MEMBER" as const },
+        { label: "Discipleship", href: "/department/discipleship", icon: Heart, minRole: "MEMBER" as const },
         { label: "Calendar", href: "/calendar", icon: Calendar, minRole: "MEMBER" as const },
         { label: "Affirmations", href: "/affirmations", icon: Sparkles, minRole: "MEMBER" as const },
       ];
