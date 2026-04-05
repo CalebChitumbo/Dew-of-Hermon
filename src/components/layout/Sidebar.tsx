@@ -22,6 +22,9 @@ import {
   LogOut,
   CalendarPlus,
   ClipboardCheck,
+  GraduationCap,
+  Heart,
+  UsersRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -42,6 +45,9 @@ const navItems: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: Calendar, minRole: "MEMBER" },
   { label: "Create Event", href: "/manage/events/new", icon: CalendarPlus, minRole: "DEPARTMENT_LEAD" },
   { label: "Event Approvals", href: "/manage/events/approvals", icon: ClipboardCheck, minRole: "DEPARTMENT_LEAD" },
+  { label: "Campus Ministry", href: "/department/campus-ministry", icon: GraduationCap, minRole: "MEMBER" },
+  { label: "Life Groups", href: "/department/life-groups", icon: UsersRound, minRole: "MEMBER" },
+  { label: "Discipleship", href: "/department/discipleship", icon: Heart, minRole: "MEMBER" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, minRole: "MEMBER" },
   { label: "Templates", href: "/manage/templates", icon: Mail, minRole: "ADMIN" },
   { label: "Reports", href: "/manage/reports", icon: BarChart3, minRole: "ADMIN" },

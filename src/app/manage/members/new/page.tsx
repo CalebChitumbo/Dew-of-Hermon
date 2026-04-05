@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
@@ -36,6 +36,7 @@ const LIFE_GROUP_LABELS: Record<LifeGroup, string> = {
 
 export default function NewMemberPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { userData } = useAuth();
   const { toast } = useToast();
 
@@ -44,10 +45,10 @@ export default function NewMemberPage() {
   const [loadingDepts, setLoadingDepts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
-  const [name, setName] = useState("");
+  // Form state — pre-fill from query params (e.g., from discipleship pipeline)
+  const [name, setName] = useState(searchParams.get("prefillName") || "");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(searchParams.get("prefillPhone") || "");
   const [role, setRole] = useState<UserRole>("MEMBER");
   const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
   const [lifeGroup, setLifeGroup] = useState<LifeGroup | "">("");
