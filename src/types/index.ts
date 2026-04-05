@@ -238,3 +238,26 @@ export interface Institution {
   order: number;
   createdAt: Date;
 }
+
+// ─── Access Control ───
+
+export type AccessLevel = "edit" | "view" | "none";
+
+/** A page key maps to the permission each role has for that page */
+export type PagePermissions = Record<string, Record<UserRole, AccessLevel>>;
+
+export interface AccessControlConfig {
+  pagePermissions: PagePermissions;
+  updatedAt: Date;
+  updatedBy: string;
+}
+
+/** Metadata about a configurable page */
+export interface PageDefinition {
+  key: string;
+  label: string;
+  description: string;
+  route: string;
+  /** Roles that can never lose access (e.g. SUPER_ADMIN always has edit) */
+  lockedRoles?: Partial<Record<UserRole, AccessLevel>>;
+}

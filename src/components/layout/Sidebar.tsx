@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { hasMinRole } from "@/lib/permissions";
+import { useAccessControl } from "@/contexts/AccessControlContext";
+import { canAccessPage } from "@/lib/access-control";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -12,10 +13,8 @@ import {
   Calendar,
   Sparkles,
   Mail,
-  CheckSquare,
   BarChart3,
   Settings,
-  Bell,
   Building2,
   UserCircle,
   CalendarDays,
@@ -34,69 +33,68 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
-  minRole: "SUPER_ADMIN" | "ADMIN" | "DEPARTMENT_LEAD" | "YOUTH_LEADER" | "MEMBER";
+  /** The page key used for access control lookup */
+  pageKey: string | null;
 }
 
-const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, minRole: "YOUTH_LEADER" },
-  { label: "Departments", href: "/departments", icon: Building2, minRole: "ADMIN" },
-  { label: "Members", href: "/manage/members", icon: Users, minRole: "ADMIN" },
-  { label: "Services & Rotas", href: "/manage/services", icon: ClipboardList, minRole: "ADMIN" },
-  { label: "Calendar", href: "/calendar", icon: Calendar, minRole: "MEMBER" },
-  { label: "Create Event", href: "/manage/events/new", icon: CalendarPlus, minRole: "DEPARTMENT_LEAD" },
-  { label: "Event Approvals", href: "/manage/events/approvals", icon: ClipboardCheck, minRole: "DEPARTMENT_LEAD" },
-  { label: "Campus Ministry", href: "/department/campus-ministry", icon: GraduationCap, minRole: "MEMBER" },
-  { label: "Life Groups", href: "/department/life-groups", icon: UsersRound, minRole: "MEMBER" },
-  { label: "Discipleship", href: "/department/discipleship", icon: Heart, minRole: "MEMBER" },
-  { label: "Affirmations", href: "/affirmations", icon: Sparkles, minRole: "MEMBER" },
-  { label: "Templates", href: "/manage/templates", icon: Mail, minRole: "ADMIN" },
-  { label: "Reports", href: "/manage/reports", icon: BarChart3, minRole: "ADMIN" },
-  { label: "Settings", href: "/manage/settings", icon: Settings, minRole: "SUPER_ADMIN" },
+/**
+ * All possible nav items. Visibility is determined by the access control
+ * config rather than hardcoded role checks.
+ * pageKey=null means the item is always shown (e.g. settings uses its own guard).
+ */
+const allNavItems: NavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
+  { label: "Departments", href: "/departments", icon: Building2, pageKey: "departments" },
+  { label: "Members", href: "/manage/members", icon: Users, pageKey: "members" },
+  { label: "Services & Rotas", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
+  { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
+  { label: "Create Event", href: "/manage/events/new", icon: CalendarPlus, pageKey: "events_create" },
+  { label: "Event Approvals", href: "/manage/events/approvals", icon: ClipboardCheck, pageKey: "events_approvals" },
+  { label: "Campus Ministry", href: "/department/campus-ministry", icon: GraduationCap, pageKey: "campus_ministry" },
+  { label: "Life Groups", href: "/department/life-groups", icon: UsersRound, pageKey: "life_groups" },
+  { label: "Discipleship", href: "/department/discipleship", icon: Heart, pageKey: "discipleship" },
+  { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
+  { label: "Templates", href: "/manage/templates", icon: Mail, pageKey: "templates" },
+  { label: "Reports", href: "/manage/reports", icon: BarChart3, pageKey: "reports" },
+  { label: "Settings", href: "/manage/settings", icon: Settings, pageKey: null },
 ];
 
-const deptLeadItems: NavItem[] = [
-  { label: "My Departments", href: "/departments", icon: Building2, minRole: "DEPARTMENT_LEAD" },
-  { label: "Members", href: "/manage/members", icon: Users, minRole: "DEPARTMENT_LEAD" },
-  { label: "Services", href: "/manage/services", icon: ClipboardList, minRole: "DEPARTMENT_LEAD" },
-  { label: "Create Event", href: "/manage/events/new", icon: CalendarPlus, minRole: "DEPARTMENT_LEAD" },
-  { label: "Event Approvals", href: "/manage/events/approvals", icon: ClipboardCheck, minRole: "DEPARTMENT_LEAD" },
-];
-
-const memberItems: NavItem[] = [
-  { label: "My Schedule", href: "/my-schedule", icon: CalendarDays, minRole: "MEMBER" },
-  { label: "Calendar", href: "/calendar", icon: Calendar, minRole: "MEMBER" },
-  { label: "Affirmations", href: "/affirmations", icon: Sparkles, minRole: "MEMBER" },
+/** Items always shown for all logged-in users */
+const alwaysVisibleItems: NavItem[] = [
+  { label: "My Schedule", href: "/my-schedule", icon: CalendarDays, pageKey: null },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { userData, signOut } = useAuth();
+  const { pagePermissions } = useAccessControl();
 
   if (!userData) return null;
 
-  const getVisibleItems = () => {
-    if (hasMinRole(userData.role, "ADMIN")) {
-      return navItems.filter((item) => hasMinRole(userData.role, item.minRole));
+  const role = userData.role;
+
+  const getVisibleItems = (): NavItem[] => {
+    const items: NavItem[] = [];
+
+    for (const item of allNavItems) {
+      // Settings is always SUPER_ADMIN only
+      if (item.href === "/manage/settings") {
+        if (role === "SUPER_ADMIN") items.push(item);
+        continue;
+      }
+
+      // Check access control config
+      if (item.pageKey && canAccessPage(item.pageKey, role, pagePermissions)) {
+        items.push(item);
+      }
     }
-    if (userData.role === "DEPARTMENT_LEAD") {
-      return [
-        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, minRole: "YOUTH_LEADER" as const },
-        ...deptLeadItems,
-        { label: "Campus Ministry", href: "/department/campus-ministry", icon: GraduationCap, minRole: "MEMBER" as const },
-        { label: "Life Groups", href: "/department/life-groups", icon: UsersRound, minRole: "MEMBER" as const },
-        { label: "Discipleship", href: "/department/discipleship", icon: Heart, minRole: "MEMBER" as const },
-        { label: "Calendar", href: "/calendar", icon: Calendar, minRole: "MEMBER" as const },
-        { label: "Affirmations", href: "/affirmations", icon: Sparkles, minRole: "MEMBER" as const },
-      ];
+
+    // Add "My Schedule" for all users who aren't ADMIN+ (they see it in the main list via services)
+    if (role === "MEMBER" || role === "YOUTH_LEADER" || role === "DEPARTMENT_LEAD") {
+      items.push(...alwaysVisibleItems);
     }
-    if (userData.role === "YOUTH_LEADER") {
-      return [
-        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, minRole: "YOUTH_LEADER" as const },
-        { label: "Upcoming Service", href: "/manage/services", icon: ClipboardList, minRole: "YOUTH_LEADER" as const },
-        ...memberItems,
-      ];
-    }
-    return memberItems;
+
+    return items;
   };
 
   const visibleItems = getVisibleItems();

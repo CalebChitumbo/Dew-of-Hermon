@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AccessControlProvider } from "@/contexts/AccessControlContext";
 import { Toaster } from "@/components/ui/toaster";
 import { PushNotificationPrompt } from "@/components/shared/PushNotificationPrompt";
 
@@ -27,9 +28,11 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans">
         <AuthProvider>
-          {children}
-          <Toaster />
-          <PushNotificationPrompt />
+          <AccessControlProvider>
+            {children}
+            <Toaster />
+            <PushNotificationPrompt />
+          </AccessControlProvider>
         </AuthProvider>
       </body>
     </html>

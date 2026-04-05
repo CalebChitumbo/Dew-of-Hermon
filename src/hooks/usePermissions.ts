@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useAccessControl } from "@/contexts/AccessControlContext";
 import {
   hasMinRole,
   canManageMembers,
@@ -17,10 +18,16 @@ import {
   canManageAffirmations,
   getAssignableRoles,
 } from "@/lib/permissions";
-import { UserRole } from "@/types";
+import {
+  canAccessPage,
+  canEditPage,
+  getPageAccess,
+} from "@/lib/access-control";
+import { AccessLevel, UserRole } from "@/types";
 
 export function usePermissions() {
   const { userData } = useAuth();
+  const { pagePermissions } = useAccessControl();
 
   const role = userData?.role || "MEMBER";
 
@@ -43,5 +50,14 @@ export function usePermissions() {
     isAdmin: hasMinRole(role, "ADMIN"),
     isSuperAdmin: role === "SUPER_ADMIN",
     isDeptLead: hasMinRole(role, "DEPARTMENT_LEAD"),
+
+    // Access control helpers
+    canAccessPage: (pageKey: string) =>
+      canAccessPage(pageKey, role, pagePermissions),
+    canEditPage: (pageKey: string) =>
+      canEditPage(pageKey, role, pagePermissions),
+    getPageAccess: (pageKey: string): AccessLevel =>
+      getPageAccess(pageKey, role, pagePermissions),
+    pagePermissions,
   };
 }

@@ -19,6 +19,7 @@ import {
   CheckSquare,
   GripVertical,
   GraduationCap,
+  Shield,
   ChevronRight,
 } from "lucide-react";
 
@@ -123,6 +124,22 @@ function SettingsContent() {
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Link href="/manage/settings/access-control">
+          <Card className="hover:border-gold/50 hover:shadow-md transition-all cursor-pointer">
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-teal-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-clay-700">Access Control</p>
+                  <p className="text-sm text-clay-500">Customise role permissions for pages</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-clay-400" />
+            </CardContent>
+          </Card>
+        </Link>
         <Link href="/manage/settings/institutions">
           <Card className="hover:border-gold/50 hover:shadow-md transition-all cursor-pointer">
             <CardContent className="flex items-center justify-between p-4">
