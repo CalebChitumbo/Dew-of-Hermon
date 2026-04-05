@@ -152,27 +152,34 @@ export default function DiscipleshipPipelinePage() {
       orderBy("createdAt", "desc")
     );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      const allCards = snapshot.docs.map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          ...data,
-          dateOfContact: data.dateOfContact?.toDate?.() || new Date(),
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-          statusHistory: (data.statusHistory || []).map(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (h: any) => ({
-              ...h,
-              changedAt: h.changedAt?.toDate?.() || new Date(),
-            })
-          ),
-        } as FollowUpCard;
-      });
-      setCards(allCards);
-      setLoading(false);
-    });
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const allCards = snapshot.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            ...data,
+            dateOfContact: data.dateOfContact?.toDate?.() || new Date(),
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(),
+            statusHistory: (data.statusHistory || []).map(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (h: any) => ({
+                ...h,
+                changedAt: h.changedAt?.toDate?.() || new Date(),
+              })
+            ),
+          } as FollowUpCard;
+        });
+        setCards(allCards);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error loading follow-up cards:", error);
+        setLoading(false);
+      }
+    );
 
     return () => unsub();
   }, []);
