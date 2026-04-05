@@ -68,15 +68,16 @@
       "collectionGroup": "eventDepartmentRoles",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventId", "order": "ASCENDING" }
+        { "fieldPath": "eventId", "order": "ASCENDING" },
+        { "fieldPath": "departmentId", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "eventDepartmentRoles",
+      "collectionGroup": "followUpCards",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventId", "order": "ASCENDING" },
-        { "fieldPath": "departmentId", "order": "ASCENDING" }
+        { "fieldPath": "source", "order": "ASCENDING" },
+        { "fieldPath": "createdBy", "order": "ASCENDING" }
       ]
     },
     {
