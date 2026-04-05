@@ -20,6 +20,8 @@ import {
   Building2,
   UserCircle,
   CalendarDays,
+  CalendarPlus,
+  ClipboardCheck,
   Bell,
   X,
 } from "lucide-react";
@@ -101,7 +103,10 @@ export function Header() {
                 <>
                   <MobileMenuItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/departments" icon={Building2} label="My Departments" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+                  <MobileMenuItem href="/manage/members" icon={Users} label="Members" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/manage/services" icon={ClipboardList} label="Services" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+                  <MobileMenuItem href="/manage/events/new" icon={CalendarPlus} label="Create Event" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+                  <MobileMenuItem href="/manage/events/approvals" icon={ClipboardCheck} label="Event Approvals" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/calendar" icon={Calendar} label="Calendar" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/affirmations" icon={Sparkles} label="Affirmations" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                 </>
