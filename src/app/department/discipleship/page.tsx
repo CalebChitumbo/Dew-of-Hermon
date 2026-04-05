@@ -144,7 +144,10 @@ export default function DiscipleshipPipelinePage() {
   const hasAccess = useMemo(() => {
     if (!userData || !discipleshipDeptId) return false;
     if (hasMinRole(userData.role, "ADMIN")) return true;
-    return userData.departmentIds.includes(discipleshipDeptId);
+    return (
+      hasMinRole(userData.role, "DEPARTMENT_LEAD") &&
+      userData.departmentIds.includes(discipleshipDeptId)
+    );
   }, [userData, discipleshipDeptId]);
 
   // Fetch cards from API (fallback when onSnapshot fails)

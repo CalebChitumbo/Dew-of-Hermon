@@ -25,6 +25,9 @@ import {
   BarChart3,
   Bell,
   X,
+  GraduationCap,
+  Heart,
+  UsersRound,
 } from "lucide-react";
 
 export function Header() {
@@ -111,6 +114,9 @@ export function Header() {
                   <MobileMenuItem href="/manage/services" icon={ClipboardList} label="Services" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/manage/events/new" icon={CalendarPlus} label="Create Event" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/manage/events/approvals" icon={ClipboardCheck} label="Event Approvals" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+                  <MobileMenuItem href="/department/campus-ministry" icon={GraduationCap} label="Campus Ministry" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+                  <MobileMenuItem href="/department/life-groups" icon={UsersRound} label="Life Groups" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+                  <MobileMenuItem href="/department/discipleship" icon={Heart} label="Discipleship" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/calendar" icon={Calendar} label="Calendar" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                   <MobileMenuItem href="/affirmations" icon={Sparkles} label="Affirmations" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
                 </>
