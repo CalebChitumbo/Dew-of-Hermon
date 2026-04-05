@@ -117,13 +117,11 @@ export default function CampusMinistryPage() {
       orderBy("order", "asc")
     );
     const unsub = onSnapshot(q, (snapshot) => {
-      const insts = snapshot.docs
-        .map((d) => ({
+      const insts = (snapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
           createdAt: d.data().createdAt?.toDate?.() || new Date(),
-        }))
-        .filter((inst) => inst.isActive !== false) as Institution[];
+        })) as Institution[]).filter((inst) => inst.isActive !== false);
       setInstitutions(insts);
     });
     return () => unsub();
