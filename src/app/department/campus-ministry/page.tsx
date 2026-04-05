@@ -83,7 +83,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "succ
 
 export default function CampusMinistryPage() {
   const { userData } = useAuth();
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>(DEFAULT_INSTITUTIONS);
   const [myCards, setMyCards] = useState<FollowUpCard[]>([]);
   const [studentMembers, setStudentMembers] = useState<User[]>([]);
   const [campusDeptId, setCampusDeptId] = useState<string | null>(null);
@@ -135,6 +135,9 @@ export default function CampusMinistryPage() {
           createdAt: d.data().createdAt?.toDate?.() || new Date(),
         })) as Institution[]).filter((inst) => inst.isActive !== false);
       setInstitutions(insts.length > 0 ? insts : DEFAULT_INSTITUTIONS);
+    }, (error) => {
+      console.error("Error fetching institutions:", error);
+      setInstitutions(DEFAULT_INSTITUTIONS);
     });
     return () => unsub();
   }, []);
