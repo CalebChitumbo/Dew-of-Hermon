@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { hasMinRole } from "@/lib/permissions";
+import { useAccessControl } from "@/contexts/AccessControlContext";
+import { canAccessPage } from "@/lib/access-control";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -20,40 +21,59 @@ interface MobileNavItem {
   label: string;
   href: string;
   icon: React.ElementType;
+  pageKey: string | null;
 }
+
+/** Priority-ordered items for each "category" of mobile nav */
+const adminPriority: MobileNavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
+  { label: "Members", href: "/manage/members", icon: Users, pageKey: "members" },
+  { label: "Services", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
+  { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
+  { label: "Profile", href: "/profile", icon: UserCircle, pageKey: null },
+];
+
+const leadPriority: MobileNavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
+  { label: "Services", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
+  { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
+  { label: "Alerts", href: "/notifications", icon: Bell, pageKey: null },
+  { label: "Profile", href: "/profile", icon: UserCircle, pageKey: null },
+];
+
+const memberPriority: MobileNavItem[] = [
+  { label: "Schedule", href: "/my-schedule", icon: CalendarDays, pageKey: null },
+  { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
+  { label: "Notes", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
+  { label: "Alerts", href: "/notifications", icon: Bell, pageKey: null },
+  { label: "Profile", href: "/profile", icon: UserCircle, pageKey: null },
+];
 
 export function MobileNav() {
   const pathname = usePathname();
   const { userData } = useAuth();
+  const { pagePermissions } = useAccessControl();
 
   if (!userData) return null;
 
+  const role = userData.role;
+
   const getItems = (): MobileNavItem[] => {
-    if (hasMinRole(userData.role, "ADMIN")) {
-      return [
-        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Members", href: "/manage/members", icon: Users },
-        { label: "Services", href: "/manage/services", icon: ClipboardList },
-        { label: "Calendar", href: "/calendar", icon: Calendar },
-        { label: "Profile", href: "/profile", icon: UserCircle },
-      ];
+    // Pick a priority list based on role tier
+    let candidates: MobileNavItem[];
+    if (role === "SUPER_ADMIN" || role === "ADMIN") {
+      candidates = adminPriority;
+    } else if (role === "DEPARTMENT_LEAD") {
+      candidates = leadPriority;
+    } else {
+      candidates = memberPriority;
     }
-    if (userData.role === "DEPARTMENT_LEAD") {
-      return [
-        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Services", href: "/manage/services", icon: ClipboardList },
-        { label: "Calendar", href: "/calendar", icon: Calendar },
-        { label: "Alerts", href: "/notifications", icon: Bell },
-        { label: "Profile", href: "/profile", icon: UserCircle },
-      ];
-    }
-    return [
-      { label: "Schedule", href: "/my-schedule", icon: CalendarDays },
-      { label: "Calendar", href: "/calendar", icon: Calendar },
-      { label: "Notes", href: "/affirmations", icon: Sparkles },
-      { label: "Alerts", href: "/notifications", icon: Bell },
-      { label: "Profile", href: "/profile", icon: UserCircle },
-    ];
+
+    // Filter by access control (items with no pageKey are always shown)
+    return candidates.filter(
+      (item) =>
+        !item.pageKey || canAccessPage(item.pageKey, role, pagePermissions)
+    );
   };
 
   const items = getItems();
