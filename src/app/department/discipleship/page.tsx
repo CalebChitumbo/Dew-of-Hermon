@@ -58,6 +58,7 @@ import {
   Clock,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import { Department, FollowUpCard, FollowUpStatus, User } from "@/types";
 
 const STATUS_ORDER: FollowUpStatus[] = [
@@ -103,6 +104,7 @@ const SOURCE_LABELS: Record<string, string> = {
 export default function DiscipleshipPipelinePage() {
   const { userData } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [cards, setCards] = useState<FollowUpCard[]>([]);
   const [discipleshipDeptId, setDiscipleshipDeptId] = useState<string | null>(null);
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
@@ -145,6 +147,32 @@ export default function DiscipleshipPipelinePage() {
     return userData.departmentIds.includes(discipleshipDeptId);
   }, [userData, discipleshipDeptId]);
 
+  // Fetch cards from API (fallback when onSnapshot fails)
+  const fetchCardsFromApi = useCallback(async () => {
+    try {
+      const res = await fetch("/api/follow-up-cards");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const apiCards = (data.cards || []).map((c: any) => ({
+        ...c,
+        dateOfContact: c.dateOfContact ? new Date(c.dateOfContact) : new Date(),
+        createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+        updatedAt: c.updatedAt ? new Date(c.updatedAt) : new Date(),
+        statusHistory: (c.statusHistory || []).map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (h: any) => ({
+            ...h,
+            changedAt: h.changedAt ? new Date(h.changedAt) : new Date(),
+          })
+        ),
+      })) as FollowUpCard[];
+      setCards(apiCards);
+    } catch (err) {
+      console.error("API fallback also failed:", err);
+    }
+  }, []);
+
   // Load all follow-up cards
   useEffect(() => {
     const q = query(
@@ -177,12 +205,13 @@ export default function DiscipleshipPipelinePage() {
       },
       (error) => {
         console.error("Error loading follow-up cards:", error);
-        setLoading(false);
+        // Fallback: fetch via API when real-time listener fails
+        fetchCardsFromApi().finally(() => setLoading(false));
       }
     );
 
     return () => unsub();
-  }, []);
+  }, [fetchCardsFromApi]);
 
   // Load team members for assignment
   useEffect(() => {
@@ -350,9 +379,11 @@ export default function DiscipleshipPipelinePage() {
         }
       } catch (error) {
         console.error("Error advancing status:", error);
-        alert(
-          error instanceof Error ? error.message : "Failed to update status"
-        );
+        toast({
+          title: "Failed to update status",
+          description: error instanceof Error ? error.message : "Something went wrong.",
+          variant: "destructive",
+        });
       }
       setUpdating(null);
     },
@@ -377,9 +408,11 @@ export default function DiscipleshipPipelinePage() {
       }
     } catch (error) {
       console.error("Error assigning member:", error);
-      alert(
-        error instanceof Error ? error.message : "Failed to assign member"
-      );
+      toast({
+        title: "Failed to assign member",
+        description: error instanceof Error ? error.message : "Something went wrong.",
+        variant: "destructive",
+      });
     }
   };
 
