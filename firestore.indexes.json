@@ -68,13 +68,6 @@
       "collectionGroup": "eventDepartmentRoles",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "eventId", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "eventDepartmentRoles",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "eventId", "order": "ASCENDING" },
         { "fieldPath": "departmentId", "order": "ASCENDING" }
       ]
