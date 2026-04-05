@@ -44,6 +44,7 @@ import {
   Heart,
 } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 import { Department, FollowUpCard, FollowUpReason } from "@/types";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -77,6 +78,7 @@ const REASON_OPTIONS: { value: FollowUpReason; label: string }[] = [
 
 export default function LifeGroupsPage() {
   const { userData } = useAuth();
+  const { toast } = useToast();
   const [lifeGroupsDeptId, setLifeGroupsDeptId] = useState<string | null>(null);
   const [myCards, setMyCards] = useState<FollowUpCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,6 +194,7 @@ export default function LifeGroupsPage() {
       }
 
       // Reset form
+      const savedName = formName;
       setFormName("");
       setFormPhone("");
       setFormLifeGroup("");
@@ -199,9 +202,17 @@ export default function LifeGroupsPage() {
       setFormDate(new Date().toISOString().split("T")[0]);
       setFormNotes("");
       setDialogOpen(false);
+      toast({
+        title: "Follow-up lead submitted",
+        description: `${savedName} has been sent to the Discipleship team for follow-up.`,
+      });
     } catch (error) {
       console.error("Error creating follow-up lead:", error);
-      alert(error instanceof Error ? error.message : "Failed to create follow-up lead");
+      toast({
+        title: "Failed to submit lead",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
     }
     setSubmitting(false);
   };
