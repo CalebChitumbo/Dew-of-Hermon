@@ -9,6 +9,7 @@ import {
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAccessControl } from "@/contexts/AccessControlContext";
 import {
   Card,
   CardContent,
@@ -79,6 +80,7 @@ const REASON_OPTIONS: { value: FollowUpReason; label: string }[] = [
 export default function LifeGroupsPage() {
   const { userData } = useAuth();
   const { checkFeatureAccess } = usePermissions();
+  const { loading: acLoading } = useAccessControl();
   const { toast } = useToast();
   const [lifeGroupsDeptId, setLifeGroupsDeptId] = useState<string | null>(null);
   const [myCards, setMyCards] = useState<FollowUpCard[]>([]);
@@ -254,7 +256,7 @@ export default function LifeGroupsPage() {
     setSubmitting(false);
   };
 
-  if (loading) {
+  if (loading || acLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />

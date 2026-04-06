@@ -11,6 +11,7 @@ import {
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAccessControl } from "@/contexts/AccessControlContext";
 import {
   Card,
   CardContent,
@@ -104,6 +105,7 @@ const SOURCE_LABELS: Record<string, string> = {
 export default function DiscipleshipPipelinePage() {
   const { userData } = useAuth();
   const { checkFeatureAccess } = usePermissions();
+  const { loading: acLoading } = useAccessControl();
   const router = useRouter();
   const { toast } = useToast();
   const [cards, setCards] = useState<FollowUpCard[]>([]);
@@ -478,7 +480,7 @@ export default function DiscipleshipPipelinePage() {
     setRegisterDialogOpen(false);
   };
 
-  if (loading) {
+  if (loading || acLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />
