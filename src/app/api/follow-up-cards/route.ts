@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import {
-  canSubmitFollowUp,
-  canManageFollowUps,
-  hasMinRole,
-} from "@/lib/permissions";
 import { UserRole, FollowUpSource, FollowUpStatus, FollowUpReason } from "@/types";
+import {
+  loadFeaturePermissions,
+  serverCanReadFollowUps,
+  serverCanSubmitFollowUp,
+} from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
 
@@ -53,16 +53,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const campusDeptId = await getDeptIdByName("Campus Ministry");
-    const lifeGroupsDeptId = await getDeptIdByName("Life Groups");
-    const discipleshipDeptId = await getDeptIdByName("Discipleship & Follow-Up");
-
-    // Check read permissions: Campus Ministry, Life Groups, or Discipleship dept members, or ADMIN+
-    const hasAccess =
-      hasMinRole(caller.role, "ADMIN") ||
-      (campusDeptId && caller.departmentIds.includes(campusDeptId)) ||
-      (lifeGroupsDeptId && caller.departmentIds.includes(lifeGroupsDeptId)) ||
-      (discipleshipDeptId && caller.departmentIds.includes(discipleshipDeptId));
+    const featurePerms = await loadFeaturePermissions();
+    const hasAccess = await serverCanReadFollowUps(
+      caller.role,
+      caller.departmentIds,
+      caller.leadsDepartmentIds,
+      featurePerms
+    );
 
     if (!hasAccess) {
       return NextResponse.json(
@@ -143,19 +140,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const campusDeptId = await getDeptIdByName("Campus Ministry");
-    const lifeGroupsDeptId = await getDeptIdByName("Life Groups");
+    const featurePerms = await loadFeaturePermissions();
+    const canSubmit = await serverCanSubmitFollowUp(
+      caller.role,
+      caller.departmentIds,
+      featurePerms
+    );
 
-    if (
-      !canSubmitFollowUp(
-        caller.role,
-        caller.departmentIds,
-        campusDeptId || "",
-        lifeGroupsDeptId || ""
-      )
-    ) {
+    if (!canSubmit) {
       return NextResponse.json(
-        { error: "Forbidden: Only Campus Ministry or Life Groups members can create follow-up cards" },
+        { error: "Forbidden: You do not have permission to create follow-up cards" },
         { status: 403 }
       );
     }

@@ -21,15 +21,18 @@ import {
 import {
   canAccessPage,
   canEditPage,
+  checkFeaturePermission,
   getPageAccess,
 } from "@/lib/access-control";
 import { AccessLevel, UserRole } from "@/types";
 
 export function usePermissions() {
   const { userData } = useAuth();
-  const { pagePermissions } = useAccessControl();
+  const { pagePermissions, featurePermissions } = useAccessControl();
 
   const role = userData?.role || "MEMBER";
+  const deptIds = userData?.departmentIds || [];
+  const leadsDeptIds = userData?.leadsDepartmentIds || [];
 
   return {
     role,
@@ -51,7 +54,7 @@ export function usePermissions() {
     isSuperAdmin: role === "SUPER_ADMIN",
     isDeptLead: hasMinRole(role, "DEPARTMENT_LEAD"),
 
-    // Access control helpers
+    // Page access helpers
     canAccessPage: (pageKey: string) =>
       canAccessPage(pageKey, role, pagePermissions),
     canEditPage: (pageKey: string) =>
@@ -59,5 +62,36 @@ export function usePermissions() {
     getPageAccess: (pageKey: string): AccessLevel =>
       getPageAccess(pageKey, role, pagePermissions),
     pagePermissions,
+
+    // Feature permission helpers (department-specific)
+    canApproveEvents: checkFeaturePermission(
+      "approve_events",
+      role,
+      deptIds,
+      leadsDeptIds,
+      featurePermissions
+    ),
+    canSubmitFollowUp: checkFeaturePermission(
+      "submit_follow_up",
+      role,
+      deptIds,
+      leadsDeptIds,
+      featurePermissions
+    ),
+    canManageFollowUps: checkFeaturePermission(
+      "manage_follow_ups",
+      role,
+      deptIds,
+      leadsDeptIds,
+      featurePermissions
+    ),
+    canSubmitLifeGroupLead: checkFeaturePermission(
+      "submit_life_group_lead",
+      role,
+      deptIds,
+      leadsDeptIds,
+      featurePermissions
+    ),
+    featurePermissions,
   };
 }

@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import { canManageFollowUps, hasMinRole } from "@/lib/permissions";
 import { UserRole, FollowUpStatus } from "@/types";
+import {
+  loadFeaturePermissions,
+  serverCanManageFollowUps,
+} from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
 
@@ -30,14 +33,6 @@ async function getCaller() {
   }
 }
 
-async function getDeptIdByName(name: string): Promise<string | null> {
-  const snap = await adminDb
-    .collection("departments")
-    .where("name", "==", name)
-    .limit(1)
-    .get();
-  return snap.empty ? null : snap.docs[0].id;
-}
 
 // Status progression order
 const STATUS_ORDER: FollowUpStatus[] = [
@@ -130,18 +125,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const discipleshipDeptId = await getDeptIdByName("Discipleship & Follow-Up");
-
-    // Only Discipleship dept leads/members or ADMIN+ can update cards
-    const canManage = canManageFollowUps(
+    const featurePerms = await loadFeaturePermissions();
+    const canManage = await serverCanManageFollowUps(
       caller.role,
       caller.leadsDepartmentIds,
-      discipleshipDeptId || ""
+      caller.departmentIds,
+      featurePerms
     );
-    const isDiscipleshipMember =
-      discipleshipDeptId && caller.departmentIds.includes(discipleshipDeptId);
 
-    if (!canManage && !isDiscipleshipMember) {
+    if (!canManage) {
       return NextResponse.json(
         { error: "Forbidden: Only Discipleship & Follow-Up team members can update cards" },
         { status: 403 }
