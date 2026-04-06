@@ -10,7 +10,7 @@ import {
 } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { hasMinRole } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Card,
   CardContent,
@@ -103,6 +103,7 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export default function DiscipleshipPipelinePage() {
   const { userData } = useAuth();
+  const { checkFeatureAccess } = usePermissions();
   const router = useRouter();
   const { toast } = useToast();
   const [cards, setCards] = useState<FollowUpCard[]>([]);
@@ -140,15 +141,16 @@ export default function DiscipleshipPipelinePage() {
     return () => unsub();
   }, []);
 
-  // Check access
+  // Check access via configurable feature permissions
   const hasAccess = useMemo(() => {
     if (!userData || !discipleshipDeptId) return false;
-    if (hasMinRole(userData.role, "ADMIN")) return true;
-    return (
-      hasMinRole(userData.role, "DEPARTMENT_LEAD") &&
-      userData.departmentIds.includes(discipleshipDeptId)
+    return checkFeatureAccess(
+      "manage_follow_ups",
+      userData.departmentIds,
+      userData.leadsDepartmentIds,
+      { "Discipleship & Follow-Up": discipleshipDeptId }
     );
-  }, [userData, discipleshipDeptId]);
+  }, [userData, discipleshipDeptId, checkFeatureAccess]);
 
   // Fetch cards from API (fallback when onSnapshot fails)
   const fetchCardsFromApi = useCallback(async () => {

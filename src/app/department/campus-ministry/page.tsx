@@ -10,7 +10,7 @@ import {
 } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { hasMinRole } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Card,
   CardContent,
@@ -84,6 +84,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "succ
 
 export default function CampusMinistryPage() {
   const { userData } = useAuth();
+  const { checkFeatureAccess } = usePermissions();
   const { toast } = useToast();
   const [institutions, setInstitutions] = useState<Institution[]>(DEFAULT_INSTITUTIONS);
   const [myCards, setMyCards] = useState<FollowUpCard[]>([]);
@@ -117,12 +118,16 @@ export default function CampusMinistryPage() {
     return () => unsub();
   }, []);
 
-  // Check access
+  // Check access via configurable feature permissions
   const hasAccess = useMemo(() => {
     if (!userData || !campusDeptId) return false;
-    if (hasMinRole(userData.role, "ADMIN")) return true;
-    return userData.departmentIds.includes(campusDeptId);
-  }, [userData, campusDeptId]);
+    return checkFeatureAccess(
+      "submit_follow_up",
+      userData.departmentIds,
+      userData.leadsDepartmentIds,
+      { "Campus Ministry": campusDeptId }
+    );
+  }, [userData, campusDeptId, checkFeatureAccess]);
 
   // Load institutions
   useEffect(() => {
