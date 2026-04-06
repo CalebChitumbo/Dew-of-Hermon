@@ -8,6 +8,10 @@ import {
   notifyDepartmentManagers,
 } from "@/lib/event-helpers";
 import { UserRole } from "@/types";
+import {
+  loadFeaturePermissions,
+  serverCanApproveEvents,
+} from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
 
@@ -40,32 +44,14 @@ async function getCaller(): Promise<{
   }
 }
 
-const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 5,
-  ADMIN: 4,
-  DEPARTMENT_LEAD: 3,
-  YOUTH_LEADER: 2,
-  MEMBER: 1,
-};
-
-function hasMinRole(role: string, required: string): boolean {
-  return (ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[required] || 0);
-}
-
 // ─── Helper: Check if caller can approve events ───
 
 async function checkCanApprove(
-  role: string,
+  role: UserRole,
   leadsDepartmentIds: string[]
 ): Promise<boolean> {
-  if (hasMinRole(role, "ADMIN")) return true;
-  const efSnap = await adminDb
-    .collection("departments")
-    .where("name", "==", "Events & Fellowship")
-    .limit(1)
-    .get();
-  if (efSnap.empty) return false;
-  return role === "DEPARTMENT_LEAD" && leadsDepartmentIds.includes(efSnap.docs[0].id);
+  const featurePerms = await loadFeaturePermissions();
+  return serverCanApproveEvents(role, leadsDepartmentIds, featurePerms);
 }
 
 // ─── PATCH /api/events/[id]/approve ───

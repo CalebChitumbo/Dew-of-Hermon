@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { UserRole } from "@/types";
+import { FeaturePermissions, PagePermissions, UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -76,29 +76,57 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { pagePermissions } = body;
+    const { pagePermissions, featurePermissions } = body as {
+      pagePermissions?: PagePermissions;
+      featurePermissions?: FeaturePermissions;
+    };
 
-    if (!pagePermissions || typeof pagePermissions !== "object") {
+    if (
+      pagePermissions !== undefined &&
+      (typeof pagePermissions !== "object" || pagePermissions === null)
+    ) {
       return NextResponse.json(
         { error: "Invalid pagePermissions data" },
         { status: 400 }
       );
     }
 
-    // Validate: ensure SUPER_ADMIN always has "edit" on every page
-    for (const pageKey of Object.keys(pagePermissions)) {
-      pagePermissions[pageKey].SUPER_ADMIN = "edit";
+    if (
+      featurePermissions !== undefined &&
+      (typeof featurePermissions !== "object" || featurePermissions === null)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid featurePermissions data" },
+        { status: 400 }
+      );
+    }
+
+    const update: Record<string, unknown> = {
+      updatedAt: new Date(),
+      updatedBy: caller.uid,
+    };
+
+    if (pagePermissions) {
+      // Ensure SUPER_ADMIN always has "edit" on every page
+      for (const pageKey of Object.keys(pagePermissions)) {
+        pagePermissions[pageKey].SUPER_ADMIN = "edit";
+      }
+      update.pagePermissions = pagePermissions;
+    }
+
+    if (featurePermissions) {
+      // Ensure SUPER_ADMIN minRole is never set above ADMIN (SUPER_ADMIN always has access)
+      for (const featureKey of Object.keys(featurePermissions)) {
+        const fp = featurePermissions[featureKey];
+        if (fp.minRole === "SUPER_ADMIN") {
+          fp.minRole = "ADMIN";
+        }
+      }
+      update.featurePermissions = featurePermissions;
     }
 
     const docRef = adminDb.collection("settings").doc("accessControl");
-    await docRef.set(
-      {
-        pagePermissions,
-        updatedAt: new Date(),
-        updatedBy: caller.uid,
-      },
-      { merge: true }
-    );
+    await docRef.set(update, { merge: true });
 
     return NextResponse.json({ success: true });
   } catch (error) {

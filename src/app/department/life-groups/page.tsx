@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   query,
   where,
@@ -8,7 +8,7 @@ import {
 } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { canSubmitLifeGroupLead, hasMinRole } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Card,
   CardContent,
@@ -45,7 +45,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Department, FollowUpCard, FollowUpReason } from "@/types";
+import { FollowUpCard, FollowUpReason } from "@/types";
 
 const STATUS_LABELS: Record<string, string> = {
   NEW_CONTACT: "New Contact",
@@ -78,8 +78,8 @@ const REASON_OPTIONS: { value: FollowUpReason; label: string }[] = [
 
 export default function LifeGroupsPage() {
   const { userData } = useAuth();
+  const { canSubmitLifeGroupLead } = usePermissions();
   const { toast } = useToast();
-  const [lifeGroupsDeptId, setLifeGroupsDeptId] = useState<string | null>(null);
   const [myCards, setMyCards] = useState<FollowUpCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -95,30 +95,8 @@ export default function LifeGroupsPage() {
   );
   const [formNotes, setFormNotes] = useState("");
 
-  // Get Life Groups department ID
-  useEffect(() => {
-    const unsub = onSnapshot(safeCollection("departments"), (snapshot) => {
-      const depts = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: d.data().createdAt?.toDate?.() || new Date(),
-      })) as Department[];
-
-      const lgDept = depts.find((d) => d.name === "Life Groups");
-      setLifeGroupsDeptId(lgDept?.id || null);
-    });
-    return () => unsub();
-  }, []);
-
-  // Check access: Life Group leaders (DEPARTMENT_LEAD or YOUTH_LEADER in Life Groups dept)
-  const hasAccess = useMemo(() => {
-    if (!userData || !lifeGroupsDeptId) return false;
-    return canSubmitLifeGroupLead(
-      userData.role,
-      userData.departmentIds,
-      lifeGroupsDeptId
-    );
-  }, [userData, lifeGroupsDeptId]);
+  // Access comes from the configurable feature permissions (via usePermissions)
+  const hasAccess = canSubmitLifeGroupLead;
 
   // Fetch my cards from API (fallback when onSnapshot fails)
   const fetchMyCardsFromApi = useCallback(async () => {

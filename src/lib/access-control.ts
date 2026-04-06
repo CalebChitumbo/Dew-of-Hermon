@@ -1,4 +1,13 @@
-import { AccessLevel, PageDefinition, PagePermissions, UserRole } from "@/types";
+import {
+  AccessLevel,
+  FeatureDefinition,
+  FeaturePermission,
+  FeaturePermissions,
+  PageDefinition,
+  PagePermissions,
+  UserRole,
+} from "@/types";
+import { hasMinRole } from "@/lib/permissions";
 
 /**
  * All configurable pages in the system.
@@ -293,4 +302,119 @@ export function mergeWithDefaults(
     }
   }
   return merged;
+}
+
+// ─── Feature Permissions ───────────────────────────────────────────────────
+
+/**
+ * Definitions for the department-specific features that can be configured.
+ * These replace the previously hardcoded department-name lookups in permissions.ts.
+ */
+export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
+  {
+    key: "approve_events",
+    label: "Approve Events",
+    description:
+      "Who can approve or reject event requests. Link a department whose leads should also have approval access.",
+    defaultDeptAccess: "lead",
+    defaultDeptMinRole: "DEPARTMENT_LEAD",
+  },
+  {
+    key: "submit_follow_up",
+    label: "Submit Follow-Up Cards",
+    description:
+      "Who can submit follow-up cards for new contacts and visitors. Link departments whose members should have access.",
+    defaultDeptAccess: "member",
+    defaultDeptMinRole: "MEMBER",
+  },
+  {
+    key: "manage_follow_ups",
+    label: "Manage Follow-Up Pipeline",
+    description:
+      "Who can view and update all follow-up pipeline cards. Link a department whose leads should have management access.",
+    defaultDeptAccess: "lead",
+    defaultDeptMinRole: "DEPARTMENT_LEAD",
+  },
+  {
+    key: "submit_life_group_lead",
+    label: "Submit Life Group Leads",
+    description:
+      "Who can submit life group follow-up leads via the Life Groups page. Link a department and set the minimum role required.",
+    defaultDeptAccess: "member",
+    defaultDeptMinRole: "YOUTH_LEADER",
+  },
+];
+
+/**
+ * Default feature permissions — only ADMIN+ by default (no dept overrides).
+ * When no config is saved, the backend falls back to legacy name-based lookups
+ * so existing behaviour is preserved until the Chairperson configures this.
+ */
+export const DEFAULT_FEATURE_PERMISSIONS: FeaturePermissions = {
+  approve_events: {
+    minRole: "ADMIN",
+    linkedDepts: [],
+    deptMinRole: "DEPARTMENT_LEAD",
+  },
+  submit_follow_up: {
+    minRole: "ADMIN",
+    linkedDepts: [],
+    deptMinRole: "MEMBER",
+  },
+  manage_follow_ups: {
+    minRole: "ADMIN",
+    linkedDepts: [],
+    deptMinRole: "DEPARTMENT_LEAD",
+  },
+  submit_life_group_lead: {
+    minRole: "ADMIN",
+    linkedDepts: [],
+    deptMinRole: "YOUTH_LEADER",
+  },
+};
+
+/**
+ * Merge saved feature permissions with defaults for any new features.
+ */
+export function mergeFeaturePermissionsWithDefaults(
+  saved: FeaturePermissions
+): FeaturePermissions {
+  const merged: FeaturePermissions = { ...DEFAULT_FEATURE_PERMISSIONS };
+  for (const key of Object.keys(saved)) {
+    if (merged[key]) {
+      merged[key] = { ...merged[key], ...saved[key] };
+    } else {
+      merged[key] = saved[key];
+    }
+  }
+  return merged;
+}
+
+/**
+ * Client-side feature permission check using the stored config.
+ * Falls back to DEFAULT_FEATURE_PERMISSIONS when no config is provided.
+ *
+ * NOTE: When linkedDepts is empty (unconfigured), this returns false for
+ * non-minRole users. The server-side helpers handle the legacy fallback.
+ */
+export function checkFeaturePermission(
+  featureKey: string,
+  userRole: UserRole,
+  userDeptIds: string[],
+  userLeadsDeptIds: string[],
+  featurePermissions: FeaturePermissions | null
+): boolean {
+  const config: FeaturePermission | undefined =
+    featurePermissions?.[featureKey] ?? DEFAULT_FEATURE_PERMISSIONS[featureKey];
+
+  if (!config) return false;
+  if (hasMinRole(userRole, config.minRole)) return true;
+  if (!hasMinRole(userRole, config.deptMinRole)) return false;
+
+  for (const { deptId, access } of config.linkedDepts) {
+    if (access === "lead" && userLeadsDeptIds.includes(deptId)) return true;
+    if (access === "member" && userDeptIds.includes(deptId)) return true;
+  }
+
+  return false;
 }

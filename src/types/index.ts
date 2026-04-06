@@ -248,6 +248,7 @@ export type PagePermissions = Record<string, Record<UserRole, AccessLevel>>;
 
 export interface AccessControlConfig {
   pagePermissions: PagePermissions;
+  featurePermissions?: FeaturePermissions;
   updatedAt: Date;
   updatedBy: string;
 }
@@ -260,4 +261,33 @@ export interface PageDefinition {
   route: string;
   /** Roles that can never lose access (e.g. SUPER_ADMIN always has edit) */
   lockedRoles?: Partial<Record<UserRole, AccessLevel>>;
+}
+
+// ─── Feature Permissions ───
+
+export interface FeatureLinkedDept {
+  deptId: string;
+  /** 'lead' = user must lead the dept; 'member' = any dept member qualifies */
+  access: "lead" | "member";
+}
+
+export interface FeaturePermission {
+  /** Minimum role that always has access, regardless of department */
+  minRole: UserRole;
+  /** Departments that grant access to users who don't meet minRole */
+  linkedDepts: FeatureLinkedDept[];
+  /** For dept-based access, the minimum role required within that context */
+  deptMinRole: UserRole;
+}
+
+export type FeaturePermissions = Record<string, FeaturePermission>;
+
+export interface FeatureDefinition {
+  key: string;
+  label: string;
+  description: string;
+  /** Whether dept access is by leading the dept or just being a member */
+  defaultDeptAccess: "lead" | "member";
+  /** Default minimum role required for dept-based access */
+  defaultDeptMinRole: UserRole;
 }
