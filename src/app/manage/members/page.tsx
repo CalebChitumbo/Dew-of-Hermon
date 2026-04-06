@@ -6,7 +6,8 @@ import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { User, Department, UserRole } from "@/types";
-import { roleLabels, canManageMembers, canManageDeptMembers } from "@/lib/permissions";
+import { roleLabels } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ interface MemberRow {
 
 export default function MembersPage() {
   const { userData } = useAuth();
+  const { canManageMembers, canManageDeptMembers } = usePermissions();
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,8 +103,8 @@ export default function MembersPage() {
     return map;
   }, [departments]);
 
-  const isFullAdmin = userData && canManageMembers(userData.role);
-  const isDeptLead = userData && !isFullAdmin && canManageDeptMembers(userData.role);
+  const isFullAdmin = userData && canManageMembers;
+  const isDeptLead = userData && !isFullAdmin && canManageDeptMembers;
   const hasAccess = isFullAdmin || isDeptLead;
 
   // For DEPARTMENT_LEAD, only show members in their departments

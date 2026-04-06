@@ -6,6 +6,7 @@ import { format, parseISO } from "date-fns";
 import { getDocs, query, where, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { AppEvent, EventType } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +70,7 @@ type ActionState = {
 
 export default function EventApprovalsPage() {
   const { userData } = useAuth();
+  const { canAccessPage } = usePermissions();
   const { toast } = useToast();
 
   const [pendingEvents, setPendingEvents] = useState<PendingEvent[]>([]);
@@ -78,12 +80,8 @@ export default function EventApprovalsPage() {
   const [comments, setComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Access: any ADMIN+ or DEPARTMENT_LEAD can visit; final permission enforced server-side
-  const isAdmin = userData
-    ? userData.role === "SUPER_ADMIN" || userData.role === "ADMIN"
-    : false;
-  const isDeptLead = userData?.role === "DEPARTMENT_LEAD";
-  const hasAccess = isAdmin || isDeptLead;
+  // Access: uses configurable page permissions; final approval permission enforced server-side
+  const hasAccess = userData ? canAccessPage("events_approvals") : false;
 
   const fetchPendingEvents = useCallback(async () => {
     setLoading(true);
