@@ -11,6 +11,7 @@ import {
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAccessControl } from "@/contexts/AccessControlContext";
 import {
   Card,
   CardContent,
@@ -85,6 +86,7 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "warning" | "succ
 export default function CampusMinistryPage() {
   const { userData } = useAuth();
   const { checkFeatureAccess } = usePermissions();
+  const { loading: acLoading } = useAccessControl();
   const { toast } = useToast();
   const [institutions, setInstitutions] = useState<Institution[]>(DEFAULT_INSTITUTIONS);
   const [myCards, setMyCards] = useState<FollowUpCard[]>([]);
@@ -320,7 +322,7 @@ export default function CampusMinistryPage() {
     setSubmitting(false);
   };
 
-  if (loading) {
+  if (loading || acLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <LoadingSpinner size="lg" />
