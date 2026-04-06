@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { canManageInstitutions } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ interface InstitutionItem {
 export default function InstitutionsPage() {
   const { userData } = useAuth();
   const { toast } = useToast();
+  const { hasMinRole } = usePermissions();
 
   const [institutions, setInstitutions] = useState<InstitutionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,7 @@ export default function InstitutionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  const hasAccess = userData && canManageInstitutions(userData.role);
+  const hasAccess = userData && hasMinRole("ADMIN");
 
   const fetchInstitutions = useCallback(async () => {
     try {

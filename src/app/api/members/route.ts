@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { canManageMembers, getAssignableRoles } from "@/lib/permissions";
+import { getAssignableRoles } from "@/lib/permissions";
+import { serverHasFeatureMinRole } from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
@@ -33,7 +34,7 @@ export async function GET() {
       );
     }
 
-    if (!canManageMembers(caller.role)) {
+    if (!(await serverHasFeatureMinRole("manage_members", caller.role))) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!canManageMembers(caller.role)) {
+    if (!(await serverHasFeatureMinRole("manage_members", caller.role))) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

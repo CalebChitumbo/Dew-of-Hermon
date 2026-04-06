@@ -2,11 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import {
-  canSubmitFollowUp,
-  canManageFollowUps,
-  hasMinRole,
-} from "@/lib/permissions";
+import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 import { UserRole, FollowUpSource, FollowUpStatus, FollowUpReason } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -53,16 +49,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const campusDeptId = await getDeptIdByName("Campus Ministry");
-    const lifeGroupsDeptId = await getDeptIdByName("Life Groups");
-    const discipleshipDeptId = await getDeptIdByName("Discipleship & Follow-Up");
-
-    // Check read permissions: Campus Ministry, Life Groups, or Discipleship dept members, or ADMIN+
-    const hasAccess =
-      hasMinRole(caller.role, "ADMIN") ||
-      (campusDeptId && caller.departmentIds.includes(campusDeptId)) ||
-      (lifeGroupsDeptId && caller.departmentIds.includes(lifeGroupsDeptId)) ||
-      (discipleshipDeptId && caller.departmentIds.includes(discipleshipDeptId));
+    // Check read permissions: anyone who can submit or manage follow-ups
+    const [canSubmit, canManage] = await Promise.all([
+      serverCheckFeatureAccess(
+        "submit_follow_up",
+        caller.role,
+        caller.departmentIds,
+        caller.leadsDepartmentIds
+      ),
+      serverCheckFeatureAccess(
+        "manage_follow_ups",
+        caller.role,
+        caller.departmentIds,
+        caller.leadsDepartmentIds
+      ),
+    ]);
+    const hasAccess = canSubmit || canManage;
 
     if (!hasAccess) {
       return NextResponse.json(
@@ -143,17 +145,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const campusDeptId = await getDeptIdByName("Campus Ministry");
-    const lifeGroupsDeptId = await getDeptIdByName("Life Groups");
+    const canSubmit = await serverCheckFeatureAccess(
+      "submit_follow_up",
+      caller.role,
+      caller.departmentIds,
+      caller.leadsDepartmentIds
+    );
 
-    if (
-      !canSubmitFollowUp(
-        caller.role,
-        caller.departmentIds,
-        campusDeptId || "",
-        lifeGroupsDeptId || ""
-      )
-    ) {
+    if (!canSubmit) {
       return NextResponse.json(
         { error: "Forbidden: Only Campus Ministry or Life Groups members can create follow-up cards" },
         { status: 403 }

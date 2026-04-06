@@ -8,6 +8,7 @@ import {
   notifyDepartmentManagers,
 } from "@/lib/event-helpers";
 import { UserRole } from "@/types";
+import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ async function getCaller(): Promise<{
   uid: string;
   role: UserRole;
   name: string;
+  departmentIds: string[];
   leadsDepartmentIds: string[];
 } | null> {
   try {
@@ -33,39 +35,12 @@ async function getCaller(): Promise<{
       uid: decoded.uid,
       role: data.role as UserRole,
       name: data.name || "",
+      departmentIds: data.departmentIds || [],
       leadsDepartmentIds: data.leadsDepartmentIds || [],
     };
   } catch {
     return null;
   }
-}
-
-const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 5,
-  ADMIN: 4,
-  DEPARTMENT_LEAD: 3,
-  YOUTH_LEADER: 2,
-  MEMBER: 1,
-};
-
-function hasMinRole(role: string, required: string): boolean {
-  return (ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[required] || 0);
-}
-
-// ─── Helper: Check if caller can approve events ───
-
-async function checkCanApprove(
-  role: string,
-  leadsDepartmentIds: string[]
-): Promise<boolean> {
-  if (hasMinRole(role, "ADMIN")) return true;
-  const efSnap = await adminDb
-    .collection("departments")
-    .where("name", "==", "Events & Fellowship")
-    .limit(1)
-    .get();
-  if (efSnap.empty) return false;
-  return role === "DEPARTMENT_LEAD" && leadsDepartmentIds.includes(efSnap.docs[0].id);
 }
 
 // ─── PATCH /api/events/[id]/approve ───
@@ -82,7 +57,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const canApprove = await checkCanApprove(caller.role, caller.leadsDepartmentIds);
+    const canApprove = await serverCheckFeatureAccess(
+      "approve_events",
+      caller.role,
+      caller.departmentIds,
+      caller.leadsDepartmentIds
+    );
     if (!canApprove) {
       return NextResponse.json(
         { error: "Forbidden: Events & Fellowship Manager or Admin access required" },

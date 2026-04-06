@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import { canManageMembers, canDeleteMembers, canChangeUserRoles, getAssignableRoles } from "@/lib/permissions";
+import { getAssignableRoles } from "@/lib/permissions";
+import { serverHasFeatureMinRole } from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
@@ -91,7 +92,7 @@ export async function PUT(
 
     const callerRole = caller.role;
 
-    if (!canManageMembers(callerRole)) {
+    if (!(await serverHasFeatureMinRole("manage_members", callerRole))) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -107,7 +108,7 @@ export async function PUT(
     const existingData = existingDoc.data()!;
 
     if (role && role !== existingData.role) {
-      if (!canChangeUserRoles(callerRole)) {
+      if (!(await serverHasFeatureMinRole("change_user_roles", callerRole))) {
         return NextResponse.json(
           { error: "You do not have permission to change user roles" },
           { status: 403 }
@@ -207,7 +208,7 @@ export async function DELETE(
       );
     }
 
-    if (!canDeleteMembers(caller.role)) {
+    if (!(await serverHasFeatureMinRole("delete_members", caller.role))) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

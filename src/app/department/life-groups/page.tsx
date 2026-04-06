@@ -8,7 +8,7 @@ import {
 } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { canSubmitLifeGroupLead, hasMinRole } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Card,
   CardContent,
@@ -78,6 +78,7 @@ const REASON_OPTIONS: { value: FollowUpReason; label: string }[] = [
 
 export default function LifeGroupsPage() {
   const { userData } = useAuth();
+  const { checkFeatureAccess } = usePermissions();
   const { toast } = useToast();
   const [lifeGroupsDeptId, setLifeGroupsDeptId] = useState<string | null>(null);
   const [myCards, setMyCards] = useState<FollowUpCard[]>([]);
@@ -110,15 +111,16 @@ export default function LifeGroupsPage() {
     return () => unsub();
   }, []);
 
-  // Check access: Life Group leaders (DEPARTMENT_LEAD or YOUTH_LEADER in Life Groups dept)
+  // Check access via configurable feature permissions
   const hasAccess = useMemo(() => {
     if (!userData || !lifeGroupsDeptId) return false;
-    return canSubmitLifeGroupLead(
-      userData.role,
+    return checkFeatureAccess(
+      "submit_life_group_lead",
       userData.departmentIds,
-      lifeGroupsDeptId
+      userData.leadsDepartmentIds,
+      { "Life Groups": lifeGroupsDeptId }
     );
-  }, [userData, lifeGroupsDeptId]);
+  }, [userData, lifeGroupsDeptId, checkFeatureAccess]);
 
   // Fetch my cards from API (fallback when onSnapshot fails)
   const fetchMyCardsFromApi = useCallback(async () => {
