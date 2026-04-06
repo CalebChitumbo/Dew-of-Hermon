@@ -3,20 +3,30 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onSnapshot } from "firebase/firestore";
 import { safeDoc } from "@/lib/firebase";
-import { PagePermissions } from "@/types";
+import {
+  DepartmentAccessRule,
+  FeatureMinRoles,
+  PagePermissions,
+} from "@/types";
 import {
   DEFAULT_PAGE_PERMISSIONS,
+  DEFAULT_FEATURE_MIN_ROLES,
+  DEFAULT_DEPARTMENT_ACCESS_RULES,
   mergeWithDefaults,
+  mergeFeatureMinRoles,
 } from "@/lib/access-control";
 
 interface AccessControlContextType {
-  /** Custom page permissions from Firestore, or null if using defaults */
   pagePermissions: PagePermissions;
+  featureMinRoles: FeatureMinRoles;
+  departmentAccessRules: DepartmentAccessRule[];
   loading: boolean;
 }
 
 const AccessControlContext = createContext<AccessControlContextType>({
   pagePermissions: DEFAULT_PAGE_PERMISSIONS,
+  featureMinRoles: DEFAULT_FEATURE_MIN_ROLES,
+  departmentAccessRules: DEFAULT_DEPARTMENT_ACCESS_RULES,
   loading: true,
 });
 
@@ -28,6 +38,12 @@ export function AccessControlProvider({
   const [pagePermissions, setPagePermissions] = useState<PagePermissions>(
     DEFAULT_PAGE_PERMISSIONS
   );
+  const [featureMinRoles, setFeatureMinRoles] = useState<FeatureMinRoles>(
+    DEFAULT_FEATURE_MIN_ROLES
+  );
+  const [departmentAccessRules, setDepartmentAccessRules] = useState<
+    DepartmentAccessRule[]
+  >(DEFAULT_DEPARTMENT_ACCESS_RULES);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,6 +55,12 @@ export function AccessControlProvider({
           const data = snapshot.data();
           if (data.pagePermissions) {
             setPagePermissions(mergeWithDefaults(data.pagePermissions));
+          }
+          if (data.featureMinRoles) {
+            setFeatureMinRoles(mergeFeatureMinRoles(data.featureMinRoles));
+          }
+          if (data.departmentAccessRules) {
+            setDepartmentAccessRules(data.departmentAccessRules);
           }
         }
         setLoading(false);
@@ -52,7 +74,9 @@ export function AccessControlProvider({
   }, []);
 
   return (
-    <AccessControlContext.Provider value={{ pagePermissions, loading }}>
+    <AccessControlContext.Provider
+      value={{ pagePermissions, featureMinRoles, departmentAccessRules, loading }}
+    >
       {children}
     </AccessControlContext.Provider>
   );

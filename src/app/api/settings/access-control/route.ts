@@ -76,7 +76,7 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { pagePermissions } = body;
+    const { pagePermissions, featureMinRoles, departmentAccessRules } = body;
 
     if (!pagePermissions || typeof pagePermissions !== "object") {
       return NextResponse.json(
@@ -90,15 +90,36 @@ export async function PUT(request: Request) {
       pagePermissions[pageKey].SUPER_ADMIN = "edit";
     }
 
+    // Validate feature min roles if provided
+    if (featureMinRoles && typeof featureMinRoles === "object") {
+      // Ensure manage_settings stays SUPER_ADMIN
+      featureMinRoles.manage_settings = "SUPER_ADMIN";
+    }
+
+    // Validate department access rules if provided
+    if (departmentAccessRules && !Array.isArray(departmentAccessRules)) {
+      return NextResponse.json(
+        { error: "Invalid departmentAccessRules data" },
+        { status: 400 }
+      );
+    }
+
+    const updateData: Record<string, unknown> = {
+      pagePermissions,
+      updatedAt: new Date(),
+      updatedBy: caller.uid,
+    };
+
+    if (featureMinRoles) {
+      updateData.featureMinRoles = featureMinRoles;
+    }
+
+    if (departmentAccessRules) {
+      updateData.departmentAccessRules = departmentAccessRules;
+    }
+
     const docRef = adminDb.collection("settings").doc("accessControl");
-    await docRef.set(
-      {
-        pagePermissions,
-        updatedAt: new Date(),
-        updatedBy: caller.uid,
-      },
-      { merge: true }
-    );
+    await docRef.set(updateData, { merge: true });
 
     return NextResponse.json({ success: true });
   } catch (error) {

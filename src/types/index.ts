@@ -246,8 +246,23 @@ export type AccessLevel = "edit" | "view" | "none";
 /** A page key maps to the permission each role has for that page */
 export type PagePermissions = Record<string, Record<UserRole, AccessLevel>>;
 
+/** Minimum role required for each feature action */
+export type FeatureMinRoles = Record<string, UserRole>;
+
+/** A department-based access rule that grants a feature to users in a specific department */
+export interface DepartmentAccessRule {
+  featureKey: string;
+  departmentName: string;
+  /** true = user must lead this dept (leadsDepartmentIds), false = membership is enough (departmentIds) */
+  requiresLeadership: boolean;
+  /** If non-empty, only these roles get department-based access. Empty = any role with the membership qualifies. */
+  allowedRoles: UserRole[];
+}
+
 export interface AccessControlConfig {
   pagePermissions: PagePermissions;
+  featureMinRoles?: FeatureMinRoles;
+  departmentAccessRules?: DepartmentAccessRule[];
   updatedAt: Date;
   updatedBy: string;
 }
@@ -260,4 +275,16 @@ export interface PageDefinition {
   route: string;
   /** Roles that can never lose access (e.g. SUPER_ADMIN always has edit) */
   lockedRoles?: Partial<Record<UserRole, AccessLevel>>;
+}
+
+/** Metadata about a configurable feature permission */
+export interface FeatureDefinition {
+  key: string;
+  label: string;
+  description: string;
+  category: string;
+  /** If set, the minimum role cannot be lowered below this */
+  lockedMinRole?: UserRole;
+  /** Whether this feature supports department-based access rules */
+  supportsDepartmentRules: boolean;
 }

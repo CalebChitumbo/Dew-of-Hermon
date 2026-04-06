@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { canCreateService } from "@/lib/permissions";
+import { serverHasFeatureMinRole } from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
@@ -124,7 +124,7 @@ export async function PUT(
     const body = await request.json();
     const { theme, serviceTime, programNotes, attendanceCount, isArchived, callerRole } = body;
 
-    if (!callerRole || !canCreateService(callerRole as UserRole)) {
+    if (!callerRole || !(await serverHasFeatureMinRole("create_service", callerRole as UserRole))) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -178,7 +178,7 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const callerRole = searchParams.get("callerRole") as UserRole | null;
 
-    if (!callerRole || !canCreateService(callerRole)) {
+    if (!callerRole || !(await serverHasFeatureMinRole("create_service", callerRole as UserRole))) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

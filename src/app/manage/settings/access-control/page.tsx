@@ -1,12 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Shield,
@@ -17,15 +30,38 @@ import {
   Eye,
   EyeOff,
   Lock,
+  Plus,
+  Trash2,
+  Users,
+  Building2,
 } from "lucide-react";
-import { AccessLevel, PagePermissions, UserRole } from "@/types";
+import {
+  AccessLevel,
+  DepartmentAccessRule,
+  FeatureMinRoles,
+  PagePermissions,
+  UserRole,
+} from "@/types";
 import {
   PAGE_DEFINITIONS,
   DEFAULT_PAGE_PERMISSIONS,
+  FEATURE_DEFINITIONS,
+  DEFAULT_FEATURE_MIN_ROLES,
+  DEFAULT_DEPARTMENT_ACCESS_RULES,
 } from "@/lib/access-control";
 import { roleLabels } from "@/lib/permissions";
+import { getDocs } from "firebase/firestore";
+import { safeCollection } from "@/lib/firebase";
 
 const CONFIGURABLE_ROLES: UserRole[] = [
+  "ADMIN",
+  "DEPARTMENT_LEAD",
+  "YOUTH_LEADER",
+  "MEMBER",
+];
+
+const ALL_ROLES: UserRole[] = [
+  "SUPER_ADMIN",
   "ADMIN",
   "DEPARTMENT_LEAD",
   "YOUTH_LEADER",
@@ -56,6 +92,11 @@ const accessLevelConfig: Record<
   },
 };
 
+interface DepartmentOption {
+  id: string;
+  name: string;
+}
+
 export default function AccessControlPage() {
   return (
     <RoleProtected requiredRole="SUPER_ADMIN">
@@ -66,11 +107,32 @@ export default function AccessControlPage() {
 
 function AccessControlContent() {
   const { toast } = useToast();
+
+  // Page permissions state
   const [permissions, setPermissions] = useState<PagePermissions>(
     DEFAULT_PAGE_PERMISSIONS
   );
   const [originalPermissions, setOriginalPermissions] =
     useState<PagePermissions>(DEFAULT_PAGE_PERMISSIONS);
+
+  // Feature permissions state
+  const [featureMinRoles, setFeatureMinRoles] = useState<FeatureMinRoles>(
+    DEFAULT_FEATURE_MIN_ROLES
+  );
+  const [originalFeatureMinRoles, setOriginalFeatureMinRoles] =
+    useState<FeatureMinRoles>(DEFAULT_FEATURE_MIN_ROLES);
+
+  // Department access rules state
+  const [deptRules, setDeptRules] = useState<DepartmentAccessRule[]>(
+    DEFAULT_DEPARTMENT_ACCESS_RULES
+  );
+  const [originalDeptRules, setOriginalDeptRules] = useState<
+    DepartmentAccessRule[]
+  >(DEFAULT_DEPARTMENT_ACCESS_RULES);
+
+  // Departments list for dropdowns
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -81,15 +143,29 @@ function AccessControlContent() {
         if (res.ok) {
           const json = await res.json();
           if (json.data?.pagePermissions) {
-            // Merge with defaults for any new pages
             const merged = { ...DEFAULT_PAGE_PERMISSIONS };
             for (const key of Object.keys(json.data.pagePermissions)) {
               if (merged[key]) {
-                merged[key] = { ...merged[key], ...json.data.pagePermissions[key] };
+                merged[key] = {
+                  ...merged[key],
+                  ...json.data.pagePermissions[key],
+                };
               }
             }
             setPermissions(merged);
             setOriginalPermissions(merged);
+          }
+          if (json.data?.featureMinRoles) {
+            const merged = {
+              ...DEFAULT_FEATURE_MIN_ROLES,
+              ...json.data.featureMinRoles,
+            };
+            setFeatureMinRoles(merged);
+            setOriginalFeatureMinRoles(merged);
+          }
+          if (json.data?.departmentAccessRules) {
+            setDeptRules(json.data.departmentAccessRules);
+            setOriginalDeptRules(json.data.departmentAccessRules);
           }
         }
       } catch (error) {
@@ -98,7 +174,23 @@ function AccessControlContent() {
         setLoading(false);
       }
     }
+
+    async function loadDepartments() {
+      try {
+        const snap = await getDocs(safeCollection("departments"));
+        const depts: DepartmentOption[] = snap.docs.map((d) => ({
+          id: d.id,
+          name: d.data().name,
+        }));
+        depts.sort((a, b) => a.name.localeCompare(b.name));
+        setDepartments(depts);
+      } catch (error) {
+        console.error("Failed to load departments:", error);
+      }
+    }
+
     loadConfig();
+    loadDepartments();
   }, []);
 
   const toggleAccess = (pageKey: string, role: UserRole) => {
@@ -121,7 +213,11 @@ function AccessControlContent() {
       const res = await fetch("/api/settings/access-control", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagePermissions: permissions }),
+        body: JSON.stringify({
+          pagePermissions: permissions,
+          featureMinRoles,
+          departmentAccessRules: deptRules,
+        }),
       });
 
       if (!res.ok) {
@@ -130,6 +226,8 @@ function AccessControlContent() {
       }
 
       setOriginalPermissions(permissions);
+      setOriginalFeatureMinRoles(featureMinRoles);
+      setOriginalDeptRules(deptRules);
       toast({
         title: "Saved",
         description: "Access control settings updated successfully.",
@@ -148,10 +246,21 @@ function AccessControlContent() {
 
   const handleReset = () => {
     setPermissions(DEFAULT_PAGE_PERMISSIONS);
+    setFeatureMinRoles(DEFAULT_FEATURE_MIN_ROLES);
+    setDeptRules(DEFAULT_DEPARTMENT_ACCESS_RULES);
+  };
+
+  const handleDiscard = () => {
+    setPermissions(originalPermissions);
+    setFeatureMinRoles(originalFeatureMinRoles);
+    setDeptRules(originalDeptRules);
   };
 
   const hasChanges =
-    JSON.stringify(permissions) !== JSON.stringify(originalPermissions);
+    JSON.stringify(permissions) !== JSON.stringify(originalPermissions) ||
+    JSON.stringify(featureMinRoles) !==
+      JSON.stringify(originalFeatureMinRoles) ||
+    JSON.stringify(deptRules) !== JSON.stringify(originalDeptRules);
 
   if (loading) {
     return (
@@ -162,7 +271,7 @@ function AccessControlContent() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -178,8 +287,8 @@ function AccessControlContent() {
             Access Control
           </h1>
           <p className="text-clay-500 mt-1">
-            Customise which roles can access, view, or edit each page. Click a
-            badge to cycle through: Edit, View Only, and No Access.
+            Manage page access, feature permissions, and department-specific
+            access rules from one place.
           </p>
         </div>
         <div className="flex gap-2">
@@ -187,7 +296,11 @@ function AccessControlContent() {
             <RotateCcw className="h-4 w-4 mr-1" />
             Reset to Defaults
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving || !hasChanges}>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || !hasChanges}
+          >
             {saving ? (
               <>
                 <LoadingSpinner />
@@ -212,10 +325,7 @@ function AccessControlContent() {
               const config = accessLevelConfig[level];
               const Icon = config.icon;
               return (
-                <div
-                  key={level}
-                  className="flex items-center gap-1.5"
-                >
+                <div key={level} className="flex items-center gap-1.5">
                   <Badge
                     variant="outline"
                     className={`${config.color} text-xs`}
@@ -234,13 +344,17 @@ function AccessControlContent() {
         </CardContent>
       </Card>
 
-      {/* Permissions Grid */}
+      {/* ─── Section 1: Page Permissions ─── */}
       <Card>
         <CardHeader>
-          <CardTitle>Page Permissions</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5" />
+            Page Permissions
+          </CardTitle>
           <CardDescription>
-            Click on any badge to cycle its access level. The Chairperson role
-            always has full edit access and cannot be modified.
+            Control which roles can access, view, or edit each page. Click a
+            badge to cycle through access levels. The Chairperson always has
+            full edit access.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -376,18 +490,56 @@ function AccessControlContent() {
         </CardContent>
       </Card>
 
-      {/* Sticky save bar when changes exist */}
+      {/* ─── Section 2: Feature Permissions ─── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Feature Permissions
+          </CardTitle>
+          <CardDescription>
+            Set the minimum role required for each action. Users at or above the
+            selected role can perform the action regardless of department.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FeaturePermissionsTable
+            featureMinRoles={featureMinRoles}
+            onChangeMinRole={(key, role) =>
+              setFeatureMinRoles((prev) => ({ ...prev, [key]: role }))
+            }
+          />
+        </CardContent>
+      </Card>
+
+      {/* ─── Section 3: Department Access Rules ─── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Department Access Rules
+          </CardTitle>
+          <CardDescription>
+            Grant additional access to features based on department membership or
+            leadership. These rules allow users below the minimum role to access
+            features if they belong to specific departments.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DepartmentRulesEditor
+            rules={deptRules}
+            departments={departments}
+            onChange={setDeptRules}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Sticky save bar */}
       {hasChanges && (
-        <div className="sticky bottom-0 bg-white border-t border-clay-200 -mx-6 px-6 py-3 flex items-center justify-between shadow-lg">
-          <p className="text-sm text-clay-600">
-            You have unsaved changes
-          </p>
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-clay-200 px-6 py-3 flex items-center justify-between shadow-lg z-50">
+          <p className="text-sm text-clay-600">You have unsaved changes</p>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPermissions(originalPermissions)}
-            >
+            <Button variant="outline" size="sm" onClick={handleDiscard}>
               Discard
             </Button>
             <Button size="sm" onClick={handleSave} disabled={saving}>
@@ -406,6 +558,455 @@ function AccessControlContent() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Feature Permissions Table ───
+
+function FeaturePermissionsTable({
+  featureMinRoles,
+  onChangeMinRole,
+}: {
+  featureMinRoles: FeatureMinRoles;
+  onChangeMinRole: (featureKey: string, role: UserRole) => void;
+}) {
+  const categories = useMemo(() => {
+    const catMap = new Map<string, typeof FEATURE_DEFINITIONS>();
+    for (const feat of FEATURE_DEFINITIONS) {
+      const list = catMap.get(feat.category) ?? [];
+      list.push(feat);
+      catMap.set(feat.category, list);
+    }
+    return Array.from(catMap.entries());
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      {categories.map(([category, features]) => (
+        <div key={category}>
+          <h4 className="text-sm font-semibold text-clay-600 mb-3">
+            {category}
+          </h4>
+          <div className="space-y-2">
+            {features.map((feat) => {
+              const currentMinRole =
+                featureMinRoles[feat.key] ?? "SUPER_ADMIN";
+              const isLocked = !!feat.lockedMinRole;
+
+              return (
+                <div
+                  key={feat.key}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded-lg border border-clay-100 hover:bg-clay-50/50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-clay-700">
+                      {feat.label}
+                    </div>
+                    <div className="text-xs text-clay-400">
+                      {feat.description}
+                    </div>
+                  </div>
+                  <div className="sm:w-48 flex-shrink-0">
+                    {isLocked ? (
+                      <div className="flex items-center gap-1.5 text-sm text-clay-400">
+                        <Lock className="h-3.5 w-3.5" />
+                        <span>{roleLabels[feat.lockedMinRole!]}</span>
+                      </div>
+                    ) : (
+                      <Select
+                        value={currentMinRole}
+                        onValueChange={(value) =>
+                          onChangeMinRole(feat.key, value as UserRole)
+                        }
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ALL_ROLES.map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {roleLabels[role]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Department Access Rules Editor ───
+
+const FEATURES_WITH_DEPT_RULES = FEATURE_DEFINITIONS.filter(
+  (f) => f.supportsDepartmentRules
+);
+
+function DepartmentRulesEditor({
+  rules,
+  departments,
+  onChange,
+}: {
+  rules: DepartmentAccessRule[];
+  departments: DepartmentOption[];
+  onChange: (rules: DepartmentAccessRule[]) => void;
+}) {
+  const [addingForFeature, setAddingForFeature] = useState<string | null>(null);
+
+  const rulesByFeature = useMemo(() => {
+    const map = new Map<string, DepartmentAccessRule[]>();
+    for (const feat of FEATURES_WITH_DEPT_RULES) {
+      map.set(
+        feat.key,
+        rules.filter((r) => r.featureKey === feat.key)
+      );
+    }
+    return map;
+  }, [rules]);
+
+  const removeRule = useCallback(
+    (featureKey: string, departmentName: string) => {
+      onChange(
+        rules.filter(
+          (r) =>
+            !(
+              r.featureKey === featureKey &&
+              r.departmentName === departmentName
+            )
+        )
+      );
+    },
+    [rules, onChange]
+  );
+
+  const addRule = useCallback(
+    (rule: DepartmentAccessRule) => {
+      // Replace if same feature+department exists
+      const filtered = rules.filter(
+        (r) =>
+          !(
+            r.featureKey === rule.featureKey &&
+            r.departmentName === rule.departmentName
+          )
+      );
+      onChange([...filtered, rule]);
+      setAddingForFeature(null);
+    },
+    [rules, onChange]
+  );
+
+  const updateRule = useCallback(
+    (
+      featureKey: string,
+      departmentName: string,
+      updates: Partial<DepartmentAccessRule>
+    ) => {
+      onChange(
+        rules.map((r) =>
+          r.featureKey === featureKey && r.departmentName === departmentName
+            ? { ...r, ...updates }
+            : r
+        )
+      );
+    },
+    [rules, onChange]
+  );
+
+  return (
+    <div className="space-y-6">
+      {FEATURES_WITH_DEPT_RULES.map((feat) => {
+        const featureRules = rulesByFeature.get(feat.key) ?? [];
+
+        return (
+          <div
+            key={feat.key}
+            className="border border-clay-200 rounded-lg overflow-hidden"
+          >
+            <div className="bg-clay-50 px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="font-medium text-sm text-clay-700">
+                  {feat.label}
+                </div>
+                <div className="text-xs text-clay-400">{feat.description}</div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setAddingForFeature(
+                    addingForFeature === feat.key ? null : feat.key
+                  )
+                }
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add Rule
+              </Button>
+            </div>
+
+            <div className="divide-y divide-clay-100">
+              {featureRules.length === 0 && addingForFeature !== feat.key && (
+                <div className="px-4 py-3 text-sm text-clay-400 italic">
+                  No department rules. Only users meeting the minimum role can
+                  access this feature.
+                </div>
+              )}
+
+              {featureRules.map((rule) => (
+                <DepartmentRuleRow
+                  key={`${rule.featureKey}-${rule.departmentName}`}
+                  rule={rule}
+                  onRemove={() =>
+                    removeRule(rule.featureKey, rule.departmentName)
+                  }
+                  onUpdate={(updates) =>
+                    updateRule(
+                      rule.featureKey,
+                      rule.departmentName,
+                      updates
+                    )
+                  }
+                />
+              ))}
+
+              {addingForFeature === feat.key && (
+                <AddRuleForm
+                  featureKey={feat.key}
+                  departments={departments}
+                  existingDeptNames={featureRules.map((r) => r.departmentName)}
+                  onAdd={addRule}
+                  onCancel={() => setAddingForFeature(null)}
+                />
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DepartmentRuleRow({
+  rule,
+  onRemove,
+  onUpdate,
+}: {
+  rule: DepartmentAccessRule;
+  onRemove: () => void;
+  onUpdate: (updates: Partial<DepartmentAccessRule>) => void;
+}) {
+  return (
+    <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-sm text-clay-700">
+          {rule.departmentName}
+        </div>
+        <div className="text-xs text-clay-400">
+          {rule.requiresLeadership
+            ? "Must lead this department"
+            : "Must be a member of this department"}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Membership type toggle */}
+        <Select
+          value={rule.requiresLeadership ? "leads" : "member"}
+          onValueChange={(v) =>
+            onUpdate({ requiresLeadership: v === "leads" })
+          }
+        >
+          <SelectTrigger className="h-7 text-xs w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="member">Member of</SelectItem>
+            <SelectItem value="leads">Leads</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Role filter */}
+        <RoleFilterSelect
+          allowedRoles={rule.allowedRoles}
+          onChange={(roles) => onUpdate({ allowedRoles: roles })}
+        />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function RoleFilterSelect({
+  allowedRoles,
+  onChange,
+}: {
+  allowedRoles: UserRole[];
+  onChange: (roles: UserRole[]) => void;
+}) {
+  const toggleRole = (role: UserRole) => {
+    if (allowedRoles.includes(role)) {
+      onChange(allowedRoles.filter((r) => r !== role));
+    } else {
+      onChange([...allowedRoles, role]);
+    }
+  };
+
+  const label =
+    allowedRoles.length === 0
+      ? "Any role"
+      : allowedRoles.map((r) => roleLabels[r]).join(", ");
+
+  return (
+    <div className="relative group">
+      <button
+        className="h-7 px-2 text-xs border border-clay-200 rounded-md bg-white hover:bg-clay-50 transition-colors max-w-48 truncate"
+        title={label}
+      >
+        {label.length > 24 ? label.slice(0, 24) + "..." : label}
+      </button>
+      <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-clay-200 rounded-lg shadow-lg p-2 min-w-48 hidden group-focus-within:block group-hover:block">
+        <div className="text-[10px] font-medium text-clay-500 px-2 py-1">
+          Restrict to specific roles (empty = any)
+        </div>
+        {(
+          [
+            "DEPARTMENT_LEAD",
+            "YOUTH_LEADER",
+            "MEMBER",
+          ] as UserRole[]
+        ).map((role) => (
+          <button
+            key={role}
+            onClick={() => toggleRole(role)}
+            className={`w-full text-left px-2 py-1.5 text-xs rounded hover:bg-clay-50 flex items-center gap-2 ${
+              allowedRoles.includes(role)
+                ? "text-clay-700 font-medium"
+                : "text-clay-400"
+            }`}
+          >
+            <div
+              className={`h-3.5 w-3.5 rounded border flex items-center justify-center ${
+                allowedRoles.includes(role)
+                  ? "bg-clay-700 border-clay-700"
+                  : "border-clay-300"
+              }`}
+            >
+              {allowedRoles.includes(role) && (
+                <svg
+                  className="h-2.5 w-2.5 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              )}
+            </div>
+            {roleLabels[role]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AddRuleForm({
+  featureKey,
+  departments,
+  existingDeptNames,
+  onAdd,
+  onCancel,
+}: {
+  featureKey: string;
+  departments: DepartmentOption[];
+  existingDeptNames: string[];
+  onAdd: (rule: DepartmentAccessRule) => void;
+  onCancel: () => void;
+}) {
+  const [deptName, setDeptName] = useState("");
+  const [requiresLeadership, setRequiresLeadership] = useState(false);
+
+  const availableDepts = departments.filter(
+    (d) => !existingDeptNames.includes(d.name)
+  );
+
+  return (
+    <div className="px-4 py-3 bg-clay-50/50">
+      <div className="flex flex-col sm:flex-row gap-3 items-end">
+        <div className="flex-1">
+          <label className="text-xs font-medium text-clay-600 block mb-1">
+            Department
+          </label>
+          <Select value={deptName} onValueChange={setDeptName}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Select department..." />
+            </SelectTrigger>
+            <SelectContent>
+              {availableDepts.map((dept) => (
+                <SelectItem key={dept.id} value={dept.name}>
+                  {dept.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="sm:w-36">
+          <label className="text-xs font-medium text-clay-600 block mb-1">
+            Access type
+          </label>
+          <Select
+            value={requiresLeadership ? "leads" : "member"}
+            onValueChange={(v) => setRequiresLeadership(v === "leads")}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="member">Member of</SelectItem>
+              <SelectItem value="leads">Leads</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            className="h-8"
+            disabled={!deptName}
+            onClick={() =>
+              onAdd({
+                featureKey,
+                departmentName: deptName,
+                requiresLeadership,
+                allowedRoles: [],
+              })
+            }
+          >
+            Add
+          </Button>
+          <Button variant="outline" size="sm" className="h-8" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { onSnapshot, orderBy, query } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Affirmation, Service, AppEvent } from "@/types";
-import { canManageAffirmations } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import { format } from "date-fns";
 
 export default function AffirmationsPage() {
   const { userData } = useAuth();
+  const { canManageAffirmations: canManageAffirmationsFlag } = usePermissions();
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [services, setServices] = useState<Map<string, Service>>(new Map());
   const [events, setEvents] = useState<Map<string, AppEvent>>(new Map());
@@ -122,7 +123,7 @@ export default function AffirmationsPage() {
             Potter&apos;s Wheel words of encouragement and affirmation
           </p>
         </div>
-        {userData && canManageAffirmations(userData.role) && (
+        {userData && canManageAffirmationsFlag && (
           <Link href="/manage/affirmations">
             <Button variant="gold">
               <Plus className="mr-2 h-4 w-4" />

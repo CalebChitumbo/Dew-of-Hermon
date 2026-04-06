@@ -1,4 +1,12 @@
-import { AccessLevel, PageDefinition, PagePermissions, UserRole } from "@/types";
+import {
+  AccessLevel,
+  DepartmentAccessRule,
+  FeatureDefinition,
+  FeatureMinRoles,
+  PageDefinition,
+  PagePermissions,
+  UserRole,
+} from "@/types";
 
 /**
  * All configurable pages in the system.
@@ -293,4 +301,238 @@ export function mergeWithDefaults(
     }
   }
   return merged;
+}
+
+// ─── Feature Permissions ───
+
+/**
+ * All configurable feature permissions in the system.
+ * These define what actions users can perform, beyond page access.
+ */
+export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
+  // Events
+  {
+    key: "create_events",
+    label: "Create Events",
+    description: "Create new events",
+    category: "Events",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "approve_events",
+    label: "Approve Events",
+    description: "Approve or reject event requests",
+    category: "Events",
+    supportsDepartmentRules: true,
+  },
+  // Follow-Up
+  {
+    key: "submit_follow_up",
+    label: "Submit Follow-Up Cards",
+    description: "Create follow-up cards for new contacts",
+    category: "Follow-Up",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "manage_follow_ups",
+    label: "Manage Follow-Up Cards",
+    description: "Update status and assign follow-up cards",
+    category: "Follow-Up",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "submit_life_group_lead",
+    label: "Life Group Lead Reports",
+    description: "Submit life group follow-up reports",
+    category: "Life Groups",
+    supportsDepartmentRules: true,
+  },
+  // Members
+  {
+    key: "manage_members",
+    label: "Manage Members",
+    description: "Add and edit church members",
+    category: "Members",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "delete_members",
+    label: "Delete Members",
+    description: "Remove members from the system",
+    category: "Members",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "change_user_roles",
+    label: "Change User Roles",
+    description: "Assign or change member roles",
+    category: "Members",
+    supportsDepartmentRules: false,
+  },
+  // Services
+  {
+    key: "create_service",
+    label: "Create Services",
+    description: "Create and manage service rotas",
+    category: "Services",
+    supportsDepartmentRules: false,
+  },
+  // Content & Communication
+  {
+    key: "manage_templates",
+    label: "Manage Email Templates",
+    description: "Create and edit email templates",
+    category: "Communication",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "manage_affirmations",
+    label: "Manage Affirmations",
+    description: "Create and edit affirmations",
+    category: "Content",
+    supportsDepartmentRules: false,
+  },
+  // Admin
+  {
+    key: "manage_departments",
+    label: "Manage Departments",
+    description: "Create and configure departments",
+    category: "Admin",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "manage_institutions",
+    label: "Manage Institutions",
+    description: "Manage institution list",
+    category: "Admin",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "manage_settings",
+    label: "Manage Settings",
+    description: "Access system settings",
+    category: "Admin",
+    lockedMinRole: "SUPER_ADMIN",
+    supportsDepartmentRules: false,
+  },
+];
+
+/** Default minimum role for each feature (matches current hardcoded behavior) */
+export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
+  approve_events: "ADMIN",
+  submit_follow_up: "ADMIN",
+  manage_follow_ups: "ADMIN",
+  submit_life_group_lead: "ADMIN",
+  manage_members: "ADMIN",
+  delete_members: "ADMIN",
+  change_user_roles: "ADMIN",
+  create_service: "ADMIN",
+  create_events: "DEPARTMENT_LEAD",
+  manage_templates: "ADMIN",
+  manage_affirmations: "ADMIN",
+  manage_departments: "ADMIN",
+  manage_institutions: "ADMIN",
+  manage_settings: "SUPER_ADMIN",
+};
+
+/** Default department access rules (matches current hardcoded behavior) */
+export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
+  {
+    featureKey: "approve_events",
+    departmentName: "Events & Fellowship",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "submit_follow_up",
+    departmentName: "Campus Ministry",
+    requiresLeadership: false,
+    allowedRoles: [],
+  },
+  {
+    featureKey: "submit_follow_up",
+    departmentName: "Life Groups",
+    requiresLeadership: false,
+    allowedRoles: [],
+  },
+  {
+    featureKey: "manage_follow_ups",
+    departmentName: "Discipleship & Follow-Up",
+    requiresLeadership: true,
+    allowedRoles: [],
+  },
+  {
+    featureKey: "submit_life_group_lead",
+    departmentName: "Life Groups",
+    requiresLeadership: false,
+    allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
+  },
+];
+
+const ROLE_HIERARCHY: Record<UserRole, number> = {
+  SUPER_ADMIN: 5,
+  ADMIN: 4,
+  DEPARTMENT_LEAD: 3,
+  YOUTH_LEADER: 2,
+  MEMBER: 1,
+};
+
+/**
+ * Check if a user has access to a feature, considering both
+ * the minimum role and any department-based access rules.
+ *
+ * @param departmentNameToId - Map of department name → Firestore ID
+ */
+export function checkFeatureAccess(
+  featureKey: string,
+  userRole: UserRole,
+  userDepartmentIds: string[],
+  userLeadsDepartmentIds: string[],
+  departmentNameToId: Record<string, string>,
+  config?: {
+    minRoles?: FeatureMinRoles;
+    rules?: DepartmentAccessRule[];
+  }
+): boolean {
+  // SUPER_ADMIN always has access
+  if (userRole === "SUPER_ADMIN") return true;
+
+  const minRoles = config?.minRoles ?? DEFAULT_FEATURE_MIN_ROLES;
+  const rules = config?.rules ?? DEFAULT_DEPARTMENT_ACCESS_RULES;
+
+  // Check minimum role
+  const minRole = minRoles[featureKey] ?? "SUPER_ADMIN";
+  if (ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[minRole]) return true;
+
+  // Check department-based access rules
+  const featureRules = rules.filter((r) => r.featureKey === featureKey);
+  for (const rule of featureRules) {
+    const deptId = departmentNameToId[rule.departmentName];
+    if (!deptId) continue;
+
+    const hasMembership = rule.requiresLeadership
+      ? userLeadsDepartmentIds.includes(deptId)
+      : userDepartmentIds.includes(deptId);
+
+    if (!hasMembership) continue;
+
+    // Check allowed roles (empty array = any role qualifies)
+    if (
+      rule.allowedRoles.length === 0 ||
+      rule.allowedRoles.includes(userRole)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Merge saved feature min roles with defaults for any new features.
+ */
+export function mergeFeatureMinRoles(
+  saved: FeatureMinRoles
+): FeatureMinRoles {
+  return { ...DEFAULT_FEATURE_MIN_ROLES, ...saved };
 }
