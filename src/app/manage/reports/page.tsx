@@ -4,8 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import { getDocs, query, orderBy, where, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
-import { hasMinRole } from "@/lib/permissions";
 import { roleLabels } from "@/lib/permissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { UserRole, AssignmentStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +47,7 @@ interface ServiceSummary {
 
 export default function ReportsPage() {
   const { userData } = useAuth();
+  const { isAdmin } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [memberSummary, setMemberSummary] = useState<MemberSummary>({
     total: 0,
@@ -166,7 +167,7 @@ export default function ReportsPage() {
     );
   }, [serviceSummary]);
 
-  if (!userData || !hasMinRole(userData.role, "ADMIN")) {
+  if (!userData || !isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Shield className="h-16 w-16 text-clay-300 mb-4" />
