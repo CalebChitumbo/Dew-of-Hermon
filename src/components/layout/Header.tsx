@@ -1,46 +1,32 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useAccessControl } from "@/contexts/AccessControlContext";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { Button } from "@/components/ui/button";
-import { Menu, LogOut } from "lucide-react";
+import { Menu, LogOut, UserCircle, Bell, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { hasMinRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Users,
-  ClipboardList,
-  Calendar,
-  Sparkles,
-  Mail,
-  Settings,
-  Building2,
-  UserCircle,
-  CalendarDays,
-  CalendarPlus,
-  ClipboardCheck,
-  BarChart3,
-  Bell,
-  X,
-  GraduationCap,
-  Heart,
-  UsersRound,
-} from "lucide-react";
+import { getVisibleNavItems } from "@/components/layout/nav-config";
 
 export function Header() {
   const { userData, signOut } = useAuth();
+  const { pagePermissions } = useAccessControl();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   if (!userData) return null;
 
+  const visibleItems = getVisibleNavItems(userData.role, pagePermissions);
+
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
     await signOut();
   };
+
+  const closeMenu = () => setMobileMenuOpen(false);
 
   return (
     <>
@@ -72,8 +58,8 @@ export function Header() {
             className="fixed inset-0 bg-black/50"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="fixed left-0 top-0 bottom-0 w-72 bg-white shadow-xl">
-            <div className="flex h-14 items-center justify-between px-4 border-b border-clay-200">
+          <div className="fixed left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
+            <div className="flex h-14 items-center justify-between px-4 border-b border-clay-200 flex-shrink-0">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">&#x1F3FA;</span>
                 <span className="font-display text-clay-700">
@@ -88,56 +74,34 @@ export function Header() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <nav className="p-4 space-y-1">
-              {hasMinRole(userData.role, "ADMIN") && (
-                <>
-                  <MobileMenuItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/departments" icon={Building2} label="Departments" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/members" icon={Users} label="Members" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/services" icon={ClipboardList} label="Services & Rotas" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/calendar" icon={Calendar} label="Calendar" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/events/new" icon={CalendarPlus} label="Create Event" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/events/approvals" icon={ClipboardCheck} label="Event Approvals" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/affirmations" icon={Sparkles} label="Affirmations" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/templates" icon={Mail} label="Templates" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/reports" icon={BarChart3} label="Reports" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  {userData.role === "SUPER_ADMIN" && (
-                    <MobileMenuItem href="/manage/settings" icon={Settings} label="Settings" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  )}
-                </>
-              )}
-              {userData.role === "DEPARTMENT_LEAD" && (
-                <>
-                  <MobileMenuItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/departments" icon={Building2} label="My Departments" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/members" icon={Users} label="Members" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/services" icon={ClipboardList} label="Services" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/events/new" icon={CalendarPlus} label="Create Event" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/manage/events/approvals" icon={ClipboardCheck} label="Event Approvals" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/department/campus-ministry" icon={GraduationCap} label="Campus Ministry" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/department/life-groups" icon={UsersRound} label="Life Groups" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/department/discipleship" icon={Heart} label="Discipleship" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/calendar" icon={Calendar} label="Calendar" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/affirmations" icon={Sparkles} label="Affirmations" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                </>
-              )}
-              {(userData.role === "YOUTH_LEADER" || userData.role === "MEMBER") && (
-                <>
-                  {userData.role === "YOUTH_LEADER" && (
-                    <>
-                      <MobileMenuItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                      <MobileMenuItem href="/manage/services" icon={ClipboardList} label="Upcoming Service" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                    </>
-                  )}
-                  <MobileMenuItem href="/my-schedule" icon={CalendarDays} label="My Schedule" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/calendar" icon={Calendar} label="Calendar" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                  <MobileMenuItem href="/affirmations" icon={Sparkles} label="Affirmations" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-                </>
-              )}
-              <MobileMenuItem href="/notifications" icon={Bell} label="Notifications" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
-              <MobileMenuItem href="/profile" icon={UserCircle} label="Profile" pathname={pathname} onClick={() => setMobileMenuOpen(false)} />
+            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+              {visibleItems.map((item) => (
+                <MobileMenuItem
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={item.label}
+                  pathname={pathname}
+                  onClick={closeMenu}
+                />
+              ))}
+              {/* Mobile-only shortcuts — same for every account type */}
+              <MobileMenuItem
+                href="/notifications"
+                icon={Bell}
+                label="Notifications"
+                pathname={pathname}
+                onClick={closeMenu}
+              />
+              <MobileMenuItem
+                href="/profile"
+                icon={UserCircle}
+                label="Profile"
+                pathname={pathname}
+                onClick={closeMenu}
+              />
             </nav>
-            <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 border-t border-clay-200">
+            <div className="flex-shrink-0 p-4 pb-6 border-t border-clay-200 bg-white">
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/20 text-gold-dark text-sm font-bold">
                   {userData.name.charAt(0).toUpperCase()}
