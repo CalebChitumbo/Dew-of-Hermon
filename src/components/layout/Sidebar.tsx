@@ -4,65 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAccessControl } from "@/contexts/AccessControlContext";
-import { canAccessPage } from "@/lib/access-control";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard,
-  Users,
-  ClipboardList,
-  Calendar,
-  Sparkles,
-  Mail,
-  BarChart3,
-  Settings,
-  Building2,
-  UserCircle,
-  CalendarDays,
-  LogOut,
-  CalendarPlus,
-  ClipboardCheck,
-  GraduationCap,
-  Heart,
-  UsersRound,
-} from "lucide-react";
+import { UserCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: React.ElementType;
-  /** The page key used for access control lookup */
-  pageKey: string | null;
-}
-
-/**
- * All possible nav items. Visibility is determined by the access control
- * config rather than hardcoded role checks.
- * pageKey=null means the item is always shown (e.g. settings uses its own guard).
- */
-const allNavItems: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
-  { label: "Departments", href: "/departments", icon: Building2, pageKey: "departments" },
-  { label: "Members", href: "/manage/members", icon: Users, pageKey: "members" },
-  { label: "Services & Rotas", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
-  { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
-  { label: "Create Event", href: "/manage/events/new", icon: CalendarPlus, pageKey: "events_create" },
-  { label: "Event Approvals", href: "/manage/events/approvals", icon: ClipboardCheck, pageKey: "events_approvals" },
-  { label: "Campus Ministry", href: "/department/campus-ministry", icon: GraduationCap, pageKey: "campus_ministry" },
-  { label: "Life Groups", href: "/department/life-groups", icon: UsersRound, pageKey: "life_groups" },
-  { label: "Discipleship", href: "/department/discipleship", icon: Heart, pageKey: "discipleship" },
-  { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
-  { label: "Templates", href: "/manage/templates", icon: Mail, pageKey: "templates" },
-  { label: "Reports", href: "/manage/reports", icon: BarChart3, pageKey: "reports" },
-  { label: "Settings", href: "/manage/settings", icon: Settings, pageKey: null },
-];
-
-/** Items always shown for all logged-in users */
-const alwaysVisibleItems: NavItem[] = [
-  { label: "My Schedule", href: "/my-schedule", icon: CalendarDays, pageKey: null },
-];
+import { getVisibleNavItems } from "@/components/layout/nav-config";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -71,33 +18,7 @@ export function Sidebar() {
 
   if (!userData) return null;
 
-  const role = userData.role;
-
-  const getVisibleItems = (): NavItem[] => {
-    const items: NavItem[] = [];
-
-    for (const item of allNavItems) {
-      // Settings is always SUPER_ADMIN only
-      if (item.href === "/manage/settings") {
-        if (role === "SUPER_ADMIN") items.push(item);
-        continue;
-      }
-
-      // Check access control config
-      if (item.pageKey && canAccessPage(item.pageKey, role, pagePermissions)) {
-        items.push(item);
-      }
-    }
-
-    // Add "My Schedule" for all users who aren't ADMIN+ (they see it in the main list via services)
-    if (role === "MEMBER" || role === "YOUTH_LEADER" || role === "DEPARTMENT_LEAD") {
-      items.push(...alwaysVisibleItems);
-    }
-
-    return items;
-  };
-
-  const visibleItems = getVisibleItems();
+  const visibleItems = getVisibleNavItems(userData.role, pagePermissions);
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
