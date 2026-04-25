@@ -244,10 +244,16 @@ export interface FollowUpCard {
   updatedAt: Date;
 }
 
-// ─── Campus Ministry Devotionals ───
+// ─── Campus Ministry / Life Groups Devotionals ───
+
+export type DevotionalScope = "CAMPUS_MINISTRY" | "LIFE_GROUPS";
 
 export interface Devotional {
   id: string;
+  /** Which audience this devotional was posted for. Defaults to
+   * CAMPUS_MINISTRY for backwards compatibility with older posts that
+   * predate the scope field. */
+  scope: DevotionalScope;
   title: string;
   content: string;
   /** ISO date (yyyy-mm-dd) for the start of the week this devotional covers */

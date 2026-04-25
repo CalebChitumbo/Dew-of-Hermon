@@ -364,6 +364,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     supportsDepartmentRules: true,
   },
   {
+    key: "manage_life_group_devotionals",
+    label: "Manage Life Group Devotionals",
+    description:
+      "Post and edit the weekly devotional focus shown to all life groups",
+    category: "Life Groups",
+    supportsDepartmentRules: true,
+  },
+  {
     key: "submit_life_group_lead",
     label: "Life Group Lead Reports",
     description: "Submit life group follow-up reports",
@@ -448,6 +456,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   view_assigned_follow_ups: "ADMIN",
   approve_follow_up: "ADMIN",
   manage_devotionals: "ADMIN",
+  manage_life_group_devotionals: "ADMIN",
   submit_life_group_lead: "ADMIN",
   manage_members: "ADMIN",
   delete_members: "ADMIN",
@@ -514,6 +523,12 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
   {
     featureKey: "manage_devotionals",
     departmentName: "Campus Ministry",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "manage_life_group_devotionals",
+    departmentName: "Life Groups",
     requiresLeadership: true,
     allowedRoles: ["DEPARTMENT_LEAD"],
   },
