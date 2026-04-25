@@ -106,6 +106,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (isStudent && !institutionId) {
+      setError("Please select your campus so you appear under it on the register");
+      return;
+    }
+
     setIsLoading(true);
 
     try {

@@ -62,7 +62,9 @@ import { format, differenceInDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Department, FollowUpCard, FollowUpStatus, User } from "@/types";
 
-const STATUS_ORDER: FollowUpStatus[] = [
+type PipelineStatus = Exclude<FollowUpStatus, "PENDING_LEAD_APPROVAL" | "REJECTED">;
+
+const STATUS_ORDER: PipelineStatus[] = [
   "NEW_CONTACT",
   "ASSIGNED",
   "CONTACTED",
@@ -71,7 +73,7 @@ const STATUS_ORDER: FollowUpStatus[] = [
   "MEMBER",
 ];
 
-const STATUS_LABELS: Record<FollowUpStatus, string> = {
+const STATUS_LABELS: Record<PipelineStatus, string> = {
   NEW_CONTACT: "New Contact",
   ASSIGNED: "Assigned",
   CONTACTED: "Contacted",
@@ -80,7 +82,7 @@ const STATUS_LABELS: Record<FollowUpStatus, string> = {
   MEMBER: "Member",
 };
 
-const STATUS_COLORS: Record<FollowUpStatus, string> = {
+const STATUS_COLORS: Record<PipelineStatus, string> = {
   NEW_CONTACT: "bg-gray-100 border-gray-300",
   ASSIGNED: "bg-orange-50 border-orange-300",
   CONTACTED: "bg-yellow-50 border-yellow-300",
@@ -90,7 +92,7 @@ const STATUS_COLORS: Record<FollowUpStatus, string> = {
 };
 
 const STATUS_BADGE_VARIANT: Record<
-  FollowUpStatus,
+  PipelineStatus,
   "default" | "secondary" | "warning" | "success" | "gold"
 > = {
   NEW_CONTACT: "secondary",
@@ -262,8 +264,16 @@ export default function DiscipleshipPipelinePage() {
 
   // Filtered cards. Youth Leaders (assignee-only viewers) only ever see cards
   // assigned to them — applied as a hard scope before user filters.
+  // Cards still pending lead approval (or rejected) never reach the
+  // discipleship pipeline.
   const filteredCards = useMemo(() => {
     return cards.filter((card) => {
+      if (
+        card.status === "PENDING_LEAD_APPROVAL" ||
+        card.status === "REJECTED"
+      ) {
+        return false;
+      }
       if (!canManage && canViewAssigned) {
         if (card.assigneeId !== userData?.id) return false;
       }
@@ -282,7 +292,7 @@ export default function DiscipleshipPipelinePage() {
 
   // Group cards by status for Kanban
   const cardsByStatus = useMemo(() => {
-    const grouped: Record<FollowUpStatus, FollowUpCard[]> = {
+    const grouped: Record<PipelineStatus, FollowUpCard[]> = {
       NEW_CONTACT: [],
       ASSIGNED: [],
       CONTACTED: [],
@@ -291,22 +301,32 @@ export default function DiscipleshipPipelinePage() {
       MEMBER: [],
     };
     for (const card of filteredCards) {
-      if (grouped[card.status]) {
-        grouped[card.status].push(card);
+      if (card.status in grouped) {
+        grouped[card.status as PipelineStatus].push(card);
       }
     }
     return grouped;
   }, [filteredCards]);
 
-  // Analytics
+  // Analytics — exclude submissions still pending lead approval and rejected
+  // ones since they aren't in the pipeline.
   const analytics = useMemo(() => {
-    const total = cards.length;
-    const byCampus = cards.filter((c) => c.source === "CAMPUS_MINISTRY").length;
-    const byLifeGroups = cards.filter((c) => c.source === "LIFE_GROUPS").length;
-    const memberCount = cards.filter((c) => c.status === "MEMBER").length;
+    const pipelineCards = cards.filter(
+      (c) => c.status !== "PENDING_LEAD_APPROVAL" && c.status !== "REJECTED"
+    );
+    const total = pipelineCards.length;
+    const byCampus = pipelineCards.filter(
+      (c) => c.source === "CAMPUS_MINISTRY"
+    ).length;
+    const byLifeGroups = pipelineCards.filter(
+      (c) => c.source === "LIFE_GROUPS"
+    ).length;
+    const memberCount = pipelineCards.filter(
+      (c) => c.status === "MEMBER"
+    ).length;
 
     // Conversion rates
-    const statusCounts: Record<FollowUpStatus, number> = {
+    const statusCounts: Partial<Record<FollowUpStatus, number>> = {
       NEW_CONTACT: 0,
       ASSIGNED: 0,
       CONTACTED: 0,
@@ -314,12 +334,12 @@ export default function DiscipleshipPipelinePage() {
       REGULAR_ATTENDEE: 0,
       MEMBER: 0,
     };
-    for (const card of cards) {
-      statusCounts[card.status]++;
+    for (const card of pipelineCards) {
+      statusCounts[card.status] = (statusCounts[card.status] || 0) + 1;
     }
 
     // Cards that reached each stage (including those who have moved past it)
-    const reachedStage: Record<FollowUpStatus, number> = {
+    const reachedStage: Partial<Record<FollowUpStatus, number>> = {
       NEW_CONTACT: total,
       ASSIGNED: 0,
       CONTACTED: 0,
@@ -327,15 +347,16 @@ export default function DiscipleshipPipelinePage() {
       REGULAR_ATTENDEE: 0,
       MEMBER: 0,
     };
-    for (const card of cards) {
-      const idx = STATUS_ORDER.indexOf(card.status);
+    for (const card of pipelineCards) {
+      const idx = STATUS_ORDER.indexOf(card.status as PipelineStatus);
       for (let i = 1; i <= idx; i++) {
-        reachedStage[STATUS_ORDER[i]]++;
+        const s = STATUS_ORDER[i];
+        reachedStage[s] = (reachedStage[s] || 0) + 1;
       }
     }
 
     // Average time in each stage
-    const stageDurations: Record<FollowUpStatus, number[]> = {
+    const stageDurations: Partial<Record<FollowUpStatus, number[]>> = {
       NEW_CONTACT: [],
       ASSIGNED: [],
       CONTACTED: [],
@@ -343,7 +364,7 @@ export default function DiscipleshipPipelinePage() {
       REGULAR_ATTENDEE: [],
       MEMBER: [],
     };
-    for (const card of cards) {
+    for (const card of pipelineCards) {
       const history = card.statusHistory || [];
       for (let i = 0; i < history.length - 1; i++) {
         const curr = history[i];
@@ -353,8 +374,9 @@ export default function DiscipleshipPipelinePage() {
             new Date(next.changedAt),
             new Date(curr.changedAt)
           );
-          if (stageDurations[curr.status as FollowUpStatus]) {
-            stageDurations[curr.status as FollowUpStatus].push(days);
+          const bucket = stageDurations[curr.status as FollowUpStatus];
+          if (bucket) {
+            bucket.push(days);
           }
         }
       }
@@ -362,7 +384,7 @@ export default function DiscipleshipPipelinePage() {
 
     const avgDays: Record<string, number | null> = {};
     for (const status of STATUS_ORDER) {
-      const durations = stageDurations[status];
+      const durations = stageDurations[status] || [];
       avgDays[status] =
         durations.length > 0
           ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
@@ -384,8 +406,8 @@ export default function DiscipleshipPipelinePage() {
 
   const handleAdvanceStatus = useCallback(
     async (card: FollowUpCard) => {
-      const currentIndex = STATUS_ORDER.indexOf(card.status);
-      if (currentIndex >= STATUS_ORDER.length - 1) return;
+      const currentIndex = STATUS_ORDER.indexOf(card.status as PipelineStatus);
+      if (currentIndex < 0 || currentIndex >= STATUS_ORDER.length - 1) return;
 
       const nextStatus = STATUS_ORDER[currentIndex + 1];
       setUpdating(card.id);
@@ -600,7 +622,9 @@ export default function DiscipleshipPipelinePage() {
 
           {/* Kanban Board */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {STATUS_ORDER.map((status) => (
+            {STATUS_ORDER.map((status) => {
+              const columnCards = cardsByStatus[status] || [];
+              return (
               <div key={status} className="space-y-3">
                 <div
                   className={`rounded-lg border-2 p-3 ${STATUS_COLORS[status]}`}
@@ -610,18 +634,18 @@ export default function DiscipleshipPipelinePage() {
                       {STATUS_LABELS[status]}
                     </h3>
                     <Badge variant="outline" className="text-xs">
-                      {cardsByStatus[status].length}
+                      {columnCards.length}
                     </Badge>
                   </div>
                 </div>
 
                 <div className="space-y-2 min-h-[100px]">
-                  {cardsByStatus[status].length === 0 ? (
+                  {columnCards.length === 0 ? (
                     <div className="text-center py-6 text-xs text-clay-400">
                       No contacts
                     </div>
                   ) : (
-                    cardsByStatus[status].map((card) => (
+                    columnCards.map((card) => (
                       <Card
                         key={card.id}
                         className="cursor-pointer hover:shadow-md transition-shadow"
@@ -719,7 +743,8 @@ export default function DiscipleshipPipelinePage() {
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </TabsContent>
 
@@ -801,9 +826,9 @@ export default function DiscipleshipPipelinePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {STATUS_ORDER.map((status, index) => {
-                const count = analytics.statusCounts[status];
-                const reached = analytics.reachedStage[status];
+              {STATUS_ORDER.map((status) => {
+                const count = analytics.statusCounts[status] ?? 0;
+                const reached = analytics.reachedStage[status] ?? 0;
                 const percent =
                   analytics.total > 0
                     ? Math.round((reached / analytics.total) * 100)
@@ -900,9 +925,14 @@ export default function DiscipleshipPipelinePage() {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Badge
-                  variant={STATUS_BADGE_VARIANT[selectedCard.status]}
+                  variant={
+                    STATUS_BADGE_VARIANT[
+                      selectedCard.status as PipelineStatus
+                    ] || "secondary"
+                  }
                 >
-                  {STATUS_LABELS[selectedCard.status]}
+                  {STATUS_LABELS[selectedCard.status as PipelineStatus] ||
+                    selectedCard.status}
                 </Badge>
                 <Badge
                   variant={
@@ -1006,12 +1036,12 @@ export default function DiscipleshipPipelinePage() {
                       >
                         <Badge
                           variant={
-                            STATUS_BADGE_VARIANT[h.status as FollowUpStatus] ||
+                            STATUS_BADGE_VARIANT[h.status as PipelineStatus] ||
                             "secondary"
                           }
                           className="text-[10px]"
                         >
-                          {STATUS_LABELS[h.status as FollowUpStatus] ||
+                          {STATUS_LABELS[h.status as PipelineStatus] ||
                             h.status}
                         </Badge>
                         <span>

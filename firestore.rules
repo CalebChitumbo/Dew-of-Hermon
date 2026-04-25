@@ -94,6 +94,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ─── Campus Devotionals ───
+    // Read by anyone signed in. Writes go through the API, which enforces
+    // the manage_devotionals feature permission for the Campus Ministry lead.
+    match /devotionals/{devId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
     // ─── Notifications ───
     match /notifications/{notifId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;

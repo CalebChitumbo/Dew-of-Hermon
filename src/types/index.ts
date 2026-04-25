@@ -12,7 +12,15 @@ export type LifeGroup = "BRIDGE" | "ANCHOR" | "CORNERSTONE";
 
 export type EventApprovalStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
 
-export type FollowUpStatus = "NEW_CONTACT" | "ASSIGNED" | "CONTACTED" | "FIRST_VISIT" | "REGULAR_ATTENDEE" | "MEMBER";
+export type FollowUpStatus =
+  | "PENDING_LEAD_APPROVAL"
+  | "REJECTED"
+  | "NEW_CONTACT"
+  | "ASSIGNED"
+  | "CONTACTED"
+  | "FIRST_VISIT"
+  | "REGULAR_ATTENDEE"
+  | "MEMBER";
 
 export type FollowUpSource = "CAMPUS_MINISTRY" | "LIFE_GROUPS";
 
@@ -224,7 +232,30 @@ export interface FollowUpCard {
   assigneeName: string | null;
   createdBy: string;
   createdByName: string;
+  /** Role of the person who submitted the card. Used to gate the dept-lead approval flow. */
+  submittedByRole: UserRole | null;
+  /** When approval is required, the dept lead that approved/rejected the card. */
+  approvedBy: string | null;
+  approvedByName: string | null;
+  approvedAt: Date | null;
+  rejectionReason: string | null;
   statusHistory: { status: FollowUpStatus; changedBy: string; changedAt: Date }[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── Campus Ministry Devotionals ───
+
+export interface Devotional {
+  id: string;
+  title: string;
+  content: string;
+  /** ISO date (yyyy-mm-dd) for the start of the week this devotional covers */
+  weekStartDate: string;
+  /** Optional theme/scripture reference shown alongside the title */
+  scriptureReference: string | null;
+  authorId: string;
+  authorName: string;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -5,7 +5,8 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { email, password, name } = await request.json();
+    const { email, password, name, lifeGroup, isStudent, institutionId } =
+      await request.json();
 
     if (!email || !password || !name) {
       return NextResponse.json(
@@ -21,18 +22,35 @@ export async function POST(request: Request) {
       displayName: name,
     });
 
-    // Create Firestore user document
+    // If student, auto-add Campus Ministry department so they appear in the
+    // student register on first sign-in.
+    const departmentIds: string[] = [];
+    if (isStudent) {
+      const campusDeptSnapshot = await adminDb
+        .collection("departments")
+        .where("name", "==", "Campus Ministry")
+        .limit(1)
+        .get();
+      if (!campusDeptSnapshot.empty) {
+        departmentIds.push(campusDeptSnapshot.docs[0].id);
+      }
+    }
+
+    const now = new Date();
     await adminDb.collection("users").doc(userRecord.uid).set({
       name,
       email,
       phone: null,
       role: "MEMBER",
-      departmentIds: [],
+      departmentIds,
       leadsDepartmentIds: [],
       profileImage: null,
       isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      lifeGroup: lifeGroup || null,
+      isStudent: !!isStudent,
+      institutionId: isStudent ? institutionId || null : null,
+      createdAt: now,
+      updatedAt: now,
     });
 
     return NextResponse.json({

@@ -124,6 +124,11 @@ export async function GET(request: Request) {
         assigneeName: data.assigneeName || null,
         createdBy: data.createdBy || "",
         createdByName: data.createdByName || "",
+        submittedByRole: data.submittedByRole || null,
+        approvedBy: data.approvedBy || null,
+        approvedByName: data.approvedByName || null,
+        approvedAt: data.approvedAt?.toDate?.()?.toISOString() || null,
+        rejectionReason: data.rejectionReason || null,
         statusHistory: (data.statusHistory || []).map(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (h: any) => ({
@@ -202,13 +207,26 @@ export async function POST(request: Request) {
       );
     }
 
+    const sourceDeptName =
+      source === "CAMPUS_MINISTRY" ? "Campus Ministry" : "Life Groups";
+    const sourceLabel = sourceDeptName;
+
+    // Submitters at or below YOUTH_LEADER must have their cards approved by a
+    // department lead before the card moves into the discipleship pipeline.
+    const requiresApproval =
+      caller.role === "YOUTH_LEADER" || caller.role === "MEMBER";
+
+    const initialStatus: FollowUpStatus = requiresApproval
+      ? "PENDING_LEAD_APPROVAL"
+      : "NEW_CONTACT";
+
     const now = new Date();
     const cardData = {
       name,
       phone,
       source,
       sourceDetail,
-      status: "NEW_CONTACT" as FollowUpStatus,
+      status: initialStatus,
       reason: reason || null,
       notes: notes || "",
       dateOfContact: dateOfContact ? new Date(dateOfContact) : now,
@@ -216,9 +234,14 @@ export async function POST(request: Request) {
       assigneeName: null,
       createdBy: caller.uid,
       createdByName: caller.name,
+      submittedByRole: caller.role,
+      approvedBy: null,
+      approvedByName: null,
+      approvedAt: null,
+      rejectionReason: null,
       statusHistory: [
         {
-          status: "NEW_CONTACT" as FollowUpStatus,
+          status: initialStatus,
           changedBy: caller.uid,
           changedAt: now,
         },
@@ -229,31 +252,56 @@ export async function POST(request: Request) {
 
     const docRef = await adminDb.collection("followUpCards").add(cardData);
 
-    // Notify Discipleship & Follow-Up dept members about the new card
-    const discipleshipDeptId = await getDeptIdByName("Discipleship & Follow-Up");
-    if (discipleshipDeptId) {
-      const discipleshipMembers = await adminDb
-        .collection("users")
-        .where("departmentIds", "array-contains", discipleshipDeptId)
-        .where("isActive", "==", true)
-        .get();
+    if (requiresApproval) {
+      // Notify the department leads of the source dept so they can approve the
+      // submission before it hits the discipleship pipeline.
+      const sourceDeptId = await getDeptIdByName(sourceDeptName);
+      if (sourceDeptId) {
+        const leadsSnap = await adminDb
+          .collection("users")
+          .where("leadsDepartmentIds", "array-contains", sourceDeptId)
+          .where("isActive", "==", true)
+          .get();
 
-      const sourceLabel =
-        source === "CAMPUS_MINISTRY" ? "Campus Ministry" : "Life Groups";
+        for (const leadDoc of leadsSnap.docs) {
+          createNotificationWithEmail({
+            userId: leadDoc.id,
+            title: "Follow-Up Pending Your Approval",
+            message: `${caller.name} submitted a follow-up for ${name}. Review and approve to send it to the discipleship team.`,
+            type: "announcement",
+            link: "/department/campus-ministry?tab=approvals",
+            recipientEmail: leadDoc.data().email,
+            email: {
+              subject: `Follow-Up Pending Approval: ${name}`,
+              text: `${caller.name} (${caller.role}) submitted a follow-up card for "${name}" via ${sourceLabel}. Please review and approve it before it reaches the discipleship team.`,
+            },
+          }).catch(console.error);
+        }
+      }
+    } else {
+      // Notify Discipleship & Follow-Up dept members about the new card
+      const discipleshipDeptId = await getDeptIdByName("Discipleship & Follow-Up");
+      if (discipleshipDeptId) {
+        const discipleshipMembers = await adminDb
+          .collection("users")
+          .where("departmentIds", "array-contains", discipleshipDeptId)
+          .where("isActive", "==", true)
+          .get();
 
-      for (const memberDoc of discipleshipMembers.docs) {
-        createNotificationWithEmail({
-          userId: memberDoc.id,
-          title: "New Follow-Up Contact",
-          message: `${name} has been added from ${sourceLabel} by ${caller.name}.`,
-          type: "announcement",
-          link: "/department/discipleship",
-          recipientEmail: memberDoc.data().email,
-          email: {
-            subject: `New Follow-Up Contact: ${name}`,
-            text: `A new follow-up contact "${name}" has been submitted from ${sourceLabel}. Please review and follow up.`,
-          },
-        }).catch(console.error);
+        for (const memberDoc of discipleshipMembers.docs) {
+          createNotificationWithEmail({
+            userId: memberDoc.id,
+            title: "New Follow-Up Contact",
+            message: `${name} has been added from ${sourceLabel} by ${caller.name}.`,
+            type: "announcement",
+            link: "/department/discipleship",
+            recipientEmail: memberDoc.data().email,
+            email: {
+              subject: `New Follow-Up Contact: ${name}`,
+              text: `A new follow-up contact "${name}" has been submitted from ${sourceLabel}. Please review and follow up.`,
+            },
+          }).catch(console.error);
+        }
       }
     }
 
