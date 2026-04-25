@@ -352,6 +352,11 @@ export default function CampusMinistryPage() {
   }, []);
 
   useEffect(() => {
+    // Always fetch via API so the list populates even if the realtime
+    // listener never delivers (e.g. rules not yet redeployed for the new
+    // collection, or denied-but-no-error edge cases).
+    fetchDevotionalsFromApi();
+
     const q = query(
       safeCollection("devotionals"),
       orderBy("weekStartDate", "desc")
@@ -359,6 +364,7 @@ export default function CampusMinistryPage() {
     const unsub = onSnapshot(
       q,
       (snapshot) => {
+        if (snapshot.empty) return;
         const list = snapshot.docs.map((d) => {
           const data = d.data();
           return {
