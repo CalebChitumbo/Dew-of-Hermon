@@ -33,6 +33,7 @@ async function getCaller() {
 // Status progression order
 const STATUS_ORDER: FollowUpStatus[] = [
   "NEW_CONTACT",
+  "ASSIGNED",
   "CONTACTED",
   "FIRST_VISIT",
   "REGULAR_ATTENDEE",
@@ -121,17 +122,25 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only users with manage_follow_ups permission can update cards
-    const canManage = await serverCheckFeatureAccess(
-      "manage_follow_ups",
-      caller.role,
-      caller.departmentIds,
-      caller.leadsDepartmentIds
-    );
+    // Determine the caller's level of access
+    const [canManage, canViewAssigned] = await Promise.all([
+      serverCheckFeatureAccess(
+        "manage_follow_ups",
+        caller.role,
+        caller.departmentIds,
+        caller.leadsDepartmentIds
+      ),
+      serverCheckFeatureAccess(
+        "view_assigned_follow_ups",
+        caller.role,
+        caller.departmentIds,
+        caller.leadsDepartmentIds
+      ),
+    ]);
 
-    if (!canManage) {
+    if (!canManage && !canViewAssigned) {
       return NextResponse.json(
-        { error: "Forbidden: Only Discipleship & Follow-Up team members can update cards" },
+        { error: "Forbidden: You do not have access to update follow-up cards" },
         { status: 403 }
       );
     }
@@ -147,15 +156,41 @@ export async function PATCH(
     }
 
     const currentData = doc.data()!;
+
+    // Assignee-only viewers (e.g. Youth Leaders) may only edit cards assigned to them
+    if (!canManage && currentData.assigneeId !== caller.uid) {
+      return NextResponse.json(
+        { error: "Forbidden: You can only update cards assigned to you" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { status, assigneeId, assigneeName, notes } = body;
+
+    // Assignee-only viewers cannot reassign cards
+    if (!canManage && assigneeId !== undefined && assigneeId !== caller.uid) {
+      return NextResponse.json(
+        { error: "Forbidden: You cannot reassign this card" },
+        { status: 403 }
+      );
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updates: Record<string, any> = {
       updatedAt: new Date(),
     };
 
-    // Validate status transition
+    const statusLabels: Record<FollowUpStatus, string> = {
+      NEW_CONTACT: "New Contact",
+      ASSIGNED: "Assigned",
+      CONTACTED: "Contacted",
+      FIRST_VISIT: "First Visit",
+      REGULAR_ATTENDEE: "Regular Attendee",
+      MEMBER: "Member",
+    };
+
+    // Validate explicit status transition
     if (status && status !== currentData.status) {
       if (!isValidTransition(currentData.status, status)) {
         return NextResponse.json(
@@ -178,13 +213,6 @@ export async function PATCH(
 
       // Notify the card creator about status change
       if (currentData.createdBy && currentData.createdBy !== caller.uid) {
-        const statusLabels: Record<FollowUpStatus, string> = {
-          NEW_CONTACT: "New Contact",
-          CONTACTED: "Contacted",
-          FIRST_VISIT: "First Visit",
-          REGULAR_ATTENDEE: "Regular Attendee",
-          MEMBER: "Member",
-        };
         createNotificationWithEmail({
           userId: currentData.createdBy,
           title: "Follow-Up Status Updated",
@@ -196,13 +224,37 @@ export async function PATCH(
     }
 
     if (assigneeId !== undefined) {
-      updates.assigneeId = assigneeId;
+      const newAssigneeId: string | null = assigneeId || null;
+      updates.assigneeId = newAssigneeId;
       updates.assigneeName = assigneeName || null;
 
+      const previousAssigneeId: string | null = currentData.assigneeId || null;
+      const isFirstAssignment =
+        newAssigneeId && newAssigneeId !== previousAssigneeId;
+
+      // When the card is first assigned (or reassigned) and we haven't already
+      // moved past the ASSIGNED stage, advance the status to ASSIGNED so it
+      // shows up in the assignee's queue and out of the "new" pipeline column.
+      if (
+        isFirstAssignment &&
+        currentData.status === "NEW_CONTACT" &&
+        !updates.status
+      ) {
+        updates.status = "ASSIGNED" as FollowUpStatus;
+        updates.statusHistory = [
+          ...(currentData.statusHistory || []),
+          {
+            status: "ASSIGNED" as FollowUpStatus,
+            changedBy: caller.uid,
+            changedAt: new Date(),
+          },
+        ];
+      }
+
       // Notify the assignee
-      if (assigneeId && assigneeId !== caller.uid) {
+      if (newAssigneeId && newAssigneeId !== caller.uid) {
         createNotificationWithEmail({
-          userId: assigneeId,
+          userId: newAssigneeId,
           title: "Follow-Up Card Assigned",
           message: `You have been assigned to follow up with ${currentData.name}.`,
           type: "assignment",

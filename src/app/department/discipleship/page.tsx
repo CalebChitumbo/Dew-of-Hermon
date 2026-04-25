@@ -64,6 +64,7 @@ import { Department, FollowUpCard, FollowUpStatus, User } from "@/types";
 
 const STATUS_ORDER: FollowUpStatus[] = [
   "NEW_CONTACT",
+  "ASSIGNED",
   "CONTACTED",
   "FIRST_VISIT",
   "REGULAR_ATTENDEE",
@@ -72,6 +73,7 @@ const STATUS_ORDER: FollowUpStatus[] = [
 
 const STATUS_LABELS: Record<FollowUpStatus, string> = {
   NEW_CONTACT: "New Contact",
+  ASSIGNED: "Assigned",
   CONTACTED: "Contacted",
   FIRST_VISIT: "First Visit",
   REGULAR_ATTENDEE: "Regular Attendee",
@@ -80,6 +82,7 @@ const STATUS_LABELS: Record<FollowUpStatus, string> = {
 
 const STATUS_COLORS: Record<FollowUpStatus, string> = {
   NEW_CONTACT: "bg-gray-100 border-gray-300",
+  ASSIGNED: "bg-orange-50 border-orange-300",
   CONTACTED: "bg-yellow-50 border-yellow-300",
   FIRST_VISIT: "bg-blue-50 border-blue-300",
   REGULAR_ATTENDEE: "bg-green-50 border-green-300",
@@ -91,6 +94,7 @@ const STATUS_BADGE_VARIANT: Record<
   "default" | "secondary" | "warning" | "success" | "gold"
 > = {
   NEW_CONTACT: "secondary",
+  ASSIGNED: "warning",
   CONTACTED: "warning",
   FIRST_VISIT: "gold",
   REGULAR_ATTENDEE: "success",
@@ -143,8 +147,8 @@ export default function DiscipleshipPipelinePage() {
     return () => unsub();
   }, []);
 
-  // Check access via configurable feature permissions
-  const hasAccess = useMemo(() => {
+  // Full management: see and assign all cards (Discipleship lead + Admin+)
+  const canManage = useMemo(() => {
     if (!userData || !discipleshipDeptId) return false;
     return checkFeatureAccess(
       "manage_follow_ups",
@@ -153,6 +157,19 @@ export default function DiscipleshipPipelinePage() {
       { "Discipleship & Follow-Up": discipleshipDeptId }
     );
   }, [userData, discipleshipDeptId, checkFeatureAccess]);
+
+  // Assignee-scoped access: see and update only cards assigned to you (Youth Leaders)
+  const canViewAssigned = useMemo(() => {
+    if (!userData || !discipleshipDeptId) return false;
+    return checkFeatureAccess(
+      "view_assigned_follow_ups",
+      userData.departmentIds,
+      userData.leadsDepartmentIds,
+      { "Discipleship & Follow-Up": discipleshipDeptId }
+    );
+  }, [userData, discipleshipDeptId, checkFeatureAccess]);
+
+  const hasAccess = canManage || canViewAssigned;
 
   // Fetch cards from API (fallback when onSnapshot fails)
   const fetchCardsFromApi = useCallback(async () => {
@@ -243,9 +260,13 @@ export default function DiscipleshipPipelinePage() {
     return () => unsub();
   }, [discipleshipDeptId]);
 
-  // Filtered cards
+  // Filtered cards. Youth Leaders (assignee-only viewers) only ever see cards
+  // assigned to them — applied as a hard scope before user filters.
   const filteredCards = useMemo(() => {
     return cards.filter((card) => {
+      if (!canManage && canViewAssigned) {
+        if (card.assigneeId !== userData?.id) return false;
+      }
       if (sourceFilter !== "ALL" && card.source !== sourceFilter) return false;
       if (assigneeFilter !== "ALL") {
         if (assigneeFilter === "UNASSIGNED" && card.assigneeId) return false;
@@ -257,12 +278,13 @@ export default function DiscipleshipPipelinePage() {
       }
       return true;
     });
-  }, [cards, sourceFilter, assigneeFilter]);
+  }, [cards, sourceFilter, assigneeFilter, canManage, canViewAssigned, userData?.id]);
 
   // Group cards by status for Kanban
   const cardsByStatus = useMemo(() => {
     const grouped: Record<FollowUpStatus, FollowUpCard[]> = {
       NEW_CONTACT: [],
+      ASSIGNED: [],
       CONTACTED: [],
       FIRST_VISIT: [],
       REGULAR_ATTENDEE: [],
@@ -286,6 +308,7 @@ export default function DiscipleshipPipelinePage() {
     // Conversion rates
     const statusCounts: Record<FollowUpStatus, number> = {
       NEW_CONTACT: 0,
+      ASSIGNED: 0,
       CONTACTED: 0,
       FIRST_VISIT: 0,
       REGULAR_ATTENDEE: 0,
@@ -298,6 +321,7 @@ export default function DiscipleshipPipelinePage() {
     // Cards that reached each stage (including those who have moved past it)
     const reachedStage: Record<FollowUpStatus, number> = {
       NEW_CONTACT: total,
+      ASSIGNED: 0,
       CONTACTED: 0,
       FIRST_VISIT: 0,
       REGULAR_ATTENDEE: 0,
@@ -313,6 +337,7 @@ export default function DiscipleshipPipelinePage() {
     // Average time in each stage
     const stageDurations: Record<FollowUpStatus, number[]> = {
       NEW_CONTACT: [],
+      ASSIGNED: [],
       CONTACTED: [],
       FIRST_VISIT: [],
       REGULAR_ATTENDEE: [],
@@ -452,17 +477,24 @@ export default function DiscipleshipPipelinePage() {
 
     setUpdating(selectedCard.id);
 
-    const assignee = teamMembers.find((m) => m.id === editAssignee);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const payload: Record<string, any> = { notes: editNotes };
+
+    // Only managers can change the assignee; assignee-only viewers can edit notes only.
+    if (canManage) {
+      const assigneeId = editAssignee && editAssignee !== "none" ? editAssignee : null;
+      const assignee = assigneeId
+        ? teamMembers.find((m) => m.id === assigneeId)
+        : null;
+      payload.assigneeId = assigneeId;
+      payload.assigneeName = assignee?.name || null;
+    }
 
     try {
       await fetch(`/api/follow-up-cards/${selectedCard.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          notes: editNotes,
-          assigneeId: editAssignee || null,
-          assigneeName: assignee?.name || null,
-        }),
+        body: JSON.stringify(payload),
       });
       setDetailDialogOpen(false);
     } catch (error) {
@@ -503,22 +535,28 @@ export default function DiscipleshipPipelinePage() {
     );
   }
 
+  const assigneeOnlyView = !canManage && canViewAssigned;
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-          Discipleship Pipeline
+          {assigneeOnlyView ? "My Assigned Contacts" : "Discipleship Pipeline"}
         </h1>
         <p className="text-clay-500 mt-1">
-          Track and manage follow-up contacts through their discipleship journey
+          {assigneeOnlyView
+            ? "Follow up with the contacts assigned to you and move them through the pipeline"
+            : "Track and manage follow-up contacts through their discipleship journey"}
         </p>
       </div>
 
       <Tabs defaultValue="pipeline" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pipeline">Pipeline Board</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          {canManage && (
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Pipeline Board Tab */}
@@ -539,7 +577,8 @@ export default function DiscipleshipPipelinePage() {
                 <SelectItem value="LIFE_GROUPS">Life Groups</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+            {canManage && (
+              <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Assignee" />
               </SelectTrigger>
@@ -552,14 +591,15 @@ export default function DiscipleshipPipelinePage() {
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+              </Select>
+            )}
             <Badge variant="secondary" className="ml-auto">
               {filteredCards.length} contact{filteredCards.length !== 1 ? "s" : ""}
             </Badge>
           </div>
 
           {/* Kanban Board */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {STATUS_ORDER.map((status) => (
               <div key={status} className="space-y-3">
                 <div
@@ -620,8 +660,23 @@ export default function DiscipleshipPipelinePage() {
                               {card.assigneeName}
                             </div>
                           )}
-                          {/* Advance button */}
-                          {status !== "MEMBER" && (
+                          {/* Action button: Assign for new contacts (managers only),
+                              Advance for everything else through Regular Attendee */}
+                          {status === "NEW_CONTACT" && canManage && (
+                            <Button
+                              variant="gold"
+                              size="sm"
+                              className="w-full mt-2 text-xs h-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openCardDetail(card);
+                              }}
+                            >
+                              <UserPlus className="mr-1 h-3 w-3" />
+                              Assign
+                            </Button>
+                          )}
+                          {status !== "NEW_CONTACT" && status !== "MEMBER" && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -898,25 +953,36 @@ export default function DiscipleshipPipelinePage() {
 
               <Separator />
 
-              <div className="space-y-2">
-                <Label>Assign Team Member</Label>
-                <Select
-                  value={editAssignee}
-                  onValueChange={setEditAssignee}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Unassigned</SelectItem>
-                    {teamMembers.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {canManage ? (
+                <div className="space-y-2">
+                  <Label>Assign Team Member</Label>
+                  <Select
+                    value={editAssignee}
+                    onValueChange={setEditAssignee}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned</SelectItem>
+                      {teamMembers.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.name} ({m.role.replace(/_/g, " ")})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                selectedCard.assigneeName && (
+                  <div className="text-sm">
+                    <p className="text-clay-500">Assigned To</p>
+                    <p className="font-medium text-clay-700">
+                      {selectedCard.assigneeName}
+                    </p>
+                  </div>
+                )
+              )}
 
               <div className="space-y-2">
                 <Label>Notes</Label>

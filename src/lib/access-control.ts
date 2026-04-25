@@ -341,6 +341,13 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     supportsDepartmentRules: true,
   },
   {
+    key: "view_assigned_follow_ups",
+    label: "View Assigned Follow-Up Cards",
+    description: "See and update only the follow-up cards assigned to you",
+    category: "Follow-Up",
+    supportsDepartmentRules: true,
+  },
+  {
     key: "submit_life_group_lead",
     label: "Life Group Lead Reports",
     description: "Submit life group follow-up reports",
@@ -422,6 +429,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   approve_events: "ADMIN",
   submit_follow_up: "ADMIN",
   manage_follow_ups: "ADMIN",
+  view_assigned_follow_ups: "ADMIN",
   submit_life_group_lead: "ADMIN",
   manage_members: "ADMIN",
   delete_members: "ADMIN",
@@ -460,6 +468,12 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     departmentName: "Discipleship & Follow-Up",
     requiresLeadership: true,
     allowedRoles: [],
+  },
+  {
+    featureKey: "view_assigned_follow_ups",
+    departmentName: "Discipleship & Follow-Up",
+    requiresLeadership: false,
+    allowedRoles: ["YOUTH_LEADER", "DEPARTMENT_LEAD"],
   },
   {
     featureKey: "submit_life_group_lead",

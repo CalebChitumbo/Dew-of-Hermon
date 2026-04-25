@@ -49,8 +49,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check read permissions: anyone who can submit or manage follow-ups
-    const [canSubmit, canManage] = await Promise.all([
+    // Check read permissions: managers see all, assigned-only viewers see their own,
+    // submitters can also see (limited via filter below)
+    const [canSubmit, canManage, canViewAssigned] = await Promise.all([
       serverCheckFeatureAccess(
         "submit_follow_up",
         caller.role,
@@ -63,8 +64,14 @@ export async function GET(request: Request) {
         caller.departmentIds,
         caller.leadsDepartmentIds
       ),
+      serverCheckFeatureAccess(
+        "view_assigned_follow_ups",
+        caller.role,
+        caller.departmentIds,
+        caller.leadsDepartmentIds
+      ),
     ]);
-    const hasAccess = canSubmit || canManage;
+    const hasAccess = canSubmit || canManage || canViewAssigned;
 
     if (!hasAccess) {
       return NextResponse.json(
@@ -87,7 +94,12 @@ export async function GET(request: Request) {
     if (sourceParam) {
       q = q.where("source", "==", sourceParam);
     }
-    if (assigneeIdParam) {
+
+    // Non-managers (e.g. Youth Leaders) only see cards assigned to them.
+    // This forces an assigneeId filter on their query.
+    if (!canManage && canViewAssigned) {
+      q = q.where("assigneeId", "==", caller.uid);
+    } else if (assigneeIdParam) {
       q = q.where("assigneeId", "==", assigneeIdParam);
     }
 
