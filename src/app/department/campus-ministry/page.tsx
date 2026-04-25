@@ -325,6 +325,32 @@ export default function CampusMinistryPage() {
   }, []);
 
   // Load weekly devotional posts
+  // Load weekly devotional posts. Falls back to the API when the realtime
+  // read is denied (e.g. before firestore.rules has been deployed with the
+  // new /devotionals collection rule).
+  const fetchDevotionalsFromApi = useCallback(async () => {
+    try {
+      const res = await fetch("/api/devotionals");
+      if (!res.ok) return;
+      const data = await res.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const list = (data.devotionals || []).map((d: any) => ({
+        id: d.id,
+        title: d.title || "",
+        content: d.content || "",
+        weekStartDate: d.weekStartDate || "",
+        scriptureReference: d.scriptureReference || null,
+        authorId: d.authorId || "",
+        authorName: d.authorName || "",
+        createdAt: d.createdAt ? new Date(d.createdAt) : new Date(),
+        updatedAt: d.updatedAt ? new Date(d.updatedAt) : new Date(),
+      })) as Devotional[];
+      setDevotionals(list);
+    } catch (err) {
+      console.error("Devotionals API fallback failed:", err);
+    }
+  }, []);
+
   useEffect(() => {
     const q = query(
       safeCollection("devotionals"),
@@ -351,10 +377,11 @@ export default function CampusMinistryPage() {
       },
       (error) => {
         console.error("Error loading devotionals:", error);
+        fetchDevotionalsFromApi();
       }
     );
     return () => unsub();
-  }, []);
+  }, [fetchDevotionalsFromApi]);
 
   // Load pending-approval cards (only for the Campus Ministry coordinator)
   useEffect(() => {
@@ -509,6 +536,9 @@ export default function CampusMinistryPage() {
         throw new Error(err.error || "Failed to save devotional");
       }
       setDevDialogOpen(false);
+      // Refresh via API in case the realtime listener is denied (e.g. before
+      // firestore.rules redeployment includes /devotionals).
+      fetchDevotionalsFromApi();
       toast({
         title: editingDevotional
           ? "Devotional updated"
@@ -538,6 +568,7 @@ export default function CampusMinistryPage() {
         const err = await res.json();
         throw new Error(err.error || "Failed to delete");
       }
+      fetchDevotionalsFromApi();
       toast({ title: "Devotional removed" });
     } catch (error) {
       toast({
