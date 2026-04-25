@@ -14,6 +14,7 @@ import {
   DEFAULT_DEPARTMENT_ACCESS_RULES,
   mergeWithDefaults,
   mergeFeatureMinRoles,
+  mergeDepartmentAccessRules,
 } from "@/lib/access-control";
 
 interface AccessControlContextType {
@@ -60,7 +61,9 @@ export function AccessControlProvider({
             setFeatureMinRoles(mergeFeatureMinRoles(data.featureMinRoles));
           }
           if (data.departmentAccessRules) {
-            setDepartmentAccessRules(data.departmentAccessRules);
+            setDepartmentAccessRules(
+              mergeDepartmentAccessRules(data.departmentAccessRules)
+            );
           }
         }
         setLoading(false);

@@ -586,3 +586,19 @@ export function mergeFeatureMinRoles(
 ): FeatureMinRoles {
   return { ...DEFAULT_FEATURE_MIN_ROLES, ...saved };
 }
+
+/**
+ * Merge saved department access rules with defaults for any feature that
+ * isn't yet covered by saved rules. Saved rules win for features they
+ * already cover (so an admin's customizations are never overwritten), but
+ * features added in code after the last save still get their defaults.
+ */
+export function mergeDepartmentAccessRules(
+  saved: DepartmentAccessRule[]
+): DepartmentAccessRule[] {
+  const coveredFeatures = new Set(saved.map((r) => r.featureKey));
+  const missingDefaults = DEFAULT_DEPARTMENT_ACCESS_RULES.filter(
+    (r) => !coveredFeatures.has(r.featureKey)
+  );
+  return [...saved, ...missingDefaults];
+}
