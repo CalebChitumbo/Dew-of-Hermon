@@ -51,30 +51,37 @@ export async function GET(request: Request) {
     const limitParam = searchParams.get("limit");
     const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 20;
 
+    // Fetch by createdAt (always set as a Timestamp on write) so we never
+    // silently drop docs whose weekStartDate field is missing/wrong-typed,
+    // which would happen with a server-side orderBy("weekStartDate").
     const snapshot = await adminDb
       .collection("devotionals")
-      .orderBy("weekStartDate", "desc")
+      .orderBy("createdAt", "desc")
       .limit(limit)
       .get();
 
-    const devotionals = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        title: data.title || "",
-        content: data.content || "",
-        weekStartDate: data.weekStartDate || "",
-        scriptureReference: data.scriptureReference || null,
-        authorId: data.authorId,
-        authorName: data.authorName || "",
-        createdAt:
-          data.createdAt?.toDate?.()?.toISOString() ||
-          new Date().toISOString(),
-        updatedAt:
-          data.updatedAt?.toDate?.()?.toISOString() ||
-          new Date().toISOString(),
-      };
-    });
+    const devotionals = snapshot.docs
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          title: data.title || "",
+          content: data.content || "",
+          weekStartDate: data.weekStartDate || "",
+          scriptureReference: data.scriptureReference || null,
+          authorId: data.authorId,
+          authorName: data.authorName || "",
+          createdAt:
+            data.createdAt?.toDate?.()?.toISOString() ||
+            new Date().toISOString(),
+          updatedAt:
+            data.updatedAt?.toDate?.()?.toISOString() ||
+            new Date().toISOString(),
+        };
+      })
+      // Sort by weekStartDate desc on the client side so the most recent
+      // week shows first regardless of submission order.
+      .sort((a, b) => (b.weekStartDate || "").localeCompare(a.weekStartDate || ""));
 
     return NextResponse.json({ devotionals });
   } catch (error) {

@@ -359,26 +359,30 @@ export default function CampusMinistryPage() {
 
     const q = query(
       safeCollection("devotionals"),
-      orderBy("weekStartDate", "desc")
+      orderBy("createdAt", "desc")
     );
     const unsub = onSnapshot(
       q,
       (snapshot) => {
         if (snapshot.empty) return;
-        const list = snapshot.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id,
-            title: data.title || "",
-            content: data.content || "",
-            weekStartDate: data.weekStartDate || "",
-            scriptureReference: data.scriptureReference || null,
-            authorId: data.authorId || "",
-            authorName: data.authorName || "",
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-            updatedAt: data.updatedAt?.toDate?.() || new Date(),
-          } as Devotional;
-        });
+        const list = snapshot.docs
+          .map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              title: data.title || "",
+              content: data.content || "",
+              weekStartDate: data.weekStartDate || "",
+              scriptureReference: data.scriptureReference || null,
+              authorId: data.authorId || "",
+              authorName: data.authorName || "",
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+              updatedAt: data.updatedAt?.toDate?.() || new Date(),
+            } as Devotional;
+          })
+          .sort((a, b) =>
+            (b.weekStartDate || "").localeCompare(a.weekStartDate || "")
+          );
         setDevotionals(list);
       },
       (error) => {
