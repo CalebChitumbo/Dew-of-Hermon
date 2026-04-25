@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import { UserRole } from "@/types";
+import { DevotionalScope, UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,24 @@ async function getCaller() {
   }
 }
 
+const FEATURE_KEY_BY_SCOPE: Record<DevotionalScope, string> = {
+  CAMPUS_MINISTRY: "manage_devotionals",
+  LIFE_GROUPS: "manage_life_group_devotionals",
+};
+
+async function callerCanManageDoc(
+  caller: NonNullable<Awaited<ReturnType<typeof getCaller>>>,
+  docScope: DevotionalScope
+): Promise<boolean> {
+  const featureKey = FEATURE_KEY_BY_SCOPE[docScope];
+  return serverCheckFeatureAccess(
+    featureKey,
+    caller.role,
+    caller.departmentIds,
+    caller.leadsDepartmentIds
+  );
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -39,19 +57,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const canManage = await serverCheckFeatureAccess(
-      "manage_devotionals",
-      caller.role,
-      caller.departmentIds,
-      caller.leadsDepartmentIds
-    );
-    if (!canManage) {
-      return NextResponse.json(
-        { error: "Forbidden" },
-        { status: 403 }
-      );
-    }
-
     const { id } = await params;
     const docRef = adminDb.collection("devotionals").doc(id);
     const doc = await docRef.get();
@@ -60,6 +65,13 @@ export async function PATCH(
         { error: "Devotional not found" },
         { status: 404 }
       );
+    }
+
+    const docScope: DevotionalScope =
+      (doc.data()?.scope as DevotionalScope) || "CAMPUS_MINISTRY";
+
+    if (!(await callerCanManageDoc(caller, docScope))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -95,18 +107,24 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const canManage = await serverCheckFeatureAccess(
-      "manage_devotionals",
-      caller.role,
-      caller.departmentIds,
-      caller.leadsDepartmentIds
-    );
-    if (!canManage) {
+    const { id } = await params;
+    const docRef = adminDb.collection("devotionals").doc(id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return NextResponse.json(
+        { error: "Devotional not found" },
+        { status: 404 }
+      );
+    }
+
+    const docScope: DevotionalScope =
+      (doc.data()?.scope as DevotionalScope) || "CAMPUS_MINISTRY";
+
+    if (!(await callerCanManageDoc(caller, docScope))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { id } = await params;
-    await adminDb.collection("devotionals").doc(id).delete();
+    await docRef.delete();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/devotionals/[id] error:", error);

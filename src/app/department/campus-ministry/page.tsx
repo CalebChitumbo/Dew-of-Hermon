@@ -330,12 +330,13 @@ export default function CampusMinistryPage() {
   // new /devotionals collection rule).
   const fetchDevotionalsFromApi = useCallback(async () => {
     try {
-      const res = await fetch("/api/devotionals");
+      const res = await fetch("/api/devotionals?scope=CAMPUS_MINISTRY");
       if (!res.ok) return;
       const data = await res.json();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const list = (data.devotionals || []).map((d: any) => ({
         id: d.id,
+        scope: d.scope || "CAMPUS_MINISTRY",
         title: d.title || "",
         content: d.content || "",
         weekStartDate: d.weekStartDate || "",
@@ -370,6 +371,7 @@ export default function CampusMinistryPage() {
             const data = d.data();
             return {
               id: d.id,
+              scope: (data.scope as Devotional["scope"]) || "CAMPUS_MINISTRY",
               title: data.title || "",
               content: data.content || "",
               weekStartDate: data.weekStartDate || "",
@@ -380,6 +382,7 @@ export default function CampusMinistryPage() {
               updatedAt: data.updatedAt?.toDate?.() || new Date(),
             } as Devotional;
           })
+          .filter((d) => d.scope === "CAMPUS_MINISTRY")
           .sort((a, b) =>
             (b.weekStartDate || "").localeCompare(a.weekStartDate || "")
           );
@@ -535,6 +538,7 @@ export default function CampusMinistryPage() {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          scope: "CAMPUS_MINISTRY",
           title: devTitle.trim(),
           content: devContent.trim(),
           weekStartDate: devWeek,

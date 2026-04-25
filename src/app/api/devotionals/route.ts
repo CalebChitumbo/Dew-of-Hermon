@@ -3,7 +3,42 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import { UserRole } from "@/types";
+import { DevotionalScope, UserRole } from "@/types";
+
+const VALID_SCOPES: DevotionalScope[] = ["CAMPUS_MINISTRY", "LIFE_GROUPS"];
+
+const SCOPE_CONFIG: Record<
+  DevotionalScope,
+  {
+    featureKey: string;
+    departmentName: string;
+    audienceLabel: string;
+    coordinatorLabel: string;
+    link: string;
+  }
+> = {
+  CAMPUS_MINISTRY: {
+    featureKey: "manage_devotionals",
+    departmentName: "Campus Ministry",
+    audienceLabel: "Campus",
+    coordinatorLabel: "Campus Ministry coordinator",
+    link: "/department/campus-ministry?tab=devotional",
+  },
+  LIFE_GROUPS: {
+    featureKey: "manage_life_group_devotionals",
+    departmentName: "Life Groups",
+    audienceLabel: "Life Group",
+    coordinatorLabel: "Life Groups coordinator",
+    link: "/department/life-groups?tab=devotional",
+  },
+};
+
+function parseScope(raw: string | null): DevotionalScope | null {
+  if (!raw) return null;
+  return VALID_SCOPES.includes(raw as DevotionalScope)
+    ? (raw as DevotionalScope)
+    : null;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +85,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limitParam = searchParams.get("limit");
     const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 20;
+    const scope = parseScope(searchParams.get("scope"));
 
     // Fetch by createdAt (always set as a Timestamp on write) so we never
     // silently drop docs whose weekStartDate field is missing/wrong-typed,
@@ -57,14 +93,20 @@ export async function GET(request: Request) {
     const snapshot = await adminDb
       .collection("devotionals")
       .orderBy("createdAt", "desc")
-      .limit(limit)
+      .limit(scope ? Math.min(limit * 4, 200) : limit)
       .get();
 
     const devotionals = snapshot.docs
       .map((doc) => {
         const data = doc.data();
+        // Default older docs (written before scope was introduced) to the
+        // Campus Ministry feed so they keep showing up where they were
+        // originally posted.
+        const docScope: DevotionalScope =
+          (data.scope as DevotionalScope) || "CAMPUS_MINISTRY";
         return {
           id: doc.id,
+          scope: docScope,
           title: data.title || "",
           content: data.content || "",
           weekStartDate: data.weekStartDate || "",
@@ -79,6 +121,8 @@ export async function GET(request: Request) {
             new Date().toISOString(),
         };
       })
+      .filter((d) => (scope ? d.scope === scope : true))
+      .slice(0, limit)
       // Sort by weekStartDate desc on the client side so the most recent
       // week shows first regardless of submission order.
       .sort((a, b) => (b.weekStartDate || "").localeCompare(a.weekStartDate || ""));
@@ -101,8 +145,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const body = await request.json();
+    const {
+      title,
+      content,
+      weekStartDate,
+      scriptureReference,
+      scope: scopeRaw,
+    } = body;
+
+    const scope: DevotionalScope = parseScope(scopeRaw) || "CAMPUS_MINISTRY";
+    const config = SCOPE_CONFIG[scope];
+
     const canManage = await serverCheckFeatureAccess(
-      "manage_devotionals",
+      config.featureKey,
       caller.role,
       caller.departmentIds,
       caller.leadsDepartmentIds
@@ -110,15 +166,11 @@ export async function POST(request: Request) {
     if (!canManage) {
       return NextResponse.json(
         {
-          error:
-            "Forbidden: Only the Campus Ministry coordinator can post devotionals",
+          error: `Forbidden: Only the ${config.coordinatorLabel} can post ${config.audienceLabel.toLowerCase()} devotionals`,
         },
         { status: 403 }
       );
     }
-
-    const body = await request.json();
-    const { title, content, weekStartDate, scriptureReference } = body;
 
     if (!title || !content || !weekStartDate) {
       return NextResponse.json(
@@ -129,6 +181,7 @@ export async function POST(request: Request) {
 
     const now = new Date();
     const devData = {
+      scope,
       title: String(title).trim(),
       content: String(content).trim(),
       weekStartDate: String(weekStartDate),
@@ -143,13 +196,13 @@ export async function POST(request: Request) {
 
     const docRef = await adminDb.collection("devotionals").add(devData);
 
-    // Notify all active members of Campus Ministry so every campus sees
-    // this week's focus.
-    const campusDeptId = await getDeptIdByName("Campus Ministry");
-    if (campusDeptId) {
+    // Notify every active member of the target department so the whole
+    // audience sees this week's focus.
+    const deptId = await getDeptIdByName(config.departmentName);
+    if (deptId) {
       const membersSnap = await adminDb
         .collection("users")
-        .where("departmentIds", "array-contains", campusDeptId)
+        .where("departmentIds", "array-contains", deptId)
         .where("isActive", "==", true)
         .get();
 
@@ -160,10 +213,10 @@ export async function POST(request: Request) {
           title: `This week's devotional focus: ${devData.title}`,
           message: devData.content.slice(0, 240),
           type: "announcement",
-          link: "/department/campus-ministry?tab=devotional",
+          link: config.link,
           recipientEmail: memberDoc.data().email,
           email: {
-            subject: `Campus Devotional Focus: ${devData.title}`,
+            subject: `${config.audienceLabel} Devotional Focus: ${devData.title}`,
             text: `${devData.title}\n\n${devData.content}\n\nPosted by ${caller.name}.`,
           },
         }).catch(console.error);
