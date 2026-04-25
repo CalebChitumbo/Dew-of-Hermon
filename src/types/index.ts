@@ -12,7 +12,7 @@ export type LifeGroup = "BRIDGE" | "ANCHOR" | "CORNERSTONE";
 
 export type EventApprovalStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
 
-export type FollowUpStatus = "NEW_CONTACT" | "CONTACTED" | "FIRST_VISIT" | "REGULAR_ATTENDEE" | "MEMBER";
+export type FollowUpStatus = "NEW_CONTACT" | "ASSIGNED" | "CONTACTED" | "FIRST_VISIT" | "REGULAR_ATTENDEE" | "MEMBER";
 
 export type FollowUpSource = "CAMPUS_MINISTRY" | "LIFE_GROUPS";
 
