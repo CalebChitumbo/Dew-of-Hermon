@@ -8,6 +8,7 @@ import {
   DEFAULT_FEATURE_MIN_ROLES,
   DEFAULT_DEPARTMENT_ACCESS_RULES,
   mergeFeatureMinRoles,
+  mergeDepartmentAccessRules,
   checkFeatureAccess,
 } from "@/lib/access-control";
 
@@ -42,7 +43,9 @@ export async function getFeaturePermissionsConfig(): Promise<FeaturePermissionsC
     minRoles: data.featureMinRoles
       ? mergeFeatureMinRoles(data.featureMinRoles)
       : DEFAULT_FEATURE_MIN_ROLES,
-    rules: data.departmentAccessRules ?? DEFAULT_DEPARTMENT_ACCESS_RULES,
+    rules: data.departmentAccessRules
+      ? mergeDepartmentAccessRules(data.departmentAccessRules)
+      : DEFAULT_DEPARTMENT_ACCESS_RULES,
   };
 }
 
