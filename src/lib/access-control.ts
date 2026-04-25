@@ -348,6 +348,22 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     supportsDepartmentRules: true,
   },
   {
+    key: "approve_follow_up",
+    label: "Approve Follow-Up Submissions",
+    description:
+      "Review and approve follow-up cards submitted by youth leaders before they reach the discipleship team",
+    category: "Follow-Up",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "manage_devotionals",
+    label: "Manage Campus Devotionals",
+    description:
+      "Post and edit the weekly devotional focus shown to all campuses",
+    category: "Campus Ministry",
+    supportsDepartmentRules: true,
+  },
+  {
     key: "submit_life_group_lead",
     label: "Life Group Lead Reports",
     description: "Submit life group follow-up reports",
@@ -430,6 +446,8 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   submit_follow_up: "ADMIN",
   manage_follow_ups: "ADMIN",
   view_assigned_follow_ups: "ADMIN",
+  approve_follow_up: "ADMIN",
+  manage_devotionals: "ADMIN",
   submit_life_group_lead: "ADMIN",
   manage_members: "ADMIN",
   delete_members: "ADMIN",
@@ -480,6 +498,24 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     departmentName: "Life Groups",
     requiresLeadership: false,
     allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
+  },
+  {
+    featureKey: "approve_follow_up",
+    departmentName: "Campus Ministry",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "approve_follow_up",
+    departmentName: "Life Groups",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "manage_devotionals",
+    departmentName: "Campus Ministry",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
   },
 ];
 

@@ -30,7 +30,9 @@ async function getCaller() {
   }
 }
 
-// Status progression order
+// Status progression order for the discipleship pipeline. PENDING_LEAD_APPROVAL
+// and REJECTED live outside this flow — they're transitioned via the dedicated
+// /approve endpoint.
 const STATUS_ORDER: FollowUpStatus[] = [
   "NEW_CONTACT",
   "ASSIGNED",
@@ -46,6 +48,7 @@ function isValidTransition(
 ): boolean {
   const currentIndex = STATUS_ORDER.indexOf(currentStatus);
   const newIndex = STATUS_ORDER.indexOf(newStatus);
+  if (currentIndex < 0 || newIndex < 0) return false;
   // Can only move forward or stay at the same status
   return newIndex >= currentIndex;
 }
@@ -88,6 +91,11 @@ export async function GET(
         assigneeName: data.assigneeName || null,
         createdBy: data.createdBy || "",
         createdByName: data.createdByName || "",
+        submittedByRole: data.submittedByRole || null,
+        approvedBy: data.approvedBy || null,
+        approvedByName: data.approvedByName || null,
+        approvedAt: data.approvedAt?.toDate?.()?.toISOString() || null,
+        rejectionReason: data.rejectionReason || null,
         statusHistory: (data.statusHistory || []).map(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (h: any) => ({
@@ -182,6 +190,8 @@ export async function PATCH(
     };
 
     const statusLabels: Record<FollowUpStatus, string> = {
+      PENDING_LEAD_APPROVAL: "Pending Approval",
+      REJECTED: "Rejected",
       NEW_CONTACT: "New Contact",
       ASSIGNED: "Assigned",
       CONTACTED: "Contacted",
