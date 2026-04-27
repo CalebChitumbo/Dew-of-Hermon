@@ -111,6 +111,13 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     route: "/manage/reports",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
+  {
+    key: "latreou",
+    label: "Latreou",
+    description: "Worship cycle planner — songs, uniforms, rehearsals, and PDF export",
+    route: "/latreou",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
 ];
 
 /** The default permissions that match the current hardcoded behavior */
@@ -212,6 +219,13 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
     MEMBER: "none",
+  },
+  latreou: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "view",
+    YOUTH_LEADER: "view",
+    MEMBER: "view",
   },
 };
 
@@ -446,6 +460,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     lockedMinRole: "SUPER_ADMIN",
     supportsDepartmentRules: false,
   },
+  {
+    key: "latreou_access",
+    label: "Use Latreou Planner",
+    description:
+      "Plan worship cycles and export the team document via the Latreou tab",
+    category: "Worship",
+    supportsDepartmentRules: true,
+  },
 ];
 
 /** Default minimum role for each feature (matches current hardcoded behavior) */
@@ -468,6 +490,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_departments: "ADMIN",
   manage_institutions: "ADMIN",
   manage_settings: "SUPER_ADMIN",
+  latreou_access: "ADMIN",
 };
 
 /** Default department access rules (matches current hardcoded behavior) */
@@ -531,6 +554,12 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     departmentName: "Life Groups",
     requiresLeadership: true,
     allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "latreou_access",
+    departmentName: "Worship & Music",
+    requiresLeadership: false,
+    allowedRoles: [],
   },
 ];
 

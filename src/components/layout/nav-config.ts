@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Heart,
   UsersRound,
+  Music,
 } from "lucide-react";
 import { canAccessPage } from "@/lib/access-control";
 import type { PagePermissions, UserRole } from "@/types";
@@ -43,6 +44,7 @@ export const allNavItems: NavItem[] = [
   { label: "Campus Ministry", href: "/department/campus-ministry", icon: GraduationCap, pageKey: "campus_ministry" },
   { label: "Life Groups", href: "/department/life-groups", icon: UsersRound, pageKey: "life_groups" },
   { label: "Discipleship", href: "/department/discipleship", icon: Heart, pageKey: "discipleship" },
+  { label: "Latreou", href: "/latreou", icon: Music, pageKey: "latreou" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
   { label: "Templates", href: "/manage/templates", icon: Mail, pageKey: "templates" },
   { label: "Reports", href: "/manage/reports", icon: BarChart3, pageKey: "reports" },
