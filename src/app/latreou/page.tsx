@@ -6,6 +6,8 @@ import { onSnapshot } from "firebase/firestore";
 import {
   ArrowLeft,
   ArrowRight,
+  ClipboardList,
+  Lightbulb,
   Music,
   RotateCcw,
   Save,
@@ -26,11 +28,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import type { Department } from "@/types";
 
 import { ProgressBar } from "./components/ProgressBar";
 import { ResumeDraftDialog } from "./components/ResumeDraftDialog";
+import { SongSuggestionsTab } from "./components/SongSuggestionsTab";
 import { StepCycleOverview } from "./components/StepCycleOverview";
 import { StepFirstSunday } from "./components/StepFirstSunday";
 import { StepSecondSunday } from "./components/StepSecondSunday";
@@ -108,6 +117,13 @@ export default function LatreouPage() {
     );
   }, [userData, worshipDeptId, checkFeatureAccess]);
 
+  const isLead = useMemo(() => {
+    if (!userData) return false;
+    if (userData.role === "SUPER_ADMIN" || userData.role === "ADMIN") return true;
+    if (!worshipDeptId) return false;
+    return userData.leadsDepartmentIds?.includes(worshipDeptId) ?? false;
+  }, [userData, worshipDeptId]);
+
   if (!userData || acLoading || deptLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -171,9 +187,21 @@ export default function LatreouPage() {
       case 0:
         return <StepCycleOverview cycle={cycle} onPatch={patchCycle} />;
       case 1:
-        return <StepFirstSunday cycle={cycle} onPatch={patchCycle} />;
+        return (
+          <StepFirstSunday
+            cycle={cycle}
+            onPatch={patchCycle}
+            canPickSuggestions={isLead}
+          />
+        );
       case 2:
-        return <StepSecondSunday cycle={cycle} onPatch={patchCycle} />;
+        return (
+          <StepSecondSunday
+            cycle={cycle}
+            onPatch={patchCycle}
+            canPickSuggestions={isLead}
+          />
+        );
       case 3:
         return <StepUniforms cycle={cycle} onPatch={patchCycle} />;
       case 4:
@@ -181,13 +209,13 @@ export default function LatreouPage() {
       case 5:
         return <StepScripturePrayer cycle={cycle} onPatch={patchCycle} />;
       case 6:
-        return <StepSignOff cycle={cycle} onPatch={patchCycle} />;
+        return <StepSignOff cycle={cycle} />;
       default:
         return null;
     }
   };
 
-  return (
+  const docPrep = (
     <div className="space-y-6">
       <ResumeDraftDialog
         open={hasStoredDraft && !hasDecided}
@@ -196,19 +224,10 @@ export default function LatreouPage() {
         onStartFresh={startFresh}
       />
 
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gold/15 text-gold-dark">
-            <Music className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="font-display text-3xl text-clay-700">Latreou</h1>
-            <p className="text-sm text-clay-500">
-              Plan a two-Sunday worship cycle and export it as a single document
-              for your team.
-            </p>
-          </div>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-clay-500">
+          Walk through every section to assemble the cycle document.
+        </p>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-clay-500">
             {formatSavedAt(lastSavedAt)}
@@ -227,7 +246,7 @@ export default function LatreouPage() {
             Reset form
           </Button>
         </div>
-      </header>
+      </div>
 
       <div className="rounded-lg border border-clay-200 bg-white p-4 md:p-6">
         <ProgressBar currentStep={step} onSelect={setStep} />
@@ -286,6 +305,50 @@ export default function LatreouPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gold/15 text-gold-dark">
+            <Music className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="font-display text-3xl text-clay-700">Latreou</h1>
+            <p className="text-sm text-clay-500">
+              Suggest songs for the team and{isLead ? " " : " — leads "}
+              {isLead
+                ? "prepare the two-Sunday worship cycle document."
+                : "prepare the cycle document."}
+            </p>
+          </div>
+        </div>
+      </header>
+
+      {isLead ? (
+        <Tabs defaultValue="suggestions">
+          <TabsList>
+            <TabsTrigger value="suggestions">
+              <Lightbulb className="mr-1 h-4 w-4" />
+              Song suggestions
+            </TabsTrigger>
+            <TabsTrigger value="document">
+              <ClipboardList className="mr-1 h-4 w-4" />
+              Document preparation
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="suggestions" className="mt-6">
+            <SongSuggestionsTab isLead={isLead} />
+          </TabsContent>
+          <TabsContent value="document" className="mt-6">
+            {docPrep}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <SongSuggestionsTab isLead={isLead} />
+      )}
     </div>
   );
 }

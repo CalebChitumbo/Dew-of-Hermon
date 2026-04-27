@@ -228,7 +228,7 @@ function drawSundaySection(
   date: string,
   session1: Song[],
   session2: Song[],
-  specialItem: { title: string; responsible: string }
+  specialItem: { title: string; responsible: string; link: string }
 ): void {
   drawSectionHeading(doc, cur, title);
   drawParagraph(doc, cur, formatDateOrDash(date), {
@@ -240,7 +240,7 @@ function drawSundaySection(
   drawSongTable(doc, cur, "Session 1", session1);
   drawSongTable(doc, cur, "Session 2", session2);
 
-  drawSubHeading(doc, cur, "Special Item");
+  drawSubHeading(doc, cur, "Special Song");
   if (!specialItem.title && !specialItem.responsible) {
     drawParagraph(doc, cur, "None.", { italic: true, color: SUBHEADING_COLOR });
   } else {
@@ -249,6 +249,16 @@ function drawSundaySection(
       cur,
       `${specialItem.title || "—"} — led by ${specialItem.responsible || "—"}`
     );
+    if (specialItem.link) {
+      const lineHeight = 11 * 1.35;
+      ensureRoom(doc, cur, lineHeight);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(...LINK_COLOR);
+      doc.textWithLink("▶ Listen", PAGE_MARGIN, cur.y, { url: specialItem.link });
+      doc.setTextColor(...BODY_COLOR);
+      cur.y += lineHeight;
+    }
   }
   cur.y += 12;
 }
@@ -334,17 +344,6 @@ function drawPrayer(doc: jsPDF, cur: Cursor, cycle: LatreouCycle): void {
   cur.y += 8;
 }
 
-function drawSignOff(doc: jsPDF, cur: Cursor, cycle: LatreouCycle): void {
-  drawSectionHeading(doc, cur, "A Word from Your Director");
-  drawParagraph(doc, cur, cycle.signOffMessage);
-  cur.y += 12;
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(11);
-  doc.setTextColor(...SUBHEADING_COLOR);
-  ensureRoom(doc, cur, 14);
-  doc.text(`— ${cycle.preparedBy || "—"}`, PAGE_MARGIN, cur.y);
-}
-
 export function buildLatreouPdf(cycle: LatreouCycle): void {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const cur = makeCursor(doc);
@@ -377,7 +376,6 @@ export function buildLatreouPdf(cycle: LatreouCycle): void {
   drawRehearsals(doc, cur, cycle);
   drawScripture(doc, cur, cycle);
   drawPrayer(doc, cur, cycle);
-  drawSignOff(doc, cur, cycle);
 
   doc.save(`latreou-${slugify(cycle.cycleName)}.pdf`);
 }

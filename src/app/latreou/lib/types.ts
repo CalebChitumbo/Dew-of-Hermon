@@ -8,6 +8,7 @@ export type Song = {
 export type SpecialItem = {
   title: string;
   responsible: string;
+  link: string;
 };
 
 export type SundayPlan = {
@@ -44,7 +45,6 @@ export type LatreouCycle = {
   rehearsals: Rehearsal[];
   scripture: { reference: string; text: string };
   prayerDirection: string;
-  signOffMessage: string;
 };
 
 export const STEP_LABELS: readonly string[] = [
@@ -54,7 +54,21 @@ export const STEP_LABELS: readonly string[] = [
   "Uniforms",
   "Rehearsals",
   "Scripture & Prayer",
-  "Sign-Off",
+  "Preview & Export",
 ] as const;
 
 export const TOTAL_STEPS = STEP_LABELS.length;
+
+export type SongSuggestionStatus = "open" | "archived";
+
+export type SongSuggestion = {
+  id: string;
+  title: string;
+  youtubeLink: string;
+  suggestedBy: string;
+  suggestedByName: string;
+  status: SongSuggestionStatus;
+  createdAt: Date | null;
+  archivedAt?: Date | null;
+  pickedForCycle?: string;
+};

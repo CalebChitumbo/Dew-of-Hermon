@@ -54,7 +54,7 @@ export function generateRehearsalSchedule(
   );
   const midpoint = addDays(first, Math.max(1, Math.floor(gapDays / 2)));
 
-  const location = defaults.location ?? "Sanctuary";
+  const location = defaults.location ?? "TOD";
   const coordinator = defaults.coordinator ?? "";
 
   const used = new Set<string>();

@@ -4,8 +4,6 @@ import { useState } from "react";
 import { Download, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +17,9 @@ import { PreviewDocument } from "./PreviewDocument";
 
 interface StepSignOffProps {
   cycle: LatreouCycle;
-  onPatch: (patch: Partial<LatreouCycle>) => void;
 }
 
-export function StepSignOff({ cycle, onPatch }: StepSignOffProps) {
+export function StepSignOff({ cycle }: StepSignOffProps) {
   const { toast } = useToast();
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -45,30 +42,6 @@ export function StepSignOff({ cycle, onPatch }: StepSignOffProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>A word from you</CardTitle>
-          <p className="text-sm text-clay-500">
-            A closing message to the team — encouragement, vision, or a final
-            charge before they serve.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-1.5">
-            <Label htmlFor="signOff" className="sr-only">
-              Sign-off message
-            </Label>
-            <Textarea
-              id="signOff"
-              value={cycle.signOffMessage}
-              onChange={(e) => onPatch({ signOffMessage: e.target.value })}
-              rows={8}
-              placeholder="Team, we lift our voices because He first sang over us..."
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       <Card>
         <CardHeader>
           <CardTitle>Preview & download</CardTitle>

@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { useState } from "react";
+import { ListPlus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import type { Song, SundayPlan } from "../lib/types";
 import { emptySong } from "../lib/empty-cycle";
 import { SongRow } from "./SongRow";
+import { PickFromSuggestionsDialog } from "./PickFromSuggestionsDialog";
 
 interface SundayEditorProps {
   title: string;
@@ -15,6 +17,9 @@ interface SundayEditorProps {
   value: SundayPlan;
   onChange: (next: SundayPlan) => void;
   dateLabel: string;
+  cycleName: string;
+  canPickSuggestions: boolean;
+  sundayKey: "first" | "second";
 }
 
 export function SundayEditor({
@@ -23,7 +28,14 @@ export function SundayEditor({
   value,
   onChange,
   dateLabel,
+  cycleName,
+  canPickSuggestions,
+  sundayKey,
 }: SundayEditorProps) {
+  const [pickerSession, setPickerSession] = useState<
+    "session1" | "session2" | null
+  >(null);
+
   const updateSession = (
     key: "session1" | "session2",
     next: Song[]
@@ -41,20 +53,33 @@ export function SundayEditor({
     helper: string
   ) => (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-base font-semibold text-clay-700">{label}</h3>
           <p className="text-xs text-clay-500">{helper}</p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => addSong(key)}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Add song
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {canPickSuggestions ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPickerSession(key)}
+            >
+              <ListPlus className="mr-1 h-4 w-4" />
+              Pick from suggestions
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addSong(key)}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Add song
+          </Button>
+        </div>
       </div>
       {value[key].length === 0 ? (
         <div className="rounded-md border border-dashed border-clay-200 bg-clay-50 p-6 text-center text-sm text-clay-500">
@@ -118,7 +143,7 @@ export function SundayEditor({
         )}
 
         <div className="space-y-3 rounded-md border border-clay-100 bg-clay-50 p-4">
-          <h3 className="text-base font-semibold text-clay-700">Special item</h3>
+          <h3 className="text-base font-semibold text-clay-700">Special Song</h3>
           <p className="text-xs text-clay-500">
             Performance, item, or piece outside the regular session flow.
           </p>
@@ -154,12 +179,49 @@ export function SundayEditor({
                     },
                   })
                 }
-                placeholder="Who's leading the special item"
+                placeholder="Who's leading the special song"
+              />
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor={`${title}-special-link`}>
+                Link (optional)
+              </Label>
+              <Input
+                id={`${title}-special-link`}
+                type="url"
+                value={value.specialItem.link}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    specialItem: {
+                      ...value.specialItem,
+                      link: e.target.value,
+                    },
+                  })
+                }
+                placeholder="https://youtube.com/watch?v=..."
               />
             </div>
           </div>
         </div>
       </CardContent>
+
+      {canPickSuggestions ? (
+        <PickFromSuggestionsDialog
+          open={pickerSession !== null}
+          onOpenChange={(open) => !open && setPickerSession(null)}
+          cycleName={cycleName}
+          targetLabel={`${title} · ${
+            pickerSession === "session1" ? "Session 1" : "Session 2"
+          }`}
+          onPicked={(songs) => {
+            if (pickerSession) {
+              updateSession(pickerSession, [...value[pickerSession], ...songs]);
+            }
+            setPickerSession(null);
+          }}
+        />
+      ) : null}
     </Card>
   );
 }
