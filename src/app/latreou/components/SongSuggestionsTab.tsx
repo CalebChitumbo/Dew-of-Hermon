@@ -116,10 +116,13 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
       });
     } catch (err) {
       console.error("Failed to submit song suggestion", err);
+      const message =
+        err instanceof Error
+          ? `${(err as { code?: string }).code ?? "error"}: ${err.message}`
+          : "Something went wrong sending your suggestion.";
       toast({
         title: "Couldn't submit",
-        description:
-          "Something went wrong sending your suggestion. Try again.",
+        description: message,
         variant: "destructive",
       });
     } finally {
