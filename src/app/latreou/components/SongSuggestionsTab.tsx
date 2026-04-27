@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import {
   Archive,
@@ -36,8 +36,8 @@ import type { SongSuggestion } from "../lib/types";
 import {
   createSuggestion,
   deleteSuggestion,
+  fetchSuggestions,
   restoreSuggestion,
-  subscribeSuggestions,
 } from "../lib/song-suggestions";
 
 interface SongSuggestionsTabProps {
@@ -69,31 +69,37 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
 
   const [deleteTarget, setDeleteTarget] = useState<SongSuggestion | null>(null);
 
-  useEffect(() => {
-    setOpenLoading(true);
-    const unsub = subscribeSuggestions(
-      "open",
-      (rows) => {
-        setOpen(rows);
-        setOpenLoading(false);
-      },
-      () => setOpenLoading(false)
-    );
-    return () => unsub();
+  const refreshOpen = useCallback(async () => {
+    try {
+      const rows = await fetchSuggestions("open");
+      setOpen(rows);
+    } catch (err) {
+      console.error("Failed to load song suggestions", err);
+    } finally {
+      setOpenLoading(false);
+    }
+  }, []);
+
+  const refreshArchived = useCallback(async () => {
+    try {
+      const rows = await fetchSuggestions("archived");
+      setArchived(rows);
+    } catch (err) {
+      console.error("Failed to load archived suggestions", err);
+    } finally {
+      setArchivedLoading(false);
+    }
   }, []);
 
   useEffect(() => {
+    setOpenLoading(true);
+    refreshOpen();
+  }, [refreshOpen]);
+
+  useEffect(() => {
     setArchivedLoading(true);
-    const unsub = subscribeSuggestions(
-      "archived",
-      (rows) => {
-        setArchived(rows);
-        setArchivedLoading(false);
-      },
-      () => setArchivedLoading(false)
-    );
-    return () => unsub();
-  }, []);
+    refreshArchived();
+  }, [refreshArchived]);
 
   const canSubmit = useMemo(() => title.trim().length > 0, [title]);
 
@@ -104,8 +110,6 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
       await createSuggestion({
         title,
         youtubeLink: link,
-        suggestedBy: userData.id,
-        suggestedByName: userData.name,
       });
       setTitle("");
       setLink("");
@@ -114,6 +118,7 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
         title: "Song suggested",
         description: "Your suggestion has been added to the list.",
       });
+      refreshOpen();
     } catch (err) {
       console.error("Failed to submit song suggestion", err);
       const message =
@@ -137,6 +142,8 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
         title: "Suggestion restored",
         description: `"${s.title}" is back in the open list.`,
       });
+      refreshOpen();
+      refreshArchived();
     } catch (err) {
       console.error("Failed to restore suggestion", err);
       toast({
@@ -155,6 +162,8 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
         title: "Suggestion removed",
         description: `"${deleteTarget.title}" has been deleted.`,
       });
+      refreshOpen();
+      refreshArchived();
     } catch (err) {
       console.error("Failed to delete suggestion", err);
       toast({

@@ -18,7 +18,7 @@ import type { Song, SongSuggestion } from "../lib/types";
 import { newId } from "../lib/empty-cycle";
 import {
   archiveSuggestion,
-  subscribeSuggestions,
+  fetchSuggestions,
 } from "../lib/song-suggestions";
 
 interface PickFromSuggestionsDialogProps {
@@ -46,15 +46,20 @@ export function PickFromSuggestionsDialog({
     if (!open) return;
     setLoading(true);
     setSelected(new Set());
-    const unsub = subscribeSuggestions(
-      "open",
-      (next) => {
-        setRows(next);
-        setLoading(false);
-      },
-      () => setLoading(false)
-    );
-    return () => unsub();
+    let cancelled = false;
+    fetchSuggestions("open")
+      .then((next) => {
+        if (!cancelled) setRows(next);
+      })
+      .catch((err) => {
+        console.error("Failed to load song suggestions", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   const selectedRows = useMemo(
