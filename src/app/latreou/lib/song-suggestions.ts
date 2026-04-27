@@ -69,10 +69,10 @@ export async function createSuggestion(input: {
   suggestedByName: string;
 }): Promise<void> {
   await addDoc(safeCollection(COLLECTION), {
-    title: input.title.trim(),
-    youtubeLink: input.youtubeLink.trim(),
-    suggestedBy: input.suggestedBy,
-    suggestedByName: input.suggestedByName,
+    title: (input.title ?? "").trim(),
+    youtubeLink: (input.youtubeLink ?? "").trim(),
+    suggestedBy: input.suggestedBy ?? "",
+    suggestedByName: input.suggestedByName ?? "",
     status: "open" as SongSuggestionStatus,
     createdAt: serverTimestamp(),
   });
