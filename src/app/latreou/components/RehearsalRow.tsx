@@ -64,7 +64,7 @@ export function RehearsalRow({
             onChange={(e) =>
               onChange({ ...rehearsal, location: e.target.value })
             }
-            placeholder="e.g. Sanctuary"
+            placeholder="e.g. TOD"
           />
         </div>
         <div className="space-y-1.5">

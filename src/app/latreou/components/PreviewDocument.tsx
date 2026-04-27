@@ -99,7 +99,7 @@ export function PreviewDocument({ cycle }: PreviewDocumentProps) {
           <SongList songs={cycle.firstSunday.session2} />
         </div>
         <h3 className="mt-4 text-base font-semibold text-clay-700">
-          Special item
+          Special Song
         </h3>
         <p className="mt-1 text-sm">
           {cycle.firstSunday.specialItem.title ||
@@ -108,6 +108,19 @@ export function PreviewDocument({ cycle }: PreviewDocumentProps) {
               {cycle.firstSunday.specialItem.title || "—"}
               {" — led by "}
               {cycle.firstSunday.specialItem.responsible || "—"}
+              {cycle.firstSunday.specialItem.link ? (
+                <>
+                  {" · "}
+                  <a
+                    href={cycle.firstSunday.specialItem.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-700 underline"
+                  >
+                    Listen
+                  </a>
+                </>
+              ) : null}
             </>
           ) : (
             <span className="italic text-clay-500">None.</span>
@@ -129,7 +142,7 @@ export function PreviewDocument({ cycle }: PreviewDocumentProps) {
           <SongList songs={cycle.secondSunday.session2} />
         </div>
         <h3 className="mt-4 text-base font-semibold text-clay-700">
-          Special item
+          Special Song
         </h3>
         <p className="mt-1 text-sm">
           {cycle.secondSunday.specialItem.title ||
@@ -138,6 +151,19 @@ export function PreviewDocument({ cycle }: PreviewDocumentProps) {
               {cycle.secondSunday.specialItem.title || "—"}
               {" — led by "}
               {cycle.secondSunday.specialItem.responsible || "—"}
+              {cycle.secondSunday.specialItem.link ? (
+                <>
+                  {" · "}
+                  <a
+                    href={cycle.secondSunday.specialItem.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-700 underline"
+                  >
+                    Listen
+                  </a>
+                </>
+              ) : null}
             </>
           ) : (
             <span className="italic text-clay-500">None.</span>
@@ -238,16 +264,6 @@ export function PreviewDocument({ cycle }: PreviewDocumentProps) {
         <SectionHeading>Prayer direction</SectionHeading>
         <p className="whitespace-pre-wrap text-sm">
           {cycle.prayerDirection || "—"}
-        </p>
-      </section>
-
-      <section>
-        <SectionHeading>A word from your director</SectionHeading>
-        <p className="whitespace-pre-wrap text-sm">
-          {cycle.signOffMessage || "—"}
-        </p>
-        <p className="mt-4 text-sm italic text-clay-500">
-          — {cycle.preparedBy || "—"}
         </p>
       </section>
     </article>

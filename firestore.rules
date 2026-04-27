@@ -158,5 +158,19 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    // ─── Worship Song Suggestions (Latreou) ───
+    // Any signed-in user can read & propose suggestions. Suggesters can delete
+    // their own open submission. Worship leads (and admins) can update
+    // (archive / restore) and delete any suggestion.
+    match /worshipSongSuggestions/{suggestionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.suggestedBy == request.auth.uid
+        && request.resource.data.status == "open";
+      allow update: if isDeptLead();
+      allow delete: if isDeptLead()
+        || (isSignedIn() && resource.data.suggestedBy == request.auth.uid);
+    }
   }
 }

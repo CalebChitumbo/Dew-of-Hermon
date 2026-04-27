@@ -16,7 +16,7 @@ function emptySunday(): SundayPlan {
     date: "",
     session1: [],
     session2: [],
-    specialItem: { title: "", responsible: "" },
+    specialItem: { title: "", responsible: "", link: "" },
   };
 }
 
@@ -37,6 +37,5 @@ export function createEmptyCycle(): LatreouCycle {
     rehearsals: [],
     scripture: { reference: "", text: "" },
     prayerDirection: "",
-    signOffMessage: "",
   };
 }
