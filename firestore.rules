@@ -172,5 +172,14 @@ service cloud.firestore {
       allow delete: if isDeptLead()
         || (isSignedIn() && resource.data.suggestedBy == request.auth.uid);
     }
+
+    // ─── Fundraising Plans ───
+    // Shared planning documents (e.g. Sunday Braai). Any signed-in user can
+    // read; everyone except plain MEMBER can edit (matches the default page
+    // permissions for the Fundraising tab).
+    match /fundraisingPlans/{planId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && getUserRole() != "MEMBER";
+    }
   }
 }

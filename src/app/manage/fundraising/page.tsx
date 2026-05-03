@@ -1,6 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  doc,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAccessControl } from "@/contexts/AccessControlContext";
+import { canEditPage } from "@/lib/access-control";
 import {
   Card,
   CardContent,
@@ -15,12 +26,17 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import {
   Flame,
   ShoppingBasket,
   CalendarClock,
   Wallet,
   CheckCircle2,
+  Cloud,
+  CloudOff,
 } from "lucide-react";
 
 type Phase = "preparations" | "actualDay";
@@ -38,6 +54,16 @@ interface TaskState {
   notes: string;
   done: boolean;
 }
+
+interface PlanDoc {
+  tasks: Record<string, TaskState>;
+  updatedAt: Date | null;
+  updatedByName: string | null;
+}
+
+const PLAN_COLLECTION = "fundraisingPlans";
+const PLAN_ID = "sunday-braai";
+const SAVE_DEBOUNCE_MS = 600;
 
 const SUNDAY_BRAAI_TASKS: BraaiTask[] = [
   // Preparations (procurement mainly done by Nkisu)
@@ -122,9 +148,7 @@ const SUNDAY_BRAAI_TASKS: BraaiTask[] = [
   },
 ];
 
-const STORAGE_KEY = "fundraising:sunday-braai:v1";
-
-function defaultState(): Record<string, TaskState> {
+function defaultTaskMap(): Record<string, TaskState> {
   const map: Record<string, TaskState> = {};
   for (const t of SUNDAY_BRAAI_TASKS) {
     map[t.id] = { assignee: "", budget: "", notes: "", done: false };
@@ -132,44 +156,182 @@ function defaultState(): Record<string, TaskState> {
   return map;
 }
 
+type SaveStatus = "idle" | "saving" | "saved" | "error";
+
 export default function FundraisingPage() {
-  const [taskState, setTaskState] = useState<Record<string, TaskState>>(
-    defaultState
-  );
-  const [hydrated, setHydrated] = useState(false);
+  const { firebaseUser, userData } = useAuth();
+  const { pagePermissions, loading: acLoading } = useAccessControl();
+  const { toast } = useToast();
 
-  // Hydrate from localStorage
+  const [tasks, setTasks] = useState<Record<string, TaskState>>(defaultTaskMap);
+  const [meta, setMeta] = useState<{
+    updatedAt: Date | null;
+    updatedByName: string | null;
+  }>({ updatedAt: null, updatedByName: null });
+  const [loaded, setLoaded] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks the latest local edits so the debounced save flushes the freshest
+  // values rather than a stale snapshot captured at the time of the keystroke.
+  const pendingTasksRef = useRef<Record<string, TaskState>>(tasks);
+  // Ignore the snapshot triggered by our own write so it doesn't blow away
+  // text the user has typed since.
+  const localEditAtRef = useRef<number>(0);
+
+  const canEdit = useMemo(() => {
+    if (!userData) return false;
+    return canEditPage("fundraising", userData.role, pagePermissions);
+  }, [userData, pagePermissions]);
+
+  // Subscribe to the shared plan document
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Record<string, TaskState>;
-        setTaskState((prev) => {
-          const merged = { ...prev };
-          for (const id of Object.keys(parsed)) {
-            if (merged[id]) merged[id] = { ...merged[id], ...parsed[id] };
+    if (!firebaseUser) return;
+    const ref = doc(db, PLAN_COLLECTION, PLAN_ID);
+
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        // Skip remote echoes of our own pending edits to avoid clobbering
+        // characters the user has typed in the last few hundred ms.
+        if (Date.now() - localEditAtRef.current < SAVE_DEBOUNCE_MS * 2) {
+          if (!loaded) setLoaded(true);
+          return;
+        }
+
+        if (!snap.exists()) {
+          // No plan yet — surface the defaults so the team can start editing.
+          const fresh = defaultTaskMap();
+          setTasks(fresh);
+          pendingTasksRef.current = fresh;
+          setMeta({ updatedAt: null, updatedByName: null });
+        } else {
+          const data = snap.data() as Partial<PlanDoc> & {
+            updatedAt?: Timestamp | null;
+          };
+          const merged = defaultTaskMap();
+          const remoteTasks = data.tasks ?? {};
+          for (const id of Object.keys(merged)) {
+            if (remoteTasks[id]) {
+              merged[id] = { ...merged[id], ...remoteTasks[id] };
+            }
           }
-          return merged;
+          setTasks(merged);
+          pendingTasksRef.current = merged;
+          setMeta({
+            updatedAt: data.updatedAt?.toDate?.() ?? null,
+            updatedByName: data.updatedByName ?? null,
+          });
+        }
+        setLoaded(true);
+      },
+      (err) => {
+        console.error("Failed to load fundraising plan:", err);
+        toast({
+          title: "Couldn't load plan",
+          description: err.message,
+          variant: "destructive",
         });
+        setLoaded(true);
       }
-    } catch (err) {
-      console.error("Failed to load fundraising plan:", err);
-    }
-    setHydrated(true);
-  }, []);
+    );
 
-  // Persist to localStorage
-  useEffect(() => {
-    if (!hydrated) return;
+    return () => unsub();
+    // toast/loaded intentionally excluded — stable refs / one-shot guard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firebaseUser]);
+
+  const flushSave = useCallback(async () => {
+    if (!firebaseUser || !userData) return;
+    setSaveStatus("saving");
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(taskState));
+      await setDoc(
+        doc(db, PLAN_COLLECTION, PLAN_ID),
+        {
+          tasks: pendingTasksRef.current,
+          updatedAt: serverTimestamp(),
+          updatedById: firebaseUser.uid,
+          updatedByName: userData.name,
+        },
+        { merge: true }
+      );
+      setSaveStatus("saved");
     } catch (err) {
       console.error("Failed to save fundraising plan:", err);
+      setSaveStatus("error");
+      toast({
+        title: "Couldn't save changes",
+        description:
+          err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
     }
-  }, [taskState, hydrated]);
+  }, [firebaseUser, userData, toast]);
 
-  const updateTask = (id: string, patch: Partial<TaskState>) => {
-    setTaskState((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  const scheduleSave = useCallback(() => {
+    localEditAtRef.current = Date.now();
+    setSaveStatus("saving");
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      flushSave();
+    }, SAVE_DEBOUNCE_MS);
+  }, [flushSave]);
+
+  // Flush pending saves on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        flushSave();
+      }
+    };
+  }, [flushSave]);
+
+  const updateTask = useCallback(
+    (id: string, patch: Partial<TaskState>) => {
+      if (!canEdit) return;
+      setTasks((prev) => {
+        const next = { ...prev, [id]: { ...prev[id], ...patch } };
+        pendingTasksRef.current = next;
+        return next;
+      });
+      scheduleSave();
+    },
+    [canEdit, scheduleSave]
+  );
+
+  const resetPlan = async () => {
+    if (!canEdit || !firebaseUser || !userData) return;
+    if (
+      !window.confirm(
+        "Reset the Sunday Braai plan? This will clear all assignees, budgets, and notes for everyone."
+      )
+    ) {
+      return;
+    }
+    const fresh = defaultTaskMap();
+    pendingTasksRef.current = fresh;
+    setTasks(fresh);
+    localEditAtRef.current = Date.now();
+    setSaveStatus("saving");
+    try {
+      await setDoc(doc(db, PLAN_COLLECTION, PLAN_ID), {
+        tasks: fresh,
+        updatedAt: serverTimestamp(),
+        updatedById: firebaseUser.uid,
+        updatedByName: userData.name,
+      });
+      setSaveStatus("saved");
+    } catch (err) {
+      console.error("Failed to reset plan:", err);
+      setSaveStatus("error");
+      toast({
+        title: "Couldn't reset plan",
+        description:
+          err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const prepTasks = SUNDAY_BRAAI_TASKS.filter((t) => t.phase === "preparations");
@@ -177,32 +339,27 @@ export default function FundraisingPage() {
 
   const stats = useMemo(() => {
     const total = SUNDAY_BRAAI_TASKS.length;
-    const done = SUNDAY_BRAAI_TASKS.filter(
-      (t) => taskState[t.id]?.done
-    ).length;
+    const done = SUNDAY_BRAAI_TASKS.filter((t) => tasks[t.id]?.done).length;
     const assigned = SUNDAY_BRAAI_TASKS.filter(
-      (t) => taskState[t.id]?.assignee?.trim()
+      (t) => tasks[t.id]?.assignee?.trim()
     ).length;
     const totalBudget = SUNDAY_BRAAI_TASKS.reduce((sum, t) => {
-      const v = parseFloat(taskState[t.id]?.budget || "");
+      const v = parseFloat(tasks[t.id]?.budget || "");
       return Number.isFinite(v) ? sum + v : sum;
     }, 0);
     return { total, done, assigned, totalBudget };
-  }, [taskState]);
+  }, [tasks]);
 
   const completionPercent =
     stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
 
-  const resetPlan = () => {
-    if (
-      typeof window !== "undefined" &&
-      window.confirm(
-        "Reset the Sunday Braai plan? This will clear all assignees, budgets, and notes."
-      )
-    ) {
-      setTaskState(defaultState());
-    }
-  };
+  if (!loaded || acLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -216,10 +373,20 @@ export default function FundraisingPage() {
             track budgets, and coordinate the day.
           </p>
         </div>
-        <Badge variant="gold" className="self-start sm:self-auto">
-          Planning Team
-        </Badge>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <SaveStatusPill status={saveStatus} canEdit={canEdit} />
+          <Badge variant="gold">Planning Team</Badge>
+        </div>
       </div>
+
+      {!canEdit && (
+        <Card className="border-clay-200 bg-clay-50">
+          <CardContent className="p-4 text-sm text-clay-600">
+            You have view-only access to this plan. Contact a planning team
+            lead if you need to make changes.
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="braai" className="space-y-4">
         <TabsList>
@@ -319,8 +486,9 @@ export default function FundraisingPage() {
                 <TaskRow
                   key={task.id}
                   task={task}
-                  state={taskState[task.id]}
+                  state={tasks[task.id]}
                   onChange={(patch) => updateTask(task.id, patch)}
+                  disabled={!canEdit}
                 />
               ))}
             </CardContent>
@@ -342,18 +510,28 @@ export default function FundraisingPage() {
                 <TaskRow
                   key={task.id}
                   task={task}
-                  state={taskState[task.id]}
+                  state={tasks[task.id]}
                   onChange={(patch) => updateTask(task.id, patch)}
+                  disabled={!canEdit}
                   hideBudget
                 />
               ))}
             </CardContent>
           </Card>
 
-          <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={resetPlan}>
-              Reset Plan
-            </Button>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-clay-400">
+              {meta.updatedAt
+                ? `Last updated ${format(meta.updatedAt, "MMM d, yyyy 'at' HH:mm")}${
+                    meta.updatedByName ? ` by ${meta.updatedByName}` : ""
+                  }`
+                : "No changes saved yet."}
+            </p>
+            {canEdit && (
+              <Button variant="outline" size="sm" onClick={resetPlan}>
+                Reset Plan
+              </Button>
+            )}
           </div>
         </TabsContent>
       </Tabs>
@@ -365,10 +543,11 @@ interface TaskRowProps {
   task: BraaiTask;
   state: TaskState | undefined;
   onChange: (patch: Partial<TaskState>) => void;
+  disabled?: boolean;
   hideBudget?: boolean;
 }
 
-function TaskRow({ task, state, onChange, hideBudget }: TaskRowProps) {
+function TaskRow({ task, state, onChange, disabled, hideBudget }: TaskRowProps) {
   const value = state ?? { assignee: "", budget: "", notes: "", done: false };
 
   return (
@@ -382,10 +561,9 @@ function TaskRow({ task, state, onChange, hideBudget }: TaskRowProps) {
       <div className="flex items-start gap-3">
         <Checkbox
           checked={value.done}
-          onCheckedChange={(checked) =>
-            onChange({ done: checked === true })
-          }
+          onCheckedChange={(checked) => onChange({ done: checked === true })}
           className="mt-1"
+          disabled={disabled}
           aria-label={`Mark ${task.title} complete`}
         />
         <div className="flex-1 space-y-3">
@@ -420,6 +598,7 @@ function TaskRow({ task, state, onChange, hideBudget }: TaskRowProps) {
                 value={value.assignee}
                 onChange={(e) => onChange({ assignee: e.target.value })}
                 placeholder="Name"
+                disabled={disabled}
               />
             </div>
             {!hideBudget && (
@@ -439,6 +618,7 @@ function TaskRow({ task, state, onChange, hideBudget }: TaskRowProps) {
                   value={value.budget}
                   onChange={(e) => onChange({ budget: e.target.value })}
                   placeholder="0.00"
+                  disabled={disabled}
                 />
               </div>
             )}
@@ -454,6 +634,7 @@ function TaskRow({ task, state, onChange, hideBudget }: TaskRowProps) {
                 value={value.notes}
                 onChange={(e) => onChange({ notes: e.target.value })}
                 placeholder="Optional"
+                disabled={disabled}
               />
             </div>
           </div>
@@ -461,4 +642,39 @@ function TaskRow({ task, state, onChange, hideBudget }: TaskRowProps) {
       </div>
     </div>
   );
+}
+
+function SaveStatusPill({
+  status,
+  canEdit,
+}: {
+  status: SaveStatus;
+  canEdit: boolean;
+}) {
+  if (!canEdit) return null;
+  if (status === "saving") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-clay-500">
+        <LoadingSpinner size="sm" />
+        Saving…
+      </span>
+    );
+  }
+  if (status === "saved") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-green-700">
+        <Cloud className="h-3 w-3" />
+        Saved
+      </span>
+    );
+  }
+  if (status === "error") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-red-600">
+        <CloudOff className="h-3 w-3" />
+        Save failed
+      </span>
+    );
+  }
+  return null;
 }
