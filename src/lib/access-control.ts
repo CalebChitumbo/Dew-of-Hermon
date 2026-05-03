@@ -118,6 +118,13 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     route: "/latreou",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
+  {
+    key: "fundraising",
+    label: "Fundraising",
+    description: "Planning hub for fundraising activities such as the Sunday Braai",
+    route: "/manage/fundraising",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
 ];
 
 /** The default permissions that match the current hardcoded behavior */
@@ -225,6 +232,13 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
+    MEMBER: "view",
+  },
+  fundraising: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "edit",
+    YOUTH_LEADER: "edit",
     MEMBER: "view",
   },
 };
