@@ -276,6 +276,52 @@ export interface Institution {
   createdAt: Date;
 }
 
+// ─── ROPs Camp Registrations ───
+
+export type CampGender = "MALE" | "FEMALE";
+
+export type CampPaymentStatus = "UNPAID" | "PAID" | "REFUNDED";
+
+export type CampTShirtSize = "XS" | "S" | "M" | "L" | "XL" | "XXL";
+
+export interface CampRegistration {
+  id: string;
+  /** Identifier for the camp the person is registering for, e.g. "rops-x-2026". */
+  campId: string;
+  firstName: string;
+  lastName: string;
+  /** ISO date string (yyyy-mm-dd). */
+  dateOfBirth: string;
+  gender: CampGender;
+  phone: string;
+  email: string | null;
+  churchOrSchool: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  medicalNotes: string | null;
+  tshirtSize: CampTShirtSize;
+  dietaryPreference: string | null;
+  paymentStatus: CampPaymentStatus;
+  paymentAmount: number | null;
+  paymentReference: string | null;
+  paymentNotes: string | null;
+  paymentMarkedBy: string | null;
+  paymentMarkedByName: string | null;
+  paymentMarkedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CampDefinition {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  capacity: number;
+  fee: number;
+  currency: string;
+}
+
 // ─── Access Control ───
 
 export type AccessLevel = "edit" | "view" | "none";

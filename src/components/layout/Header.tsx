@@ -10,16 +10,19 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getVisibleNavItems } from "@/components/layout/nav-config";
+import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 
 export function Header() {
   const { userData, signOut } = useAuth();
   const { pagePermissions } = useAccessControl();
+  const { canManage: canManageCamp } = useCampLeadAccess();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   if (!userData) return null;
 
-  const visibleItems = getVisibleNavItems(userData.role, pagePermissions);
+  const extraKeys = canManageCamp ? ["rops_camp"] : [];
+  const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });

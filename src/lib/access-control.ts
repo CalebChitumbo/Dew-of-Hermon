@@ -118,6 +118,13 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     route: "/latreou",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
+  {
+    key: "rops_camp",
+    label: "ROPs Camp",
+    description: "Manage Rites of Passage camp registrations and payments",
+    route: "/manage/rops-camp",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
 ];
 
 /** The default permissions that match the current hardcoded behavior */
@@ -226,6 +233,13 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
     MEMBER: "view",
+  },
+  rops_camp: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
   },
 };
 
@@ -468,6 +482,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     category: "Worship",
     supportsDepartmentRules: true,
   },
+  {
+    key: "manage_camp_registrations",
+    label: "Manage ROPs Camp Registrations",
+    description:
+      "View, mark paid/unpaid, and edit registrations for the Rites of Passage camp",
+    category: "ROPs Camp",
+    supportsDepartmentRules: true,
+  },
 ];
 
 /** Default minimum role for each feature (matches current hardcoded behavior) */
@@ -491,6 +513,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_institutions: "ADMIN",
   manage_settings: "SUPER_ADMIN",
   latreou_access: "ADMIN",
+  manage_camp_registrations: "ADMIN",
 };
 
 /** Default department access rules (matches current hardcoded behavior) */
@@ -560,6 +583,12 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     departmentName: "Worship & Music",
     requiresLeadership: false,
     allowedRoles: [],
+  },
+  {
+    featureKey: "manage_camp_registrations",
+    departmentName: "ROPs Camp",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
   },
 ];
 
