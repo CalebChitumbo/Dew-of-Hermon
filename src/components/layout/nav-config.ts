@@ -65,9 +65,16 @@ export const alwaysVisibleItems: NavItem[] = [
  */
 export function getVisibleNavItems(
   role: UserRole,
-  pagePermissions: PagePermissions
+  pagePermissions: PagePermissions,
+  /**
+   * Page keys to force-include even if `pagePermissions` would exclude them.
+   * Used for items granted via department-based feature rules (e.g. a
+   * DEPARTMENT_LEAD of "ROPs Camp" gaining access to /manage/rops-camp).
+   */
+  extraIncludeKeys: ReadonlyArray<string> = []
 ): NavItem[] {
   const items: NavItem[] = [];
+  const extraSet = new Set(extraIncludeKeys);
 
   for (const item of allNavItems) {
     // Settings is always SUPER_ADMIN only
@@ -76,8 +83,12 @@ export function getVisibleNavItems(
       continue;
     }
 
-    // Check access control config
-    if (item.pageKey && canAccessPage(item.pageKey, role, pagePermissions)) {
+    // Check access control config — or the explicit force-include list.
+    const allowed =
+      item.pageKey &&
+      (canAccessPage(item.pageKey, role, pagePermissions) ||
+        extraSet.has(item.pageKey));
+    if (allowed) {
       items.push(item);
     }
   }

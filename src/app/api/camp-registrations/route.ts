@@ -1,43 +1,20 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { getCamp, DEFAULT_CAMP_ID } from "@/lib/camps";
+import {
+  getCallerWithDepartments,
+  callerCanManageCampRegistrations,
+} from "./_auth";
 import type {
   CampGender,
   CampPaymentStatus,
   CampTShirtSize,
-  UserRole,
 } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 const VALID_GENDERS: CampGender[] = ["MALE", "FEMALE"];
 const VALID_TSHIRT_SIZES: CampTShirtSize[] = ["XS", "S", "M", "L", "XL", "XXL"];
-
-async function getCallerRole(): Promise<{ uid: string; name: string; role: UserRole } | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      name: data.name || decoded.email || "Admin",
-      role: data.role as UserRole,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function isAdminRole(role: UserRole): boolean {
-  return role === "SUPER_ADMIN" || role === "ADMIN";
-}
 
 function serializeRegistration(id: string, data: FirebaseFirestore.DocumentData) {
   return {
@@ -70,11 +47,11 @@ function serializeRegistration(id: string, data: FirebaseFirestore.DocumentData)
 // GET: List camp registrations (ADMIN+ only). Optional ?campId filter.
 export async function GET(request: Request) {
   try {
-    const caller = await getCallerRole();
+    const caller = await getCallerWithDepartments();
     if (!caller) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
-    if (!isAdminRole(caller.role)) {
+    if (!(await callerCanManageCampRegistrations(caller))) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 

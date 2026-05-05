@@ -482,6 +482,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     category: "Worship",
     supportsDepartmentRules: true,
   },
+  {
+    key: "manage_camp_registrations",
+    label: "Manage ROPs Camp Registrations",
+    description:
+      "View, mark paid/unpaid, and edit registrations for the Rites of Passage camp",
+    category: "ROPs Camp",
+    supportsDepartmentRules: true,
+  },
 ];
 
 /** Default minimum role for each feature (matches current hardcoded behavior) */
@@ -505,6 +513,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_institutions: "ADMIN",
   manage_settings: "SUPER_ADMIN",
   latreou_access: "ADMIN",
+  manage_camp_registrations: "ADMIN",
 };
 
 /** Default department access rules (matches current hardcoded behavior) */
@@ -574,6 +583,12 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     departmentName: "Worship & Music",
     requiresLeadership: false,
     allowedRoles: [],
+  },
+  {
+    featureKey: "manage_camp_registrations",
+    departmentName: "ROPs Camp",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
   },
 ];
 

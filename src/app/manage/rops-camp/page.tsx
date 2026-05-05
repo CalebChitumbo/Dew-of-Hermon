@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CAMPS, DEFAULT_CAMP_ID } from "@/lib/camps";
-import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useToast } from "@/hooks/use-toast";
-import { hasMinRole } from "@/lib/permissions";
-import { RoleProtected } from "@/components/shared/RoleProtected";
+import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
+import { PageLoader } from "@/components/shared/LoadingSpinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,15 +67,24 @@ interface RegistrationRow {
 }
 
 export default function RopsCampAdminPage() {
-  return (
-    <RoleProtected requiredRole="ADMIN">
-      <RopsCampAdminInner />
-    </RoleProtected>
-  );
+  const { loading, canManage } = useCampLeadAccess();
+  if (loading) return <PageLoader />;
+  if (!canManage) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-display text-clay-700">Access Denied</h2>
+          <p className="mt-2 text-clay-500">
+            You don&apos;t have permission to view ROPs Camp registrations.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return <RopsCampAdminInner />;
 }
 
 function RopsCampAdminInner() {
-  const { userData } = useAuth();
   const { toast } = useToast();
   const [campId, setCampId] = useState<string>(DEFAULT_CAMP_ID);
   const camp = useMemo(() => CAMPS.find((c) => c.id === campId)!, [campId]);
@@ -86,8 +94,6 @@ function RopsCampAdminInner() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | CampPaymentStatus>("all");
   const [editing, setEditing] = useState<RegistrationRow | null>(null);
-
-  const isAdmin = userData ? hasMinRole(userData.role, "ADMIN") : false;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -316,7 +322,6 @@ function RopsCampAdminInner() {
                             size="sm"
                             variant={row.paymentStatus === "PAID" ? "outline" : "default"}
                             onClick={() => quickToggle(row)}
-                            disabled={!isAdmin}
                           >
                             {row.paymentStatus === "PAID" ? "Mark unpaid" : "Mark paid"}
                           </Button>

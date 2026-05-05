@@ -1,6 +1,13 @@
 import type { CampDefinition } from "@/types";
 
 /**
+ * Name of the Firestore department whose lead is treated as a ROPs Camp
+ * Admin Lead. Any DEPARTMENT_LEAD on this department gets the same access
+ * to camp registrations as a full admin.
+ */
+export const ROPS_CAMP_DEPARTMENT_NAME = "ROPs Camp";
+
+/**
  * Static catalog of camps people can register for. The ID is the Firestore
  * `campId` used to scope registrations.
  */

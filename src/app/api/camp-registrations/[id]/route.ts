@@ -1,47 +1,25 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminDb, adminAuth } from "@/lib/firebase-admin";
-import type { CampPaymentStatus, UserRole } from "@/types";
+import { adminDb } from "@/lib/firebase-admin";
+import {
+  getCallerWithDepartments,
+  callerCanManageCampRegistrations,
+} from "../_auth";
+import type { CampPaymentStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 const VALID_PAYMENT_STATUSES: CampPaymentStatus[] = ["UNPAID", "PAID", "REFUNDED"];
-
-async function getCallerRole(): Promise<{ uid: string; name: string; role: UserRole } | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      name: data.name || decoded.email || "Admin",
-      role: data.role as UserRole,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function isAdminRole(role: UserRole): boolean {
-  return role === "SUPER_ADMIN" || role === "ADMIN";
-}
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const caller = await getCallerRole();
+    const caller = await getCallerWithDepartments();
     if (!caller) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
-    if (!isAdminRole(caller.role)) {
+    if (!(await callerCanManageCampRegistrations(caller))) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
@@ -99,11 +77,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const caller = await getCallerRole();
+    const caller = await getCallerWithDepartments();
     if (!caller) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
-    if (!isAdminRole(caller.role)) {
+    if (!(await callerCanManageCampRegistrations(caller))) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
