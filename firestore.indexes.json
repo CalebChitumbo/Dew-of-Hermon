@@ -113,6 +113,22 @@
       ]
     },
     {
+      "collectionGroup": "campRegistrations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "campRegistrations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "campId", "order": "ASCENDING" },
+        { "fieldPath": "paymentStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "worshipSongSuggestions",
       "queryScope": "COLLECTION",
       "fields": [

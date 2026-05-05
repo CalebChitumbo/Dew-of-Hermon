@@ -159,6 +159,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ─── ROPs Camp Registrations ───
+    // Anyone can submit a registration (public form). Reads and updates
+    // (e.g. marking paid/unpaid) are admin-only and go through the API.
+    match /campRegistrations/{regId} {
+      allow read: if isAdmin();
+      allow create: if request.resource.data.paymentStatus == "UNPAID";
+      allow update, delete: if isAdmin();
+    }
+
     // ─── Worship Song Suggestions (Latreou) ───
     // Any signed-in user can read & propose suggestions. Suggesters can delete
     // their own open submission. Worship leads (and admins) can update

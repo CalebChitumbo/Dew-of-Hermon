@@ -118,6 +118,13 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     route: "/latreou",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
+  {
+    key: "rops_camp",
+    label: "ROPs Camp",
+    description: "Manage Rites of Passage camp registrations and payments",
+    route: "/manage/rops-camp",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
 ];
 
 /** The default permissions that match the current hardcoded behavior */
@@ -226,6 +233,13 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
     MEMBER: "view",
+  },
+  rops_camp: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
   },
 };
 
