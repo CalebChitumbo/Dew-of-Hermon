@@ -6,6 +6,7 @@ import {
   callerCanManageCampRegistrations,
 } from "./_auth";
 import type {
+  CampDropoffLocation,
   CampGender,
   CampPaymentStatus,
   CampTShirtSize,
@@ -15,6 +16,11 @@ export const dynamic = "force-dynamic";
 
 const VALID_GENDERS: CampGender[] = ["MALE", "FEMALE"];
 const VALID_TSHIRT_SIZES: CampTShirtSize[] = ["XS", "S", "M", "L", "XL", "XXL"];
+const VALID_DROPOFF: CampDropoffLocation[] = ["CHURCH", "CAMPSITE"];
+
+function optionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
 
 function serializeRegistration(id: string, data: FirebaseFirestore.DocumentData) {
   return {
@@ -29,9 +35,20 @@ function serializeRegistration(id: string, data: FirebaseFirestore.DocumentData)
     churchOrSchool: data.churchOrSchool,
     emergencyContactName: data.emergencyContactName,
     emergencyContactPhone: data.emergencyContactPhone,
+    emergencyContactRelationship: data.emergencyContactRelationship ?? null,
     medicalNotes: data.medicalNotes ?? null,
+    allergies: data.allergies ?? null,
+    medications: data.medications ?? null,
     tshirtSize: data.tshirtSize,
     dietaryPreference: data.dietaryPreference ?? null,
+    parentName: data.parentName ?? null,
+    parentRelationship: data.parentRelationship ?? null,
+    parentAltPhone: data.parentAltPhone ?? null,
+    parentEmail: data.parentEmail ?? null,
+    address: data.address ?? null,
+    dropoffLocation: data.dropoffLocation ?? null,
+    notes: data.notes ?? null,
+    consentGiven: data.consentGiven ?? false,
     paymentStatus: data.paymentStatus,
     paymentAmount: data.paymentAmount ?? null,
     paymentReference: data.paymentReference ?? null,
@@ -95,10 +112,8 @@ export async function POST(request: Request) {
       "dateOfBirth",
       "gender",
       "phone",
-      "churchOrSchool",
       "emergencyContactName",
       "emergencyContactPhone",
-      "tshirtSize",
     ];
     for (const key of required) {
       if (!body[key] || typeof body[key] !== "string" || !body[key].trim()) {
@@ -114,9 +129,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid gender" }, { status: 400 });
     }
 
-    const tshirtSize = body.tshirtSize as CampTShirtSize;
-    if (!VALID_TSHIRT_SIZES.includes(tshirtSize)) {
-      return NextResponse.json({ error: "Invalid t-shirt size" }, { status: 400 });
+    let tshirtSize: CampTShirtSize | null = null;
+    if (body.tshirtSize) {
+      if (!VALID_TSHIRT_SIZES.includes(body.tshirtSize as CampTShirtSize)) {
+        return NextResponse.json({ error: "Invalid t-shirt size" }, { status: 400 });
+      }
+      tshirtSize = body.tshirtSize as CampTShirtSize;
+    }
+
+    let dropoffLocation: CampDropoffLocation | null = null;
+    if (body.dropoffLocation) {
+      const upper = String(body.dropoffLocation).toUpperCase();
+      if (!VALID_DROPOFF.includes(upper as CampDropoffLocation)) {
+        return NextResponse.json({ error: "Invalid drop-off location" }, { status: 400 });
+      }
+      dropoffLocation = upper as CampDropoffLocation;
+    }
+
+    if (!body.consentGiven) {
+      return NextResponse.json(
+        { error: "Parent/guardian consent is required" },
+        { status: 400 }
+      );
     }
 
     // Capacity check (count current registrations for this camp).
@@ -143,19 +177,24 @@ export async function POST(request: Request) {
       dateOfBirth: body.dateOfBirth.trim(),
       gender,
       phone: body.phone.trim(),
-      email: typeof body.email === "string" && body.email.trim() ? body.email.trim() : null,
-      churchOrSchool: body.churchOrSchool.trim(),
+      email: optionalString(body.email),
+      churchOrSchool: optionalString(body.churchOrSchool) ?? "",
       emergencyContactName: body.emergencyContactName.trim(),
       emergencyContactPhone: body.emergencyContactPhone.trim(),
-      medicalNotes:
-        typeof body.medicalNotes === "string" && body.medicalNotes.trim()
-          ? body.medicalNotes.trim()
-          : null,
+      emergencyContactRelationship: optionalString(body.emergencyContactRelationship),
+      medicalNotes: optionalString(body.medicalNotes),
+      allergies: optionalString(body.allergies),
+      medications: optionalString(body.medications),
       tshirtSize,
-      dietaryPreference:
-        typeof body.dietaryPreference === "string" && body.dietaryPreference.trim()
-          ? body.dietaryPreference.trim()
-          : null,
+      dietaryPreference: optionalString(body.dietaryPreference),
+      parentName: optionalString(body.parentName),
+      parentRelationship: optionalString(body.parentRelationship),
+      parentAltPhone: optionalString(body.parentAltPhone),
+      parentEmail: optionalString(body.parentEmail),
+      address: optionalString(body.address),
+      dropoffLocation,
+      notes: optionalString(body.notes),
+      consentGiven: !!body.consentGiven,
       paymentStatus: "UNPAID" as CampPaymentStatus,
       paymentAmount: null,
       paymentReference: null,
