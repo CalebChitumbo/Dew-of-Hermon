@@ -284,6 +284,8 @@ export type CampPaymentStatus = "UNPAID" | "PAID" | "REFUNDED";
 
 export type CampTShirtSize = "XS" | "S" | "M" | "L" | "XL" | "XXL";
 
+export type CampDropoffLocation = "CHURCH" | "CAMPSITE";
+
 export interface CampRegistration {
   id: string;
   /** Identifier for the camp the person is registering for, e.g. "rops-x-2026". */
@@ -298,9 +300,20 @@ export interface CampRegistration {
   churchOrSchool: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  emergencyContactRelationship: string | null;
   medicalNotes: string | null;
+  allergies: string | null;
+  medications: string | null;
   tshirtSize: CampTShirtSize;
   dietaryPreference: string | null;
+  parentName: string | null;
+  parentRelationship: string | null;
+  parentAltPhone: string | null;
+  parentEmail: string | null;
+  address: string | null;
+  dropoffLocation: CampDropoffLocation | null;
+  notes: string | null;
+  consentGiven: boolean;
   paymentStatus: CampPaymentStatus;
   paymentAmount: number | null;
   paymentReference: string | null;
