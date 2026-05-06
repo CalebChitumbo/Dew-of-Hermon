@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
-import { serializeRegistration } from "../route";
+import { serializeRegistration } from "../_serialize";
 
 export const dynamic = "force-dynamic";
 
