@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { Flame, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -59,7 +60,28 @@ export default function LoginPage() {
   };
 
   return (
-    <Card className="border-clay-200 shadow-lg">
+    <div className="space-y-4">
+      <Link
+        href="/rops-camp"
+        className="group flex items-center justify-between gap-3 rounded-lg border border-clay-200 bg-gradient-to-r from-[#16110D] to-[#2A211A] px-4 py-3 text-left text-cream shadow-sm transition-colors hover:border-[#D14A1F]"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <Flame
+            className="h-5 w-5 text-[#D14A1F] shrink-0"
+            fill="currentColor"
+          />
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#D14A1F]">
+              ROPs X · 2026
+            </p>
+            <p className="text-sm font-medium text-cream truncate">
+              Registering your child for camp?
+            </p>
+          </div>
+        </div>
+        <ArrowRight className="h-4 w-4 text-cream shrink-0 transition-transform group-hover:translate-x-1" />
+      </Link>
+      <Card className="border-clay-200 shadow-lg">
       <CardHeader className="text-center">
         <div className="mx-auto mb-4 text-5xl">&#x1F3FA;</div>
         <CardTitle className="text-3xl text-clay-700">
@@ -161,5 +183,6 @@ export default function LoginPage() {
         </p>
       </CardFooter>
     </Card>
+    </div>
   );
 }
