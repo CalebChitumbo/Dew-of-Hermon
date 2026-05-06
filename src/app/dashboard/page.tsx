@@ -46,6 +46,7 @@ import {
   Compass,
   BookOpen,
   Inbox,
+  Tent,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import type {
@@ -1070,6 +1071,16 @@ export default function DashboardPage() {
               hint="Worship cycles & rehearsals"
             />
           )}
+
+          {/* ROPs Camp registration — everyone (public page, parents-facing) */}
+          <PulseTile
+            href="/rops-camp"
+            icon={Tent}
+            iconTone="bg-orange-50 text-orange-600"
+            label="ROPs Camp"
+            value="Register"
+            hint="Reserve a place by the fire"
+          />
 
           {/* Affirmations — everyone */}
           <PulseTile
