@@ -54,9 +54,20 @@ interface RegistrationRow {
   churchOrSchool: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
+  emergencyContactRelationship: string | null;
   medicalNotes: string | null;
+  allergies: string | null;
+  medications: string | null;
   tshirtSize: string;
   dietaryPreference: string | null;
+  parentName: string | null;
+  parentRelationship: string | null;
+  parentAltPhone: string | null;
+  parentEmail: string | null;
+  address: string | null;
+  dropoffLocation: "CHURCH" | "CAMPSITE" | null;
+  notes: string | null;
+  consentGiven: boolean;
   paymentStatus: CampPaymentStatus;
   paymentAmount: number | null;
   paymentReference: string | null;
@@ -132,7 +143,7 @@ function RopsCampAdminInner() {
     return rows.filter((r) => {
       if (statusFilter !== "all" && r.paymentStatus !== statusFilter) return false;
       if (!q) return true;
-      const hay = `${r.firstName} ${r.lastName} ${r.phone} ${r.email ?? ""} ${r.churchOrSchool}`.toLowerCase();
+      const hay = `${r.firstName} ${r.lastName} ${r.phone} ${r.email ?? ""} ${r.churchOrSchool} ${r.parentName ?? ""} ${r.parentEmail ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
   }, [rows, search, statusFilter]);
@@ -277,9 +288,10 @@ function RopsCampAdminInner() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs uppercase tracking-wider text-clay-500 border-b border-clay-200">
-                    <th className="px-2 py-3 font-medium">Name</th>
+                    <th className="px-2 py-3 font-medium">Camper</th>
                     <th className="px-2 py-3 font-medium">Contact</th>
-                    <th className="px-2 py-3 font-medium">Church / school</th>
+                    <th className="px-2 py-3 font-medium">Parent / guardian</th>
+                    <th className="px-2 py-3 font-medium">Drop-off</th>
                     <th className="px-2 py-3 font-medium">Status</th>
                     <th className="px-2 py-3 font-medium">Registered</th>
                     <th className="px-2 py-3 font-medium text-right">Actions</th>
@@ -303,7 +315,20 @@ function RopsCampAdminInner() {
                           <div className="text-xs text-clay-500">{row.email}</div>
                         )}
                       </td>
-                      <td className="px-2 py-3 text-clay-700">{row.churchOrSchool}</td>
+                      <td className="px-2 py-3">
+                        <div className="text-clay-700">{row.parentName ?? "—"}</div>
+                        <div className="text-xs text-clay-500">
+                          {row.parentRelationship ?? "Guardian"}
+                          {row.parentAltPhone ? ` · ${row.parentAltPhone}` : ""}
+                        </div>
+                      </td>
+                      <td className="px-2 py-3 text-clay-700 text-xs">
+                        {row.dropoffLocation === "CHURCH"
+                          ? "Church"
+                          : row.dropoffLocation === "CAMPSITE"
+                          ? "Camp site"
+                          : "—"}
+                      </td>
                       <td className="px-2 py-3">
                         <PaymentBadge status={row.paymentStatus} />
                         {row.paymentMarkedAt && row.paymentStatus !== "UNPAID" && (
@@ -473,24 +498,93 @@ function RegistrationDialog({
             {row.firstName} {row.lastName}
           </DialogTitle>
           <DialogDescription>
-            Registered {format(new Date(row.createdAt), "MMM d, yyyy")} ·{" "}
-            {row.churchOrSchool}
+            Registered {format(new Date(row.createdAt), "MMM d, yyyy")}
+            {row.churchOrSchool ? ` · ${row.churchOrSchool}` : ""}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <Info label="Phone" value={row.phone} />
-          <Info label="Email" value={row.email ?? "—"} />
-          <Info label="Date of birth" value={row.dateOfBirth} />
-          <Info label="Gender" value={row.gender === "MALE" ? "Male" : "Female"} />
-          <Info label="T-shirt" value={row.tshirtSize} />
-          <Info label="Dietary" value={row.dietaryPreference ?? "No restrictions"} />
-          <Info
-            label="Emergency contact"
-            value={`${row.emergencyContactName} · ${row.emergencyContactPhone}`}
-            full
-          />
-          <Info label="Medical notes" value={row.medicalNotes ?? "None reported"} full />
+        <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-5">
+          <Section title="Camper">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <Info label="Date of birth" value={row.dateOfBirth} />
+              <Info
+                label="Gender"
+                value={row.gender === "MALE" ? "Male" : "Female"}
+              />
+              <Info label="T-shirt size" value={row.tshirtSize || "—"} />
+              <Info
+                label="Dietary"
+                value={row.dietaryPreference ?? "No restrictions"}
+              />
+            </div>
+          </Section>
+
+          <Section title="Parent / guardian">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <Info label="Name" value={row.parentName ?? "—"} />
+              <Info
+                label="Relationship"
+                value={row.parentRelationship ?? "—"}
+              />
+              <Info label="Primary phone" value={row.phone} />
+              <Info
+                label="Alternative phone"
+                value={row.parentAltPhone ?? "—"}
+              />
+              <Info label="Email" value={row.parentEmail ?? row.email ?? "—"} full />
+              <Info label="Home address" value={row.address ?? "—"} full />
+            </div>
+          </Section>
+
+          <Section title="Emergency contact">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <Info label="Name" value={row.emergencyContactName} />
+              <Info
+                label="Relationship"
+                value={row.emergencyContactRelationship ?? "—"}
+              />
+              <Info
+                label="Phone"
+                value={row.emergencyContactPhone}
+                full
+              />
+            </div>
+          </Section>
+
+          <Section title="Health">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <Info label="Allergies" value={row.allergies ?? "None reported"} />
+              <Info
+                label="Medications"
+                value={row.medications ?? "None reported"}
+              />
+              <Info
+                label="Medical notes"
+                value={row.medicalNotes ?? "None reported"}
+                full
+              />
+            </div>
+          </Section>
+
+          <Section title="Logistics">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <Info
+                label="Drop-off location"
+                value={
+                  row.dropoffLocation === "CHURCH"
+                    ? "At the church"
+                    : row.dropoffLocation === "CAMPSITE"
+                    ? "At the camp site"
+                    : "—"
+                }
+              />
+              <Info
+                label="Consent given"
+                value={row.consentGiven ? "Yes" : "No"}
+              />
+              <Info label="Notes" value={row.notes ?? "—"} full />
+            </div>
+          </Section>
         </div>
 
         <div className="border-t border-clay-200 pt-4 space-y-4">
@@ -582,7 +676,26 @@ function Info({ label, value, full }: { label: string; value: string; full?: boo
   return (
     <div className={full ? "col-span-2" : ""}>
       <div className="text-xs uppercase tracking-wider text-clay-500">{label}</div>
-      <div className="text-clay-800 mt-0.5">{value}</div>
+      <div className="text-clay-800 mt-0.5 whitespace-pre-wrap break-words">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-t border-clay-200 pt-4 first:border-t-0 first:pt-0">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-clay-500 mb-3">
+        {title}
+      </h3>
+      {children}
     </div>
   );
 }

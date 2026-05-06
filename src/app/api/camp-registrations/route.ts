@@ -75,21 +75,23 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const campId = url.searchParams.get("campId") || DEFAULT_CAMP_ID;
 
+    // Filter by campId only and sort in memory to avoid requiring a composite
+    // Firestore index. Camp capacity is small (tens of rows), so this is fine.
     const snapshot = await adminDb
       .collection("campRegistrations")
       .where("campId", "==", campId)
-      .orderBy("createdAt", "desc")
       .get();
 
-    const registrations = snapshot.docs.map((doc) =>
-      serializeRegistration(doc.id, doc.data())
-    );
+    const registrations = snapshot.docs
+      .map((doc) => serializeRegistration(doc.id, doc.data()))
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
     return NextResponse.json({ registrations });
   } catch (error) {
-    console.error("Error fetching camp registrations:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Error fetching camp registrations:", message, error);
     return NextResponse.json(
-      { error: "Failed to fetch registrations" },
+      { error: `Failed to fetch registrations: ${message}` },
       { status: 500 }
     );
   }
