@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -20,12 +21,14 @@ import {
 import { CAMPS } from "@/lib/camps";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
+import { PaymentInstructionsCard } from "@/components/rops-camp/PaymentInstructionsCard";
+import { RopsFontStyles } from "@/components/rops-camp/RopsFontStyles";
 
 // ─── CONFIG ─────────────────────────────────────────────────────────
 const camp = CAMPS[0];
 const CAMP_FEE_ZMW = camp.fee;
 const CAMP_DATES = "20 — 24 August 2026";
-const VENUE = "ROPs Campsite (TBD)";
+const VENUE = "Crested Crane Academy";
 const CHURCH_ADDRESS = "Tabernacle of David Assembly, Lusaka";
 
 // Camp photos served from public/rops-camp/.
@@ -41,11 +44,13 @@ const PHOTO_GALLERY = [
 ];
 
 // ─── FORM TYPES ─────────────────────────────────────────────────────
+type RegistrantType = "self" | "other";
+
 interface FormState {
+  registrantType: RegistrantType;
   camperName: string;
   camperDob: string;
   camperGender: "" | "Male" | "Female";
-  tshirtSize: "" | "XS" | "S" | "M" | "L" | "XL" | "XXL";
   parentName: string;
   parentRelationship: string;
   parentPhone: string;
@@ -64,10 +69,10 @@ interface FormState {
 }
 
 const INITIAL_FORM: FormState = {
+  registrantType: "other",
   camperName: "",
   camperDob: "",
   camperGender: "",
-  tshirtSize: "",
   parentName: "",
   parentRelationship: "",
   parentPhone: "",
@@ -121,7 +126,7 @@ export default function RopsCampPage() {
 
   return (
     <div className="font-body bg-rops-cream min-h-screen text-rops-ink">
-      <FontStyles />
+      <RopsFontStyles />
 
       {view === "register" && (
         <>
@@ -288,10 +293,13 @@ function Hero({
               begins.
             </h1>
             <p className="rise rise-3 mt-8 font-body text-rops-ink-2 text-lg max-w-xl leading-relaxed">
-              Five days. One mountain to climb together. ROPs X is where our
-              young people walk from boyhood and girlhood toward the calling on
-              their lives — built around worship, wisdom, and friendships that
-              last.
+              It&rsquo;s that session again.
+            </p>
+            <p className="rise rise-3 mt-4 font-body text-rops-ink-2 text-lg max-w-xl leading-relaxed">
+              Three days. One question that never gets old: who are you
+              becoming? ROPs X is where boys and girls don&rsquo;t just attend
+              camp. They cross a threshold. Into purpose. Into maturity. Into
+              the person God always meant them to be.
             </p>
 
             <div className="rise rise-4 mt-10 flex flex-wrap items-center gap-4">
@@ -305,6 +313,13 @@ function Hero({
                   className="transition-transform group-hover:translate-x-1"
                 />
               </button>
+              <Link
+                href="/rops-camp/my-registrations"
+                className="font-body text-[11px] uppercase tracking-[0.18em] text-rops-ink/70 hover:text-rops-ember transition-colors inline-flex items-center gap-1.5"
+              >
+                Already registered? View status
+                <ArrowRight size={12} />
+              </Link>
               <div className="font-body text-xs text-rops-taupe number-tag">
                 <span className="text-rops-ink font-semibold">
                   {registeredCount}
@@ -354,7 +369,7 @@ function Hero({
           <DossierLine
             icon={<Users size={14} />}
             label="Ages"
-            value="13 — 19 years"
+            value="12 — 35 years"
           />
           <DossierLine
             icon={<CircleDollarSign size={14} />}
@@ -371,13 +386,13 @@ function Hero({
               key={i}
               className="text-lg flex items-center gap-12 shrink-0"
             >
+              <span>grow</span>
+              <Sparkles size={14} className="text-rops-ember" />
               <span>worship</span>
               <Sparkles size={14} className="text-rops-ember" />
-              <span>wisdom</span>
+              <span>belong</span>
               <Sparkles size={14} className="text-rops-ember" />
-              <span>wilderness</span>
-              <Sparkles size={14} className="text-rops-ember" />
-              <span>witness</span>
+              <span>become</span>
               <Sparkles size={14} className="text-rops-ember" />
             </span>
           ))}
@@ -422,16 +437,16 @@ function Glimpses() {
               Glimpses · From the last passage
             </div>
             <h2 className="font-display text-rops-ink text-3xl sm:text-4xl lg:text-6xl tracking-tight leading-[1.02]">
-              Five days,
-              <span className="italic"> one rhythm.</span>
+              Three days.
+              <span className="italic"> You&rsquo;ll feel it on day one.</span>
             </h2>
           </div>
           <div className="lg:col-span-5 min-w-0">
             <p className="font-body text-rops-ink-2 text-base leading-relaxed">
-              These are real moments from ROPs IX — the camp your child is
-              about to step into. Mornings on the mountain, brotherhood over
-              nshima, hands open in worship, elders speaking truth. This is
-              what passage looks like.
+              These are real moments from previous ROPS. Early energetic
+              mornings, competitive sports, nshima that somehow tastes better
+              at camp, powerful praise and worship, and nights that go long
+              for all the right reasons. It&rsquo;s fun out here.
             </p>
           </div>
         </div>
@@ -605,6 +620,8 @@ function RegistrationForm({
     null
   );
 
+  const isSelf = form.registrantType === "self";
+
   const set =
     <K extends keyof FormState>(key: K) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -617,11 +634,16 @@ function RegistrationForm({
 
   const validate = () => {
     const err: Partial<Record<keyof FormState, string>> = {};
-    if (!form.camperName.trim()) err.camperName = "Camper name is required";
+    if (!form.camperName.trim())
+      err.camperName = isSelf
+        ? "Your name is required"
+        : "Camper name is required";
     if (!form.camperDob) err.camperDob = "Date of birth is required";
     if (!form.camperGender) err.camperGender = "Please select";
     if (!form.parentName.trim())
-      err.parentName = "Parent/guardian name required";
+      err.parentName = isSelf
+        ? "Your name is required"
+        : "Parent/guardian name required";
     if (!form.parentPhone.trim()) err.parentPhone = "Primary phone required";
     if (form.parentEmail && !/^\S+@\S+\.\S+$/.test(form.parentEmail))
       err.parentEmail = "Enter a valid email";
@@ -631,7 +653,10 @@ function RegistrationForm({
       err.emergencyPhone = "Emergency phone required";
     if (!form.dropoffLocation)
       err.dropoffLocation = "Choose a drop-off location";
-    if (!form.consent) err.consent = "Parent/guardian consent is required";
+    if (!form.consent)
+      err.consent = isSelf
+        ? "Your consent is required"
+        : "Parent/guardian consent is required";
     return err;
   };
 
@@ -666,13 +691,13 @@ function RegistrationForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           campId: camp.id,
+          registrantType: form.registrantType,
           firstName,
           lastName,
           dateOfBirth: form.camperDob,
           gender: form.camperGender === "Male" ? "MALE" : "FEMALE",
           phone: form.parentPhone,
           email: form.parentEmail || undefined,
-          tshirtSize: form.tshirtSize || undefined,
           emergencyContactName: form.emergencyName,
           emergencyContactPhone: form.emergencyPhone,
           emergencyContactRelationship: form.emergencyRelationship || undefined,
@@ -735,25 +760,74 @@ function RegistrationForm({
           </div>
           <h2 className="font-display text-rops-ink text-4xl md:text-5xl tracking-tight">
             Reserve a place
-            <span className="italic"> by the fire.</span>
+            <span className="italic"> in camp!</span>
           </h2>
           <p className="font-body text-rops-ink-2 mt-4 max-w-xl mx-auto">
             Fill in the details below. After submission you&rsquo;ll receive
-            payment instructions — send proof of payment and we&rsquo;ll mark
-            your slot as confirmed.
+            payment instructions — send proof of payment together with your
+            generated reference number and we&rsquo;ll mark your slot as
+            confirmed.
           </p>
+        </div>
+
+        {/* SECTION 0 — WHO'S FILLING THIS OUT */}
+        <div className="mb-12">
+          <SectionHeader
+            number="00"
+            title="Who&rsquo;s filling this out?"
+            sub="So we know how to address you."
+          />
+          <div className="grid sm:grid-cols-2 gap-3">
+            {(["self", "other"] as RegistrantType[]).map((t) => {
+              const selected = form.registrantType === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({ ...f, registrantType: t }))
+                  }
+                  className={
+                    "text-left p-5 rounded-sm border-[1.5px] transition-all " +
+                    (selected
+                      ? "border-rops-ember bg-rops-cream-2 ember-glow"
+                      : "border-rops-line hover:border-rops-ink bg-transparent")
+                  }
+                >
+                  <div className="font-display text-rops-ink text-lg tracking-tight">
+                    {t === "self"
+                      ? "I am the camper"
+                      : "I'm registering someone else"}
+                  </div>
+                  <div className="font-body text-[13px] text-rops-ink-2 mt-1 leading-relaxed">
+                    {t === "self"
+                      ? "You're filling this in for yourself."
+                      : "You're filling this in for your child or someone you bring."}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* SECTION 1 — CAMPER */}
         <div className="mb-12">
           <SectionHeader
             number="01"
-            title="The Camper"
-            sub="Tell us about the young person attending."
+            title={isSelf ? "Your Details" : "The Camper"}
+            sub={
+              isSelf
+                ? "Tell us a bit about yourself."
+                : "Tell us about the young person attending."
+            }
           />
           <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
             <div data-field="camperName" className="md:col-span-2">
-              <Field label="Full Name" required error={errors.camperName}>
+              <Field
+                label="Full Name"
+                required
+                error={errors.camperName}
+              >
                 <TextInput
                   value={form.camperName}
                   onChange={set("camperName")}
@@ -779,49 +853,59 @@ function RegistrationForm({
                 />
               </Field>
             </div>
-            <Field label="T-Shirt Size" help="for the camp pack">
-              <SelectField
-                value={form.tshirtSize}
-                onChange={set("tshirtSize")}
-                options={["XS", "S", "M", "L", "XL", "XXL"]}
-              />
-            </Field>
           </div>
         </div>
 
-        {/* SECTION 2 — PARENT */}
+        {/* SECTION 2 — CONTACT */}
         <div className="mb-12">
           <SectionHeader
             number="02"
-            title="Parent / Guardian"
-            sub="Who is registering this camper?"
+            title={isSelf ? "Your Contact" : "Parent / Guardian"}
+            sub={
+              isSelf
+                ? "How we'll get in touch with you about this registration."
+                : "Who is registering this camper?"
+            }
           />
           <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
-            <div data-field="parentName">
-              <Field label="Full Name" required error={errors.parentName}>
+            <div
+              data-field="parentName"
+              className={isSelf ? "md:col-span-2" : ""}
+            >
+              <Field
+                label="Full Name"
+                required
+                error={errors.parentName}
+              >
                 <TextInput
                   value={form.parentName}
                   onChange={set("parentName")}
                 />
               </Field>
             </div>
-            <Field label="Relationship to Camper">
-              <SelectField
-                value={form.parentRelationship}
-                onChange={set("parentRelationship")}
-                options={[
-                  "Mother",
-                  "Father",
-                  "Guardian",
-                  "Aunt",
-                  "Uncle",
-                  "Grandparent",
-                  "Other",
-                ]}
-              />
-            </Field>
+            {!isSelf && (
+              <Field label="Relationship to Camper">
+                <SelectField
+                  value={form.parentRelationship}
+                  onChange={set("parentRelationship")}
+                  options={[
+                    "Mother",
+                    "Father",
+                    "Guardian",
+                    "Aunt",
+                    "Uncle",
+                    "Grandparent",
+                    "Other",
+                  ]}
+                />
+              </Field>
+            )}
             <div data-field="parentPhone">
-              <Field label="Primary Phone" required error={errors.parentPhone}>
+              <Field
+                label="Primary Phone"
+                required
+                error={errors.parentPhone}
+              >
                 <TextInput
                   type="tel"
                   value={form.parentPhone}
@@ -843,7 +927,9 @@ function RegistrationForm({
                   type="email"
                   value={form.parentEmail}
                   onChange={set("parentEmail")}
-                  placeholder="parent@example.com"
+                  placeholder={
+                    isSelf ? "you@example.com" : "parent@example.com"
+                  }
                 />
               </Field>
             </div>
@@ -864,7 +950,11 @@ function RegistrationForm({
           <SectionHeader
             number="03"
             title="Emergency Contact"
-            sub="Someone we can reach if the parent/guardian is unavailable."
+            sub={
+              isSelf
+                ? "Someone we can reach if you can't be reached."
+                : "Someone we can reach if the parent/guardian is unavailable."
+            }
           />
           <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
             <div data-field="emergencyName">
@@ -902,7 +992,11 @@ function RegistrationForm({
           <SectionHeader
             number="04"
             title="Health Information"
-            sub="Help our team care well for the camper. Leave blank if none."
+            sub={
+              isSelf
+                ? "Help our team care well for you. Leave blank if none."
+                : "Help our team care well for the camper. Leave blank if none."
+            }
           />
           <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
             <Field label="Allergies">
@@ -938,8 +1032,12 @@ function RegistrationForm({
         <div className="mb-12">
           <SectionHeader
             number="05"
-            title="Drop-off Location"
-            sub="Where would you like to drop your camper for transport to camp?"
+            title={isSelf ? "Where You're Coming From" : "Drop-off Location"}
+            sub={
+              isSelf
+                ? "Where will you join us from on day one?"
+                : "Where would you like to drop your camper for transport to camp?"
+            }
           />
           <div
             data-field="dropoffLocation"
@@ -951,7 +1049,7 @@ function RegistrationForm({
                 setForm((f) => ({ ...f, dropoffLocation: "church" }))
               }
               icon={<Church size={32} strokeWidth={1.4} />}
-              title="At the Church"
+              title={isSelf ? "From the Church" : "At the Church"}
               meta={CHURCH_ADDRESS}
               detail="The team will travel together to the campsite as a group."
             />
@@ -961,9 +1059,13 @@ function RegistrationForm({
                 setForm((f) => ({ ...f, dropoffLocation: "campsite" }))
               }
               icon={<Tent size={32} strokeWidth={1.4} />}
-              title="At the Camp Site"
+              title={isSelf ? "Direct to Camp Site" : "At the Camp Site"}
               meta={VENUE}
-              detail="You will drive your camper directly to the camp venue."
+              detail={
+                isSelf
+                  ? "You'll travel directly to the camp venue."
+                  : "You will drive your camper directly to the camp venue."
+              }
             />
           </div>
           {errors.dropoffLocation && (
@@ -1011,13 +1113,27 @@ function RegistrationForm({
                 onChange={set("consent")}
               />
               <span className="font-body text-sm text-rops-ink-2 leading-relaxed">
-                As parent/guardian I give my consent for the camper to attend
-                ROPs X 2026, and I confirm that the information provided is
-                true and complete. I understand that{" "}
-                <span className="font-medium">
-                  registration is confirmed only upon receipt of payment
-                </span>
-                .
+                {isSelf ? (
+                  <>
+                    I give my consent to attend ROPs X 2026, and I confirm
+                    that the information provided is true and complete. I
+                    understand that{" "}
+                    <span className="font-medium">
+                      registration is confirmed only upon receipt of payment
+                    </span>
+                    .
+                  </>
+                ) : (
+                  <>
+                    As parent/guardian I give my consent for the camper to
+                    attend ROPs X 2026, and I confirm that the information
+                    provided is true and complete. I understand that{" "}
+                    <span className="font-medium">
+                      registration is confirmed only upon receipt of payment
+                    </span>
+                    .
+                  </>
+                )}
               </span>
             </label>
             {errors.consent && (
@@ -1038,10 +1154,12 @@ function RegistrationForm({
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-rops-line pt-8">
           <div className="font-body text-xs text-rops-taupe max-w-sm">
-            Once submitted, you&rsquo;ll see payment details. Send proof to the
-            camp coordinator — the system will update your camper&rsquo;s
-            status to{" "}
-            <span className="text-rops-forest font-semibold">paid</span>.
+            Once submitted, you&rsquo;ll see payment details. Send your mobile
+            money payment and proof to{" "}
+            <span className="text-rops-ink font-semibold">0975088939</span> —
+            your status will update to{" "}
+            <span className="text-rops-forest font-semibold">paid</span> once
+            it&rsquo;s received.
           </div>
           <button
             onClick={handleSubmit}
@@ -1131,8 +1249,12 @@ function Confirmation({
   reg: SubmittedRegistration;
   onAnother: () => void;
 }) {
-  const ref = reg.id.toUpperCase().slice(-8);
+  const { firebaseUser, loading: authLoading } = useAuth();
   const firstName = reg.camperName.split(/\s+/)[0] || reg.camperName;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   return (
     <section className="bg-rops-cream py-24 px-6 md:px-10 rops-grain min-h-[80vh] flex items-center">
@@ -1144,48 +1266,58 @@ function Confirmation({
           Registration Received
         </div>
         <h2 className="rise rise-2 font-display text-rops-ink text-5xl tracking-tight mb-4">
-          See you<span className="italic"> by the fire,</span>
+          See you<span className="italic"> in camp,</span>
           <br />
-          {firstName}.
+          {firstName}!
         </h2>
         <p className="rise rise-3 font-body text-rops-ink-2 mt-6 text-lg leading-relaxed">
           Your slot has been reserved. Please complete payment within{" "}
           <span className="font-semibold">7 days</span> to confirm.
         </p>
 
-        <div className="rise rise-4 mt-10 text-left bg-rops-cream-2 border border-rops-line rounded-sm p-6">
-          <div className="font-body text-[11px] uppercase tracking-[0.2em] text-rops-ember mb-3">
-            Payment Instructions
-          </div>
-          <div className="grid sm:grid-cols-2 gap-y-3 gap-x-6 font-body text-sm">
-            <Row k="Amount" v={`ZMW ${CAMP_FEE_ZMW.toLocaleString()}`} />
-            <Row k="Reference" v={ref} />
-            <Row k="Method" v="Mobile Money / Bank Transfer" />
-            <Row k="Send proof to" v="Camp Coordinator" />
-          </div>
-          <div className="mt-5 pt-4 border-t border-rops-line font-body text-xs text-rops-taupe leading-relaxed">
-            Use the reference above when sending proof of payment so we can
-            match your transaction to {reg.camperName}&rsquo;s registration.
-          </div>
+        <div className="rise rise-4 mt-10">
+          <PaymentInstructionsCard
+            registrationId={reg.id}
+            amount={CAMP_FEE_ZMW}
+            currency={camp.currency}
+            camperName={reg.camperName}
+          />
         </div>
 
-        <button
-          onClick={onAnother}
-          className="rise rise-5 mt-10 inline-flex items-center gap-2 font-body text-[13px] uppercase tracking-[0.18em] text-rops-ink hover:text-rops-ember transition-colors"
-        >
-          <ArrowLeft size={14} /> Register another camper
-        </button>
+        <div className="rise rise-5 mt-10 flex flex-col items-center gap-4">
+          {!authLoading && firebaseUser ? (
+            <Link
+              href="/rops-camp/my-registrations"
+              className="inline-flex items-center gap-2 bg-rops-ink text-rops-cream py-3.5 px-7 rounded-full font-body text-[13px] uppercase tracking-[0.18em] hover:bg-rops-ember transition-colors"
+            >
+              View my registrations
+              <ArrowRight size={14} />
+            </Link>
+          ) : !authLoading ? (
+            <Link
+              href={`/register?next=${encodeURIComponent(
+                "/rops-camp/my-registrations"
+              )}${
+                reg.parentEmail
+                  ? `&email=${encodeURIComponent(reg.parentEmail)}`
+                  : ""
+              }`}
+              className="inline-flex items-center gap-2 bg-rops-ink text-rops-cream py-3.5 px-7 rounded-full font-body text-[13px] uppercase tracking-[0.18em] hover:bg-rops-ember transition-colors"
+            >
+              Create an account to track this
+              <ArrowRight size={14} />
+            </Link>
+          ) : null}
+
+          <button
+            onClick={onAnother}
+            className="inline-flex items-center gap-2 font-body text-[13px] uppercase tracking-[0.18em] text-rops-ink hover:text-rops-ember transition-colors"
+          >
+            <ArrowLeft size={14} /> Register another camper
+          </button>
+        </div>
       </div>
     </section>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <>
-      <div className="text-rops-taupe">{k}</div>
-      <div className="text-rops-ink font-medium number-tag">{v}</div>
-    </>
   );
 }
 
@@ -1203,7 +1335,7 @@ function Footer({ onAdminClick }: { onAdminClick: () => void }) {
         <div className="absolute inset-0 grad-footer-up" />
         <div className="absolute inset-0 flex items-end justify-center pb-6">
           <span className="font-display italic text-rops-cream text-2xl md:text-3xl tracking-tight">
-            See you by the fire.
+            See you in camp.
           </span>
         </div>
       </div>
@@ -1240,7 +1372,8 @@ function Footer({ onAdminClick }: { onAdminClick: () => void }) {
               Questions?
             </div>
             <div className="font-body text-sm text-rops-cream">
-              Reach out to the camp coordinator at the church.
+              Reach the camp team on{" "}
+              <span className="font-semibold">0975088939</span>.
             </div>
             <button
               onClick={onAdminClick}
@@ -1379,115 +1512,3 @@ function SectionHeader({
   );
 }
 
-// ─── SHARED VISUAL TOKENS ──────────────────────────────────────────
-function FontStyles() {
-  return (
-    <>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link
-        rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossOrigin=""
-      />
-      <link
-        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Manrope:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet"
-      />
-      <style>{`
-        .font-display { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; }
-        .font-body { font-family: 'Manrope', system-ui, sans-serif; }
-        .number-tag { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "ss01" 1; }
-
-        .bg-rops-cream { background-color: #F4EEE3; }
-        .bg-rops-cream-2 { background-color: #EDE5D5; }
-        .bg-rops-ink { background-color: #16110D; }
-        .bg-rops-ink-2 { background-color: #2A211A; }
-        .bg-rops-ember { background-color: #D14A1F; }
-        .bg-rops-forest { background-color: #1F3A2E; }
-
-        .text-rops-cream { color: #F4EEE3; }
-        .text-rops-cream\\/70 { color: rgba(244, 238, 227, 0.7); }
-        .text-rops-ink { color: #16110D; }
-        .text-rops-ink-2 { color: #2A211A; }
-        .text-rops-ink\\/70 { color: rgba(22, 17, 13, 0.7); }
-        .text-rops-ember { color: #D14A1F; }
-        .text-rops-forest { color: #1F3A2E; }
-        .text-rops-taupe { color: #968779; }
-
-        .border-rops-line { border-color: #DCD2BE; }
-        .border-rops-ink { border-color: #16110D; }
-        .border-rops-ember { border-color: #D14A1F; }
-        .border-rops-taupe { border-color: rgba(150, 135, 121, 1); }
-        .border-rops-taupe\\/20 { border-color: rgba(150, 135, 121, 0.2); }
-        .border-rops-taupe\\/40 { border-color: rgba(150, 135, 121, 0.4); }
-
-        .hover\\:bg-rops-ember:hover { background-color: #D14A1F; }
-        .hover\\:bg-rops-ember-2:hover { background-color: #B23E18; }
-        .hover\\:border-rops-ink:hover { border-color: #16110D; }
-        .hover\\:border-rops-cream:hover { border-color: #F4EEE3; }
-        .hover\\:text-rops-cream:hover { color: #F4EEE3; }
-        .hover\\:text-rops-ink:hover { color: #16110D; }
-        .hover\\:text-rops-ember:hover { color: #D14A1F; }
-
-        .group:hover .group-hover\\:border-rops-ink { border-color: #16110D; }
-
-        .focus\\:border-rops-ember:focus { border-color: #D14A1F; }
-        .focus\\:outline-none:focus { outline: none; }
-
-        .placeholder\\:text-rops-taupe\\/60::placeholder { color: rgba(150, 135, 121, 0.6); }
-
-        .bg-rops-cream\\/5 { background-color: rgba(244, 238, 227, 0.05); }
-        .bg-rops-ember\\/5 { background-color: rgba(209, 74, 31, 0.05); }
-        .border-rops-ember\\/30 { border-color: rgba(209, 74, 31, 0.3); }
-
-        .text-rops-h1 {
-          font-size: 2.75rem;
-          line-height: 0.95;
-          letter-spacing: -0.02em;
-        }
-        @media (min-width: 480px) { .text-rops-h1 { font-size: 3.5rem; } }
-        @media (min-width: 640px) { .text-rops-h1 { font-size: 4.5rem; } }
-        @media (min-width: 768px) { .text-rops-h1 { font-size: 5.5rem; line-height: 0.92; } }
-        @media (min-width: 1024px) { .text-rops-h1 { font-size: 7rem; } }
-
-        .ember-glow { box-shadow: 0 6px 30px -10px rgba(209,74,31,0.55); }
-        .rops-grain {
-          background-image: radial-gradient(rgba(22,17,13,0.045) 1px, transparent 1px);
-          background-size: 3px 3px;
-        }
-
-        @keyframes risefade {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .rise { animation: risefade 700ms cubic-bezier(.2,.7,.2,1) both; }
-        .rise-1 { animation-delay: 60ms; }
-        .rise-2 { animation-delay: 140ms; }
-        .rise-3 { animation-delay: 220ms; }
-        .rise-4 { animation-delay: 300ms; }
-        .rise-5 { animation-delay: 380ms; }
-
-        @keyframes flicker {
-          0%, 100% { opacity: 1; transform: scaleY(1); }
-          50% { opacity: 0.85; transform: scaleY(1.05); }
-        }
-        .flame-flicker {
-          animation: flicker 2.4s ease-in-out infinite;
-          transform-origin: center bottom;
-        }
-
-        .marquee-mask {
-          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-        }
-
-        .grad-ink-30-up {
-          background-image: linear-gradient(to top, rgba(22, 17, 13, 0.3) 0%, transparent 60%);
-        }
-        .grad-footer-up {
-          background-image: linear-gradient(to top, #16110D 0%, rgba(22, 17, 13, 0.4) 60%, transparent 100%);
-        }
-      `}</style>
-    </>
-  );
-}

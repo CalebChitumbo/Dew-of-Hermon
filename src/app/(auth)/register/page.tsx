@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getDocs, query, orderBy } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
@@ -46,8 +46,12 @@ const DEFAULT_INSTITUTIONS: Institution[] = [
 ];
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get("next");
+  const prefillEmail = searchParams.get("email") || "";
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [lifeGroup, setLifeGroup] = useState<LifeGroup | "">("");
@@ -58,7 +62,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signUp, signInWithGoogle } = useAuth();
-  const router = useRouter();
+
+  const isSafeNext = nextUrl && nextUrl.startsWith("/") && !nextUrl.startsWith("//");
+  const postAuthRedirect = isSafeNext ? nextUrl : "/dashboard";
 
   useEffect(() => {
     async function fetchInstitutions() {
@@ -119,7 +125,7 @@ export default function RegisterPage() {
         isStudent,
         institutionId: isStudent ? institutionId || undefined : undefined,
       });
-      router.push("/dashboard");
+      router.push(postAuthRedirect);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to create account";
@@ -135,7 +141,7 @@ export default function RegisterPage() {
 
     try {
       await signInWithGoogle();
-      router.push("/dashboard");
+      router.push(postAuthRedirect);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to sign in with Google";

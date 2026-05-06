@@ -1,0 +1,46 @@
+export function serializeRegistration(
+  id: string,
+  data: FirebaseFirestore.DocumentData
+) {
+  return {
+    id,
+    campId: data.campId,
+    registrantType: data.registrantType ?? null,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    dateOfBirth: data.dateOfBirth,
+    gender: data.gender,
+    phone: data.phone,
+    email: data.email ?? null,
+    churchOrSchool: data.churchOrSchool,
+    emergencyContactName: data.emergencyContactName,
+    emergencyContactPhone: data.emergencyContactPhone,
+    emergencyContactRelationship: data.emergencyContactRelationship ?? null,
+    medicalNotes: data.medicalNotes ?? null,
+    allergies: data.allergies ?? null,
+    medications: data.medications ?? null,
+    tshirtSize: data.tshirtSize ?? null,
+    dietaryPreference: data.dietaryPreference ?? null,
+    parentName: data.parentName ?? null,
+    parentRelationship: data.parentRelationship ?? null,
+    parentAltPhone: data.parentAltPhone ?? null,
+    parentEmail: data.parentEmail ?? null,
+    address: data.address ?? null,
+    dropoffLocation: data.dropoffLocation ?? null,
+    notes: data.notes ?? null,
+    consentGiven: data.consentGiven ?? false,
+    submittedByUid: data.submittedByUid ?? null,
+    submittedByEmail: data.submittedByEmail ?? null,
+    paymentStatus: data.paymentStatus,
+    paymentAmount: data.paymentAmount ?? null,
+    paymentReference: data.paymentReference ?? null,
+    paymentNotes: data.paymentNotes ?? null,
+    paymentMarkedBy: data.paymentMarkedBy ?? null,
+    paymentMarkedByName: data.paymentMarkedByName ?? null,
+    paymentMarkedAt: data.paymentMarkedAt?.toDate?.()?.toISOString() ?? null,
+    createdAt:
+      data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+    updatedAt:
+      data.updatedAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
+  };
+}

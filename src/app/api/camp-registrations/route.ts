@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { cookies } from "next/headers";
+import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { getCamp, DEFAULT_CAMP_ID } from "@/lib/camps";
 import {
   getCallerWithDepartments,
   callerCanManageCampRegistrations,
 } from "./_auth";
+import { serializeRegistration } from "./_serialize";
 import type {
   CampDropoffLocation,
   CampGender,
   CampPaymentStatus,
   CampTShirtSize,
 } from "@/types";
+
+type RegistrantType = "self" | "other";
+
+const VALID_REGISTRANT_TYPES: RegistrantType[] = ["self", "other"];
 
 export const dynamic = "force-dynamic";
 
@@ -22,43 +28,23 @@ function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function serializeRegistration(id: string, data: FirebaseFirestore.DocumentData) {
-  return {
-    id,
-    campId: data.campId,
-    firstName: data.firstName,
-    lastName: data.lastName,
-    dateOfBirth: data.dateOfBirth,
-    gender: data.gender,
-    phone: data.phone,
-    email: data.email ?? null,
-    churchOrSchool: data.churchOrSchool,
-    emergencyContactName: data.emergencyContactName,
-    emergencyContactPhone: data.emergencyContactPhone,
-    emergencyContactRelationship: data.emergencyContactRelationship ?? null,
-    medicalNotes: data.medicalNotes ?? null,
-    allergies: data.allergies ?? null,
-    medications: data.medications ?? null,
-    tshirtSize: data.tshirtSize,
-    dietaryPreference: data.dietaryPreference ?? null,
-    parentName: data.parentName ?? null,
-    parentRelationship: data.parentRelationship ?? null,
-    parentAltPhone: data.parentAltPhone ?? null,
-    parentEmail: data.parentEmail ?? null,
-    address: data.address ?? null,
-    dropoffLocation: data.dropoffLocation ?? null,
-    notes: data.notes ?? null,
-    consentGiven: data.consentGiven ?? false,
-    paymentStatus: data.paymentStatus,
-    paymentAmount: data.paymentAmount ?? null,
-    paymentReference: data.paymentReference ?? null,
-    paymentNotes: data.paymentNotes ?? null,
-    paymentMarkedBy: data.paymentMarkedBy ?? null,
-    paymentMarkedByName: data.paymentMarkedByName ?? null,
-    paymentMarkedAt: data.paymentMarkedAt?.toDate?.()?.toISOString() ?? null,
-    createdAt: data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
-    updatedAt: data.updatedAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
-  };
+/**
+ * If a session cookie is present and valid, returns { uid, email } for
+ * stamping onto a new registration. Returns null on no cookie or invalid
+ * cookie — anonymous submission is still allowed.
+ */
+async function getOptionalSubmitter(): Promise<
+  { uid: string; email: string | null } | null
+> {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session");
+    if (!session?.value) return null;
+    const decoded = await adminAuth.verifySessionCookie(session.value);
+    return { uid: decoded.uid, email: decoded.email ?? null };
+  } catch {
+    return null;
+  }
 }
 
 // GET: List camp registrations (ADMIN+ only). Optional ?campId filter.
@@ -148,12 +134,25 @@ export async function POST(request: Request) {
       dropoffLocation = upper as CampDropoffLocation;
     }
 
+    let registrantType: RegistrantType | null = null;
+    if (body.registrantType) {
+      if (!VALID_REGISTRANT_TYPES.includes(body.registrantType as RegistrantType)) {
+        return NextResponse.json(
+          { error: "Invalid registrant type" },
+          { status: 400 }
+        );
+      }
+      registrantType = body.registrantType as RegistrantType;
+    }
+
     if (!body.consentGiven) {
       return NextResponse.json(
-        { error: "Parent/guardian consent is required" },
+        { error: "Consent is required" },
         { status: 400 }
       );
     }
+
+    const submitter = await getOptionalSubmitter();
 
     // Capacity check (count current registrations for this camp).
     const countSnap = await adminDb
@@ -174,6 +173,7 @@ export async function POST(request: Request) {
 
     const registrationData = {
       campId,
+      registrantType,
       firstName: body.firstName.trim(),
       lastName: body.lastName.trim(),
       dateOfBirth: body.dateOfBirth.trim(),
@@ -197,6 +197,8 @@ export async function POST(request: Request) {
       dropoffLocation,
       notes: optionalString(body.notes),
       consentGiven: !!body.consentGiven,
+      submittedByUid: submitter?.uid ?? null,
+      submittedByEmail: submitter?.email ?? null,
       paymentStatus: "UNPAID" as CampPaymentStatus,
       paymentAmount: null,
       paymentReference: null,

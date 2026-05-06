@@ -18,7 +18,7 @@ export const CAMPS: CampDefinition[] = [
     startDate: "2026-08-20",
     endDate: "2026-08-24",
     capacity: 80,
-    fee: 850,
+    fee: 400,
     currency: "ZMW",
   },
 ];
