@@ -27,8 +27,8 @@ import { RopsFontStyles } from "@/components/rops-camp/RopsFontStyles";
 // ─── CONFIG ─────────────────────────────────────────────────────────
 const camp = CAMPS[0];
 const CAMP_FEE_ZMW = camp.fee;
-const CAMP_DATES = "20 — 22 August 2026";
-const VENUE = "ROPs Campsite (TBD)";
+const CAMP_DATES = "20 — 24 August 2026";
+const VENUE = "Crested Crane Academy";
 const CHURCH_ADDRESS = "Tabernacle of David Assembly, Lusaka";
 
 // Camp photos served from public/rops-camp/.
