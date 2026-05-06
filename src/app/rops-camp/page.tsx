@@ -28,18 +28,16 @@ const CAMP_DATES = "20 — 24 August 2026";
 const VENUE = "ROPs Campsite (TBD)";
 const CHURCH_ADDRESS = "Tabernacle of David Assembly, Lusaka";
 
-// Placeholder photo backgrounds. Swap these for hosted photo URLs once the
-// camp imagery is uploaded to /public or a CDN.
-const PLACEHOLDER_HERO =
-  "linear-gradient(135deg, #2A211A 0%, #1F3A2E 55%, #D14A1F 130%)";
-const PLACEHOLDER_GALLERY = [
-  "linear-gradient(135deg, #1F3A2E 0%, #4FA483 100%)",
-  "linear-gradient(135deg, #2A211A 0%, #B23E18 100%)",
-  "linear-gradient(135deg, #16110D 0%, #968779 100%)",
-  "linear-gradient(135deg, #1F3A2E 0%, #16110D 100%)",
-  "linear-gradient(135deg, #D14A1F 0%, #2A211A 100%)",
-  "linear-gradient(135deg, #2A211A 0%, #4FA483 100%)",
-  "linear-gradient(135deg, #B23E18 0%, #1F3A2E 100%)",
+// Camp photos served from public/rops-camp/.
+const PHOTO_HERO = "/rops-camp/hero.jpg";
+const PHOTO_GALLERY = [
+  "/rops-camp/gallery-01.jpg",
+  "/rops-camp/gallery-02.jpg",
+  "/rops-camp/gallery-03.jpg",
+  "/rops-camp/gallery-04.jpg",
+  "/rops-camp/gallery-05.jpg",
+  "/rops-camp/gallery-06.jpg",
+  "/rops-camp/gallery-07.jpg",
 ];
 
 // ─── FORM TYPES ─────────────────────────────────────────────────────
@@ -318,10 +316,13 @@ function Hero({
 
           <div className="lg:col-span-5 rise rise-5 min-w-0">
             <div className="relative max-w-md mx-auto lg:max-w-none lg:mx-0">
-              <div
-                className="relative overflow-hidden bg-rops-ink aspect-[4/5] md:aspect-[3/4]"
-                style={{ backgroundImage: PLACEHOLDER_HERO }}
-              >
+              <div className="relative overflow-hidden bg-rops-ink aspect-[4/5] md:aspect-[3/4]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={PHOTO_HERO}
+                  alt="Out of the shadows — ROPs IX"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
                 <div className="absolute inset-0 grad-ink-30-up pointer-events-none" />
                 <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
                   <span className="font-display italic text-rops-cream text-sm leading-tight max-w-[60%]">
@@ -436,10 +437,14 @@ function Glimpses() {
         </div>
 
         <figure className="mb-6 md:mb-8">
-          <div
-            className="relative overflow-hidden bg-rops-ink aspect-[16/9] md:aspect-[21/9]"
-            style={{ backgroundImage: PLACEHOLDER_GALLERY[0] }}
-          />
+          <div className="relative overflow-hidden bg-rops-ink aspect-[16/9] md:aspect-[21/9]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={PHOTO_GALLERY[0]}
+              alt="Mornings — the mountain rises early"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
           <figcaption className="mt-3 flex items-baseline justify-between gap-4">
             <span className="font-display italic text-rops-ink text-xl">
               <span className="text-rops-ember number-tag mr-2">01.</span>
@@ -453,19 +458,22 @@ function Glimpses() {
 
         <div className="grid md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
           <GalleryTile
-            background={PLACEHOLDER_GALLERY[1]}
+            src={PHOTO_GALLERY[1]}
+            alt="Brotherhood over nshima"
             number="02."
             title="Brotherhood over nshima"
             tag="fellowship"
           />
           <GalleryTile
-            background={PLACEHOLDER_GALLERY[2]}
+            src={PHOTO_GALLERY[2]}
+            alt="Open palms in worship"
             number="03."
             title="Open palms"
             tag="worship"
           />
           <GalleryTile
-            background={PLACEHOLDER_GALLERY[3]}
+            src={PHOTO_GALLERY[3]}
+            alt="Sitting under elders"
             number="04."
             title="Sitting under elders"
             tag="teaching"
@@ -474,10 +482,14 @@ function Glimpses() {
 
         <div className="grid lg:grid-cols-12 gap-4 lg:gap-6 mb-6 lg:mb-8">
           <figure className="lg:col-span-4 min-w-0">
-            <div
-              className="relative overflow-hidden bg-rops-ink aspect-[3/4]"
-              style={{ backgroundImage: PLACEHOLDER_GALLERY[4] }}
-            />
+            <div className="relative overflow-hidden bg-rops-ink aspect-[3/4]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={PHOTO_GALLERY[4]}
+                alt="The team behind the fire"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </div>
             <figcaption className="mt-3">
               <span className="font-display italic text-rops-ink text-lg">
                 <span className="text-rops-ember number-tag mr-2">05.</span>
@@ -486,10 +498,14 @@ function Glimpses() {
             </figcaption>
           </figure>
           <figure className="lg:col-span-8 min-w-0">
-            <div
-              className="relative overflow-hidden bg-rops-ink aspect-[16/10]"
-              style={{ backgroundImage: PLACEHOLDER_GALLERY[5] }}
-            />
+            <div className="relative overflow-hidden bg-rops-ink aspect-[16/10]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={PHOTO_GALLERY[5]}
+                alt="When the room becomes holy"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </div>
             <figcaption className="mt-3 flex items-baseline justify-between gap-4">
               <span className="font-display italic text-rops-ink text-lg">
                 <span className="text-rops-ember number-tag mr-2">06.</span>
@@ -504,10 +520,14 @@ function Glimpses() {
 
         <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-center">
           <figure className="lg:col-span-5 order-2 lg:order-1 min-w-0">
-            <div
-              className="relative overflow-hidden bg-rops-ink aspect-[3/4]"
-              style={{ backgroundImage: PLACEHOLDER_GALLERY[6] }}
-            />
+            <div className="relative overflow-hidden bg-rops-ink aspect-[3/4]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={PHOTO_GALLERY[6]}
+                alt="Joy is part of the journey"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </div>
             <figcaption className="mt-3">
               <span className="font-display italic text-rops-ink text-lg">
                 <span className="text-rops-ember number-tag mr-2">07.</span>
@@ -532,22 +552,28 @@ function Glimpses() {
 }
 
 function GalleryTile({
-  background,
+  src,
+  alt,
   number,
   title,
   tag,
 }: {
-  background: string;
+  src: string;
+  alt: string;
   number: string;
   title: string;
   tag: string;
 }) {
   return (
     <figure>
-      <div
-        className="relative overflow-hidden bg-rops-ink aspect-[3/2] transition-transform duration-700 hover:scale-[1.03]"
-        style={{ backgroundImage: background }}
-      />
+      <div className="relative overflow-hidden bg-rops-ink aspect-[3/2]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-[1.03]"
+        />
+      </div>
       <figcaption className="mt-3 flex items-baseline justify-between gap-3">
         <span className="font-display italic text-rops-ink text-lg leading-tight">
           <span className="text-rops-ember number-tag mr-2">{number}</span>
@@ -1168,9 +1194,11 @@ function Footer({ onAdminClick }: { onAdminClick: () => void }) {
   return (
     <footer className="bg-rops-ink text-rops-cream">
       <div className="relative h-40 md:h-56 overflow-hidden border-b border-rops-taupe/20">
-        <div
-          className="absolute inset-0 opacity-60"
-          style={{ backgroundImage: PLACEHOLDER_HERO }}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={PHOTO_HERO}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-60"
         />
         <div className="absolute inset-0 grad-footer-up" />
         <div className="absolute inset-0 flex items-end justify-center pb-6">
