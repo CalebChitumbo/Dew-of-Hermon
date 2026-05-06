@@ -108,29 +108,48 @@ function ReadinessRing({
 
   const color =
     percentage >= 80 ? "#4A9B8E" : percentage >= 50 ? "#C8963E" : "#EF4444";
+  const gradientId = `readiness-grad-${color.replace("#", "")}`;
+  const gradientStops =
+    percentage >= 80
+      ? ["#6DB8AB", "#4A9B8E", "#357A6F"]
+      : percentage >= 50
+        ? ["#E0B872", "#C8963E", "#9A7230"]
+        : ["#FCA5A5", "#EF4444", "#B91C1C"];
 
   return (
     <div className="relative inline-flex items-center justify-center">
+      {/* Soft halo behind the ring */}
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-full blur-2xl opacity-30"
+        style={{ backgroundColor: color }}
+      />
       <svg
         width={size}
         height={size}
-        className="-rotate-90"
+        className="-rotate-90 relative drop-shadow-[0_4px_10px_rgba(91,58,41,0.10)]"
         aria-label={`${filled} of ${total} roles filled`}
       >
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={gradientStops[0]} />
+            <stop offset="60%" stopColor={gradientStops[1]} />
+            <stop offset="100%" stopColor={gradientStops[2]} />
+          </linearGradient>
+        </defs>
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#F0D0A8"
+          stroke="#FAEBD7"
           strokeWidth={strokeWidth}
           fill="none"
-          className="opacity-40"
         />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={color}
+          stroke={`url(#${gradientId})`}
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"
@@ -140,12 +159,20 @@ function ReadinessRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-display font-bold text-clay-700">
+        <span className="text-3xl font-display font-bold text-clay-700 leading-none">
           {total > 0 ? `${filled}/${total}` : "—"}
         </span>
-        <span className="text-[10px] text-clay-400 uppercase tracking-wider">
+        <span className="text-[10px] text-clay-400 uppercase tracking-[0.16em] mt-1.5">
           Roles Filled
         </span>
+        {total > 0 && (
+          <span
+            className="text-[10px] font-medium mt-0.5"
+            style={{ color }}
+          >
+            {Math.round(percentage)}%
+          </span>
+        )}
       </div>
     </div>
   );
@@ -171,34 +198,55 @@ function PulseTile({
   highlight?: boolean;
 }) {
   return (
-    <Link href={href} className="block group">
+    <Link href={href} className="block group focus:outline-none">
       <Card
-        className={`h-full transition-all group-hover:border-gold group-hover:shadow-md ${
-          highlight ? "border-red-200 bg-red-50/30" : ""
+        className={`relative h-full overflow-hidden border-clay-200/70 bg-gradient-to-br from-white to-cream/70 transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-gold/60 group-hover:shadow-[0_10px_30px_-12px_rgba(200,150,62,0.35)] group-focus-visible:ring-2 group-focus-visible:ring-gold/50 ${
+          highlight ? "border-red-200/80 bg-gradient-to-br from-red-50/40 to-cream/40" : ""
         }`}
       >
-        <CardContent className="p-4 flex flex-col gap-3 h-full">
+        {/* Top accent stripe */}
+        <span
+          aria-hidden
+          className={`absolute inset-x-0 top-0 h-0.5 ${
+            highlight
+              ? "bg-gradient-to-r from-red-400/0 via-red-400/70 to-red-400/0"
+              : "bg-gradient-to-r from-gold/0 via-gold/40 to-gold/0"
+          } opacity-0 group-hover:opacity-100 transition-opacity`}
+        />
+        {/* Subtle corner glow */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-10 -right-10 h-24 w-24 rounded-full bg-gold/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        />
+
+        <CardContent className="relative p-4 md:p-5 flex flex-col gap-3 h-full">
           <div className="flex items-center justify-between">
             <div
-              className={`flex h-9 w-9 items-center justify-center rounded-lg ${iconTone}`}
+              className={`relative flex h-10 w-10 items-center justify-center rounded-xl ${iconTone} ring-1 ring-inset ring-white/40 shadow-sm transition-transform duration-300 group-hover:scale-105`}
             >
               <Icon className="h-5 w-5" />
             </div>
-            <ChevronRight className="h-4 w-4 text-clay-300 group-hover:text-gold transition-colors" />
+            <ChevronRight className="h-4 w-4 text-clay-300 transition-all duration-300 group-hover:text-gold group-hover:translate-x-0.5" />
           </div>
           <div>
-            <p className="text-xs text-clay-400 uppercase tracking-wider">
+            <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] font-medium">
               {label}
             </p>
-            <p className="text-2xl font-display font-bold text-clay-700 mt-0.5">
+            <p className="text-2xl md:text-[1.6rem] font-display font-bold text-clay-700 mt-1 leading-tight">
               {value}
             </p>
             {hint && (
-              <p className="text-xs text-clay-400 mt-0.5 line-clamp-1">
+              <p className="text-xs text-clay-400 mt-1 line-clamp-1">
                 {hint}
               </p>
             )}
           </div>
+          {highlight && (
+            <span
+              aria-hidden
+              className="absolute top-3 right-3 inline-flex h-2 w-2 rounded-full bg-red-400 shadow-[0_0_0_4px_rgba(248,113,113,0.18)] animate-pulse"
+            />
+          )}
         </CardContent>
       </Card>
     </Link>
@@ -224,7 +272,7 @@ function ActivityItem({
   const inner = (
     <div className="flex items-start gap-3 py-3">
       <div
-        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${tone}`}
+        className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${tone} ring-1 ring-inset ring-white/40 shadow-sm`}
       >
         <Icon className="h-4 w-4" />
       </div>
@@ -232,16 +280,19 @@ function ActivityItem({
         <p className="text-sm font-medium text-clay-700 truncate">
           {notif.title}
         </p>
-        <p className="text-xs text-clay-400 truncate">{notif.message}</p>
+        <p className="text-xs text-clay-400 truncate mt-0.5">{notif.message}</p>
       </div>
-      <span className="text-[11px] text-clay-400 whitespace-nowrap shrink-0">
+      <span className="text-[11px] text-clay-400 whitespace-nowrap shrink-0 mt-1">
         {formatDistanceToNow(notif.createdAt, { addSuffix: true })}
       </span>
     </div>
   );
 
   return notif.link ? (
-    <Link href={notif.link} className="block hover:bg-clay-50/60 -mx-2 px-2 rounded">
+    <Link
+      href={notif.link}
+      className="block -mx-2 px-2 rounded-lg hover:bg-cream/70 transition-colors"
+    >
       {inner}
     </Link>
   ) : (
@@ -819,58 +870,80 @@ export default function DashboardPage() {
   // ─── Render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 md:space-y-8">
       {/* ── Welcome Hero ─────────────────────────────────────────────── */}
-      <section className="rounded-xl border border-clay-200 bg-gradient-to-br from-cream via-white to-gold/10 p-5 md:p-6">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+      <section
+        className="relative overflow-hidden rounded-2xl border border-clay-200/70 bg-white/70 p-6 md:p-8 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 0% 0%, rgba(200,150,62,0.10), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.08), transparent 50%), linear-gradient(135deg, #FFF8F0 0%, #FFFFFF 60%, rgba(200,150,62,0.06) 100%)",
+        }}
+      >
+        {/* Decorative orbs */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-gold/20 blur-3xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-teal/15 blur-3xl"
+        />
+
+        <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div className="min-w-0">
-            <p className="text-xs uppercase tracking-wider text-clay-400">
+            <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-clay-400">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
               {format(now, "EEEE, MMMM d")}
             </p>
-            <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700 mt-1">
-              {greeting(now)}, {userData.name.split(" ")[0]}
+            <h1 className="text-3xl md:text-4xl font-display font-bold text-clay-700 mt-2 leading-tight">
+              {greeting(now)},{" "}
+              <span className="bg-gradient-to-r from-clay-700 via-gold-dark to-gold bg-clip-text text-transparent">
+                {userData.name.split(" ")[0]}
+              </span>
             </h1>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
               <Badge variant="gold" className="text-xs">
                 {roleLabels[userData.role]}
               </Badge>
               {userData.lifeGroup && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs bg-white/60 backdrop-blur-sm">
                   {userData.lifeGroup} life group
                 </Badge>
               )}
             </div>
-            <p className="text-sm md:text-base text-clay-600 mt-3 max-w-2xl">
+            <p className="text-sm md:text-base text-clay-600 mt-4 max-w-2xl leading-relaxed">
               {headline}
             </p>
           </div>
 
           {/* Admin mini-stats */}
           {isAdmin && (
-            <div className="grid grid-cols-3 gap-3 md:gap-4 shrink-0">
-              <div className="text-center">
-                <p className="text-xl md:text-2xl font-display font-bold text-clay-700">
-                  {activeMemberCount}
-                </p>
-                <p className="text-[10px] uppercase tracking-wider text-clay-400">
-                  Members
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl md:text-2xl font-display font-bold text-clay-700">
-                  {pendingApprovalCount}
-                </p>
-                <p className="text-[10px] uppercase tracking-wider text-clay-400">
-                  Approvals
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl md:text-2xl font-display font-bold text-clay-700">
-                  {activeFollowUpCount}
-                </p>
-                <p className="text-[10px] uppercase tracking-wider text-clay-400">
-                  Follow-ups
-                </p>
+            <div className="relative shrink-0 rounded-xl border border-clay-200/60 bg-white/70 backdrop-blur-sm px-4 py-3 md:px-5 md:py-4 shadow-sm">
+              <div className="grid grid-cols-3 gap-5 md:gap-6 divide-x divide-clay-100">
+                <div className="text-center pr-1">
+                  <p className="text-2xl md:text-3xl font-display font-bold text-clay-700 leading-none">
+                    {activeMemberCount}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
+                    Members
+                  </p>
+                </div>
+                <div className="text-center px-1">
+                  <p className="text-2xl md:text-3xl font-display font-bold text-gold-dark leading-none">
+                    {pendingApprovalCount}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
+                    Approvals
+                  </p>
+                </div>
+                <div className="text-center pl-1">
+                  <p className="text-2xl md:text-3xl font-display font-bold text-teal leading-none">
+                    {activeFollowUpCount}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
+                    Follow-ups
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -879,11 +952,22 @@ export default function DashboardPage() {
 
       {/* ── My Next ─────────────────────────────────────────────────── */}
       <section>
-        <Card>
-          <CardHeader className="pb-3">
+        <Card className="relative overflow-hidden border-clay-200/70">
+          {/* Left accent rail — gold normally, amber if pending action */}
+          <span
+            aria-hidden
+            className={`absolute inset-y-0 left-0 w-1 ${
+              myAssignment?.assignment.status === "PENDING"
+                ? "bg-gradient-to-b from-gold via-gold-dark to-gold"
+                : "bg-gradient-to-b from-gold/60 via-teal/50 to-teal/40"
+            }`}
+          />
+          <CardHeader className="pb-3 pl-6">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Inbox className="h-5 w-5 text-gold" />
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
+                  <Inbox className="h-4 w-4 text-gold-dark" />
+                </span>
                 My Next
               </CardTitle>
               <Link href="/my-schedule">
@@ -894,38 +978,44 @@ export default function DashboardPage() {
               </Link>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pl-6">
             {myAssignment ? (
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-wider text-clay-400">
+                  <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-clay-400">
+                    <Clock className="h-3 w-3" />
                     {format(myAssignment.event.startDate, "EEE, MMM d")}
                     {myAssignment.service.serviceTime
                       ? ` · ${myAssignment.service.serviceTime}`
                       : ""}
                   </p>
-                  <p className="text-lg font-display font-semibold text-clay-700 mt-0.5">
+                  <p className="text-xl font-display font-semibold text-clay-700 mt-1">
                     {myAssignment.assignment.roleName}
                   </p>
-                  <p className="text-sm text-clay-500 mt-1 truncate">
-                    {myAssignment.event.title} · {myAssignment.event.venue}
+                  <p className="text-sm text-clay-500 mt-1 truncate inline-flex items-center gap-1.5">
+                    <span>{myAssignment.event.title}</span>
+                    <span className="text-clay-300">·</span>
+                    <MapPin className="h-3 w-3 text-clay-400" />
+                    <span className="truncate">{myAssignment.event.venue}</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <StatusBadge status={myAssignment.assignment.status} />
                   <Link href="/my-schedule">
-                    <Button size="sm" variant="gold">
+                    <Button size="sm" variant="gold" className="shadow-sm">
                       {myAssignment.assignment.status === "PENDING"
                         ? "Respond"
                         : "View"}
+                      <ArrowRight className="ml-1 h-3 w-3" />
                     </Button>
                   </Link>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col md:flex-row md:items-center gap-4 py-2">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-teal/10">
+                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal/15 to-teal/5 ring-1 ring-inset ring-teal/20">
                   <Sparkles className="h-6 w-6 text-teal" />
+                  <span className="absolute -inset-1 rounded-2xl bg-teal/10 blur-md -z-10" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-clay-700">
@@ -949,10 +1039,13 @@ export default function DashboardPage() {
 
       {/* ── Ministry Pulse Grid ─────────────────────────────────────── */}
       <section>
-        <div className="flex items-baseline justify-between mb-3">
-          <h2 className="text-sm font-medium text-clay-500 uppercase tracking-wider">
-            Ministry Pulse
-          </h2>
+        <div className="flex items-baseline justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-medium text-clay-500 uppercase tracking-[0.16em]">
+              Ministry Pulse
+            </h2>
+            <span className="h-px flex-1 w-16 bg-gradient-to-r from-clay-200 to-transparent" />
+          </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
           {/* Service Readiness — leaders & admins */}
@@ -1097,15 +1190,17 @@ export default function DashboardPage() {
       {/* ── Upcoming + Activity ─────────────────────────────────────── */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming events — spans 2 columns */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 border-clay-200/70">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5 text-gold" />
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
+                    <CalendarDays className="h-4 w-4 text-gold-dark" />
+                  </span>
                   Upcoming
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="ml-10">
                   Services, camps, retreats, and meetings on the horizon
                 </CardDescription>
               </div>
@@ -1119,14 +1214,17 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {upcomingEvents.length > 0 ? (
-              <ul className="divide-y divide-clay-50">
+              <ul className="space-y-1">
                 {upcomingEvents.map((evt) => {
                   const meta = EVENT_TYPE_META[evt.type] || EVENT_TYPE_META.MEETING;
                   const Icon = meta.icon;
                   return (
-                    <li key={evt.id} className="py-3 flex items-start gap-3">
+                    <li
+                      key={evt.id}
+                      className="group/item flex items-start gap-3 rounded-lg px-2 py-3 -mx-2 transition-colors hover:bg-cream/70"
+                    >
                       <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${meta.tone}`}
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${meta.tone} ring-1 ring-inset ring-white/40 shadow-sm transition-transform group-hover/item:scale-105`}
                       >
                         <Icon className="h-5 w-5" />
                       </div>
@@ -1135,11 +1233,11 @@ export default function DashboardPage() {
                           <p className="text-sm font-medium text-clay-700 truncate">
                             {evt.title}
                           </p>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white">
                             {meta.label}
                           </Badge>
                         </div>
-                        <p className="text-xs text-clay-400 mt-0.5 flex items-center gap-3 flex-wrap">
+                        <p className="text-xs text-clay-400 mt-1 flex items-center gap-3 flex-wrap">
                           <span className="inline-flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {format(evt.startDate, "EEE, MMM d")}
@@ -1158,9 +1256,11 @@ export default function DashboardPage() {
                 })}
               </ul>
             ) : (
-              <div className="py-8 text-center">
-                <CalendarDays className="h-10 w-10 text-clay-200 mx-auto mb-3" />
-                <p className="text-sm text-clay-400">
+              <div className="py-10 text-center rounded-xl border border-dashed border-clay-200/70 bg-cream/40">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/10">
+                  <CalendarDays className="h-6 w-6 text-gold-dark" />
+                </div>
+                <p className="text-sm text-clay-500 mt-3">
                   No events scheduled.
                 </p>
                 {isAdmin && (
@@ -1179,39 +1279,47 @@ export default function DashboardPage() {
         {/* Side column: Roles needing attention + Activity */}
         <div className="space-y-6">
           {(isAdmin || isDeptLead) && unassignedRoles.length > 0 && (
-            <Card className="border-red-200 bg-red-50/30">
+            <Card className="relative overflow-hidden border-red-200/70 bg-gradient-to-br from-red-50/50 via-white to-cream/40">
+              <span
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-red-300/0 via-red-400/70 to-red-300/0"
+              />
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2 text-red-700">
-                  <AlertTriangle className="h-5 w-5" />
+                  <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-red-100/80 ring-1 ring-inset ring-red-200/60">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="absolute -inset-0.5 rounded-lg bg-red-300/30 blur-md -z-10" />
+                  </span>
                   Roles needing attention
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="ml-10">
                   Open seats for the next service
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
+                <ul className="space-y-1.5">
                   {unassignedRoles.slice(0, 5).map((role) => (
                     <li
                       key={role.id}
-                      className="flex items-center justify-between text-sm"
+                      className="flex items-center justify-between gap-3 text-sm rounded-md px-2 py-1.5 -mx-2 hover:bg-white/60 transition-colors"
                     >
-                      <span className="text-clay-600 truncate">
-                        {role.name}
+                      <span className="inline-flex items-center gap-2 min-w-0">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-400 shrink-0" />
+                        <span className="text-clay-600 truncate">{role.name}</span>
                       </span>
-                      <Badge variant="outline" className="text-red-600 border-red-200 shrink-0">
+                      <Badge variant="outline" className="text-red-600 border-red-200 bg-white shrink-0">
                         Open
                       </Badge>
                     </li>
                   ))}
                   {unassignedRoles.length > 5 && (
-                    <li className="text-xs text-clay-400 pt-1">
+                    <li className="text-xs text-clay-400 pt-1 pl-4">
                       +{unassignedRoles.length - 5} more
                     </li>
                   )}
                 </ul>
-                <Link href="/manage/services" className="block mt-3">
-                  <Button variant="destructive" size="sm" className="w-full">
+                <Link href="/manage/services" className="block mt-4">
+                  <Button variant="destructive" size="sm" className="w-full shadow-sm">
                     <UserPlus className="mr-2 h-4 w-4" />
                     Assign roles
                   </Button>
@@ -1220,11 +1328,13 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <Card>
+          <Card className="border-clay-200/70">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-clay-400" />
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-clay-100 ring-1 ring-inset ring-clay-200/60">
+                    <Activity className="h-4 w-4 text-clay-500" />
+                  </span>
                   Recent activity
                 </CardTitle>
                 <Link href="/notifications">
@@ -1237,15 +1347,17 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {recentActivity.length > 0 ? (
-                <div className="divide-y divide-clay-50">
+                <div className="divide-y divide-clay-100/60">
                   {recentActivity.slice(0, 5).map((notif) => (
                     <ActivityItem key={notif.id} notif={notif} />
                   ))}
                 </div>
               ) : (
-                <div className="py-6 text-center">
-                  <Activity className="h-8 w-8 text-clay-200 mx-auto mb-2" />
-                  <p className="text-sm text-clay-400">
+                <div className="py-8 text-center rounded-xl border border-dashed border-clay-200/70 bg-cream/40">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-clay-100">
+                    <Activity className="h-5 w-5 text-clay-400" />
+                  </div>
+                  <p className="text-sm text-clay-400 mt-3">
                     Nothing new to show.
                   </p>
                 </div>
@@ -1258,15 +1370,27 @@ export default function DashboardPage() {
       {/* ── Service-readiness deep panel (admins/leads only) ───────── */}
       {(isAdmin || isDeptLead) && nextEvent && (
         <section>
-          <Card>
-            <CardHeader className="pb-3">
+          <Card
+            className="relative overflow-hidden border-clay-200/70"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, #FFFFFF 0%, #FFF8F0 60%, rgba(200,150,62,0.05) 100%)",
+            }}
+          >
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-gold/10 blur-3xl"
+            />
+            <CardHeader className="pb-3 relative">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <ClipboardList className="h-5 w-5 text-gold" />
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
+                      <ClipboardList className="h-4 w-4 text-gold-dark" />
+                    </span>
                     Next service at a glance
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="ml-10">
                     {nextEvent.title} ·{" "}
                     {format(nextEvent.startDate, "EEE, MMM d")}
                     {nextService?.serviceTime
@@ -1282,7 +1406,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
                 <div className="flex justify-center md:justify-start">
                   <ReadinessRing
@@ -1292,27 +1416,27 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div className="md:col-span-2 grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <p className="text-2xl font-display font-bold text-teal">
+                  <div className="rounded-xl border border-teal/15 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
+                    <p className="text-3xl font-display font-bold text-teal leading-none">
                       {assignments.filter((a) => a.status === "CONFIRMED").length}
                     </p>
-                    <p className="text-xs text-clay-400 uppercase tracking-wider mt-1">
+                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
                       Confirmed
                     </p>
                   </div>
-                  <div>
-                    <p className="text-2xl font-display font-bold text-gold">
+                  <div className="rounded-xl border border-gold/20 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
+                    <p className="text-3xl font-display font-bold text-gold-dark leading-none">
                       {assignments.filter((a) => a.status === "PENDING").length}
                     </p>
-                    <p className="text-xs text-clay-400 uppercase tracking-wider mt-1">
+                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
                       Pending
                     </p>
                   </div>
-                  <div>
-                    <p className="text-2xl font-display font-bold text-red-500">
+                  <div className="rounded-xl border border-red-200/60 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
+                    <p className="text-3xl font-display font-bold text-red-500 leading-none">
                       {unassignedCount}
                     </p>
-                    <p className="text-xs text-clay-400 uppercase tracking-wider mt-1">
+                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
                       Open
                     </p>
                   </div>
