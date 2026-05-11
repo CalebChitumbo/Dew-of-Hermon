@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
+  Camera,
   Check,
   Church,
   CircleDollarSign,
@@ -1306,6 +1307,20 @@ function Confirmation({
           Your slot has been reserved. Please complete payment within{" "}
           <span className="font-semibold">7 days</span> to confirm.
         </p>
+
+        <div className="rise rise-3 mt-8 bg-rops-cream-2 border border-rops-ember/30 rounded-sm p-5 md:p-6">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Camera size={16} className="text-rops-ember" />
+            <span className="font-body text-[11px] uppercase tracking-[0.22em] text-rops-ember">
+              Help build the hype
+            </span>
+          </div>
+          <p className="font-body text-rops-ink-2 text-sm leading-relaxed">
+            Take a screenshot of this page and drop it in the camp WhatsApp
+            group — let everyone know you&rsquo;re in and help us turn up the
+            heat for ROPs X.
+          </p>
+        </div>
 
         <div className="rise rise-4 mt-10">
           <PaymentInstructionsCard
