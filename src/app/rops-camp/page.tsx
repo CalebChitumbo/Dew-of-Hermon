@@ -258,6 +258,7 @@ function Hero({
   onRegisterClick: () => void;
   onAdminClick: () => void;
 }) {
+  const { firebaseUser, loading: authLoading } = useAuth();
   return (
     <header className="relative overflow-hidden bg-rops-cream rops-grain">
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10 pt-6 flex items-center justify-between">
@@ -272,12 +273,22 @@ function Hero({
             Dew of Hermon · Tabernacle of David
           </span>
         </div>
-        <button
-          onClick={onAdminClick}
-          className="font-body text-[11px] uppercase tracking-[0.18em] text-rops-taupe hover:text-rops-ink flex items-center gap-1.5 transition-colors"
-        >
-          <Lock size={12} /> Admin
-        </button>
+        <div className="flex items-center gap-5">
+          {!authLoading && firebaseUser ? (
+            <Link
+              href="/dashboard"
+              className="font-body text-[11px] uppercase tracking-[0.18em] text-rops-taupe hover:text-rops-ink flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowLeft size={12} /> Dashboard
+            </Link>
+          ) : null}
+          <button
+            onClick={onAdminClick}
+            className="font-body text-[11px] uppercase tracking-[0.18em] text-rops-taupe hover:text-rops-ink flex items-center gap-1.5 transition-colors"
+          >
+            <Lock size={12} /> Admin
+          </button>
+        </div>
       </div>
 
       <div className="relative max-w-7xl mx-auto px-6 md:px-10 pt-10 md:pt-16 pb-12 md:pb-16">
