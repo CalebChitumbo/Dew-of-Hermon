@@ -43,6 +43,10 @@ const departments = [
   { name: "Life Groups", icon: "👥", order: 12, description: "Small group fellowship, Bible study circles, and community building" },
   { name: "Transport & Logistics", icon: "🚐", order: 13, description: "Coordinating transport logistics for services, events, and outreach" },
   { name: "Youth Ablaze", icon: "🔥", order: 14, description: "Intercession and prayer warfare for youth events" },
+  // Departmental manager teams
+  { name: "Communications & Media", icon: "📣", order: 15, description: "Announcements, social media, publicity, and external communications" },
+  { name: "Fundraising", icon: "💰", order: 16, description: "Fundraising campaigns, donor relations, and financial mobilisation" },
+  { name: "Food Logistics", icon: "🍽️", order: 17, description: "Meal planning, catering logistics, and food provision for events and camps" },
 ];
 
 // ─── Institutions ───

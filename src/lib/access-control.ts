@@ -490,6 +490,70 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     category: "ROPs Camp",
     supportsDepartmentRules: true,
   },
+  // Departmental Manager scopes — used by the Super Admin per-department UI to
+  // grant viewing/management rights to specific department leads and youth
+  // leaders. Pages can opt into these checks as they're built out.
+  {
+    key: "manage_communications",
+    label: "Manage Communications & Media",
+    description:
+      "Post announcements, manage publicity, and run the social media calendar",
+    category: "Communications & Media",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "view_communications_reports",
+    label: "View Communications Reports",
+    description:
+      "See engagement metrics, scheduled posts, and communications summaries",
+    category: "Communications & Media",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "manage_fundraising",
+    label: "Manage Fundraising",
+    description:
+      "Run fundraising campaigns, record pledges, and update donor information",
+    category: "Fundraising",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "view_fundraising_reports",
+    label: "View Fundraising Reports",
+    description: "View campaign totals, donor lists, and contribution summaries",
+    category: "Fundraising",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "manage_transport_logistics",
+    label: "Manage Transport Logistics",
+    description:
+      "Plan transport for services, events, and outreach; record vehicle assignments",
+    category: "Transport & Logistics",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "view_transport_assignments",
+    label: "View Transport Assignments",
+    description: "See planned transport rotas and pickup lists for events",
+    category: "Transport & Logistics",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "manage_food_logistics",
+    label: "Manage Food Logistics",
+    description:
+      "Plan meals, manage catering vendors, and track food provision for events and camps",
+    category: "Food Logistics",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "view_food_logistics",
+    label: "View Food Logistics",
+    description: "View meal plans, headcounts, and catering schedules",
+    category: "Food Logistics",
+    supportsDepartmentRules: true,
+  },
 ];
 
 /** Default minimum role for each feature (matches current hardcoded behavior) */
@@ -514,6 +578,14 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_settings: "SUPER_ADMIN",
   latreou_access: "ADMIN",
   manage_camp_registrations: "ADMIN",
+  manage_communications: "ADMIN",
+  view_communications_reports: "ADMIN",
+  manage_fundraising: "ADMIN",
+  view_fundraising_reports: "ADMIN",
+  manage_transport_logistics: "ADMIN",
+  view_transport_assignments: "ADMIN",
+  manage_food_logistics: "ADMIN",
+  view_food_logistics: "ADMIN",
 };
 
 /** Default department access rules (matches current hardcoded behavior) */
@@ -590,6 +662,82 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     requiresLeadership: true,
     allowedRoles: ["DEPARTMENT_LEAD"],
   },
+  // Defaults for departmental-manager scopes — the lead of each department gets
+  // management rights for that department, and youth leaders in the same
+  // department get the corresponding view-only rights. Super Admin can adjust
+  // any of these from the Department Manager Permissions section.
+  {
+    featureKey: "manage_communications",
+    departmentName: "Communications & Media",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "view_communications_reports",
+    departmentName: "Communications & Media",
+    requiresLeadership: false,
+    allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
+  },
+  {
+    featureKey: "manage_fundraising",
+    departmentName: "Fundraising",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "view_fundraising_reports",
+    departmentName: "Fundraising",
+    requiresLeadership: false,
+    allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
+  },
+  {
+    featureKey: "manage_transport_logistics",
+    departmentName: "Transport & Logistics",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "view_transport_assignments",
+    departmentName: "Transport & Logistics",
+    requiresLeadership: false,
+    allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
+  },
+  {
+    featureKey: "manage_food_logistics",
+    departmentName: "Food Logistics",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "view_food_logistics",
+    departmentName: "Food Logistics",
+    requiresLeadership: false,
+    allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
+  },
+];
+
+/**
+ * The "Departmental Managers" tracked in the Super Admin role management UI.
+ * Each entry refers to a department whose lead is treated as a departmental
+ * manager; the Super Admin can configure what that lead and the youth leaders
+ * inside the department are allowed to access.
+ *
+ * Order matches the list provided by the Chairperson.
+ */
+export const DEPARTMENTAL_MANAGERS: ReadonlyArray<{
+  /** Department name as stored in Firestore (and used in DepartmentAccessRule). */
+  departmentName: string;
+  /** Optional friendlier label for the UI; falls back to departmentName. */
+  displayName?: string;
+}> = [
+  { departmentName: "Discipleship & Follow-Up", displayName: "Discipleship" },
+  { departmentName: "Events & Fellowship" },
+  { departmentName: "Communications & Media" },
+  { departmentName: "Fundraising" },
+  { departmentName: "Transport & Logistics" },
+  { departmentName: "Life Groups" },
+  { departmentName: "Campus Ministry" },
+  { departmentName: "Food Logistics" },
 ];
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {
