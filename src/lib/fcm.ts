@@ -57,45 +57,79 @@ async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null
   return registration;
 }
 
+export type PushPermissionFailureReason =
+  | "denied"
+  | "dismissed"
+  | "unsupported"
+  | "sw_failed"
+  | "config_missing"
+  | "token_failed";
+
+export type PushPermissionResult =
+  | { ok: true; token: string }
+  | { ok: false; reason: PushPermissionFailureReason };
+
 /**
  * Request notification permission, get the FCM token, and save it to the server.
- * Returns the token string on success, or null if the user denied permission.
+ * Returns a discriminated result so callers can show an accurate message for
+ * each failure mode instead of a generic "blocked" error.
  */
 export async function requestPushPermissionAndToken(
   userId: string
-): Promise<string | null> {
-  if (typeof window === "undefined") return null;
+): Promise<PushPermissionResult> {
+  if (typeof window === "undefined") return { ok: false, reason: "unsupported" };
+  if (!("Notification" in window)) return { ok: false, reason: "unsupported" };
+  if (!("serviceWorker" in navigator)) return { ok: false, reason: "unsupported" };
+
+  // If the user previously blocked notifications, requestPermission() will
+  // resolve immediately with "denied" — surface that without a prompt round-trip.
+  if (Notification.permission === "denied") {
+    return { ok: false, reason: "denied" };
+  }
 
   const permission = await Notification.requestPermission();
-  if (permission !== "granted") return null;
+  if (permission === "denied") return { ok: false, reason: "denied" };
+  // "default" means the user closed the prompt without choosing — not blocked,
+  // just not granted yet. They can try again.
+  if (permission !== "granted") return { ok: false, reason: "dismissed" };
 
   const messaging = getMessagingInstance();
-  if (!messaging) return null;
-
-  const swRegistration = await registerServiceWorker();
-  if (!swRegistration) return null;
+  if (!messaging) return { ok: false, reason: "unsupported" };
 
   const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
   if (!vapidKey) {
     console.error("NEXT_PUBLIC_FIREBASE_VAPID_KEY is not set");
-    return null;
+    return { ok: false, reason: "config_missing" };
   }
 
-  const token = await getToken(messaging, {
-    vapidKey,
-    serviceWorkerRegistration: swRegistration,
-  });
+  let swRegistration: ServiceWorkerRegistration | null;
+  try {
+    swRegistration = await registerServiceWorker();
+  } catch (e) {
+    console.error("Service worker registration failed:", e);
+    return { ok: false, reason: "sw_failed" };
+  }
+  if (!swRegistration) return { ok: false, reason: "sw_failed" };
 
-  if (!token) return null;
+  let token: string;
+  try {
+    token = await getToken(messaging, {
+      vapidKey,
+      serviceWorkerRegistration: swRegistration,
+    });
+  } catch (e) {
+    console.error("FCM getToken failed:", e);
+    return { ok: false, reason: "token_failed" };
+  }
+  if (!token) return { ok: false, reason: "token_failed" };
 
-  // Save token to the server
   await fetch("/api/fcm-tokens", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, userId }),
   });
 
-  return token;
+  return { ok: true, token };
 }
 
 /**
