@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
+  Camera,
   Check,
   Church,
   CircleDollarSign,
@@ -94,7 +95,10 @@ interface SubmittedRegistration {
   id: string;
   camperName: string;
   parentEmail: string;
+  claimToken: string;
 }
+
+const PENDING_CLAIM_KEY = "ropsPendingClaim";
 
 // ─── ROOT PAGE ──────────────────────────────────────────────────────
 export default function RopsCampPage() {
@@ -255,6 +259,7 @@ function Hero({
   onRegisterClick: () => void;
   onAdminClick: () => void;
 }) {
+  const { firebaseUser, loading: authLoading } = useAuth();
   return (
     <header className="relative overflow-hidden bg-rops-cream rops-grain">
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-10 pt-6 flex items-center justify-between">
@@ -269,12 +274,22 @@ function Hero({
             Dew of Hermon · Tabernacle of David
           </span>
         </div>
-        <button
-          onClick={onAdminClick}
-          className="font-body text-[11px] uppercase tracking-[0.18em] text-rops-taupe hover:text-rops-ink flex items-center gap-1.5 transition-colors"
-        >
-          <Lock size={12} /> Admin
-        </button>
+        <div className="flex items-center gap-5">
+          {!authLoading && firebaseUser ? (
+            <Link
+              href="/dashboard"
+              className="font-body text-[11px] uppercase tracking-[0.18em] text-rops-taupe hover:text-rops-ink flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowLeft size={12} /> Dashboard
+            </Link>
+          ) : null}
+          <button
+            onClick={onAdminClick}
+            className="font-body text-[11px] uppercase tracking-[0.18em] text-rops-taupe hover:text-rops-ink flex items-center gap-1.5 transition-colors"
+          >
+            <Lock size={12} /> Admin
+          </button>
+        </div>
       </div>
 
       <div className="relative max-w-7xl mx-auto px-6 md:px-10 pt-10 md:pt-16 pb-12 md:pb-16">
@@ -726,6 +741,7 @@ function RegistrationForm({
         id: json.registration.id,
         camperName: form.camperName,
         parentEmail: form.parentEmail,
+        claimToken: json.claimToken ?? "",
       });
       onSubmitted();
     } catch {
@@ -1251,13 +1267,30 @@ function Confirmation({
 }) {
   const { firebaseUser, loading: authLoading } = useAuth();
   const firstName = reg.camperName.split(/\s+/)[0] || reg.camperName;
+  const sectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
+  useEffect(() => {
+    if (reg.claimToken && typeof window !== "undefined") {
+      try {
+        window.sessionStorage.setItem(
+          PENDING_CLAIM_KEY,
+          JSON.stringify({ id: reg.id, claimToken: reg.claimToken })
+        );
+      } catch {
+        // sessionStorage may be unavailable (private mode, etc.) — fail silently
+      }
+    }
+  }, [reg.id, reg.claimToken]);
+
   return (
-    <section className="bg-rops-cream py-24 px-6 md:px-10 rops-grain min-h-[80vh] flex items-center">
+    <section
+      ref={sectionRef}
+      className="bg-rops-cream py-24 px-6 md:px-10 rops-grain min-h-[80vh] flex items-center"
+    >
       <div className="max-w-2xl mx-auto text-center">
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-rops-forest mb-8 rise rise-1">
           <Check size={36} className="text-rops-cream" strokeWidth={2.5} />
@@ -1266,7 +1299,7 @@ function Confirmation({
           Registration Received
         </div>
         <h2 className="rise rise-2 font-display text-rops-ink text-5xl tracking-tight mb-4">
-          See you<span className="italic"> in camp,</span>
+          See you at<span className="italic"> ROPs X,</span>
           <br />
           {firstName}!
         </h2>
@@ -1274,6 +1307,20 @@ function Confirmation({
           Your slot has been reserved. Please complete payment within{" "}
           <span className="font-semibold">7 days</span> to confirm.
         </p>
+
+        <div className="rise rise-3 mt-8 bg-rops-cream-2 border border-rops-ember/30 rounded-sm p-5 md:p-6">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Camera size={16} className="text-rops-ember" />
+            <span className="font-body text-[11px] uppercase tracking-[0.22em] text-rops-ember">
+              Help build the hype
+            </span>
+          </div>
+          <p className="font-body text-rops-ink-2 text-sm leading-relaxed">
+            Take a screenshot of this page and drop it in the camp WhatsApp
+            group — let everyone know you&rsquo;re in and help us turn up the
+            heat for ROPs X.
+          </p>
+        </div>
 
         <div className="rise rise-4 mt-10">
           <PaymentInstructionsCard
@@ -1335,7 +1382,7 @@ function Footer({ onAdminClick }: { onAdminClick: () => void }) {
         <div className="absolute inset-0 grad-footer-up" />
         <div className="absolute inset-0 flex items-end justify-center pb-6">
           <span className="font-display italic text-rops-cream text-2xl md:text-3xl tracking-tight">
-            See you in camp.
+            See you at ROPs X.
           </span>
         </div>
       </div>

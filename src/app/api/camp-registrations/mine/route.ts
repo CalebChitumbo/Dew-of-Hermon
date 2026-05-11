@@ -36,9 +36,9 @@ export async function GET() {
 
     const emails = Array.from(
       new Set(
-        [tokenEmail, profileEmail].filter(
-          (e): e is string => !!e && e.length > 0
-        )
+        [tokenEmail, profileEmail]
+          .filter((e): e is string => !!e && e.length > 0)
+          .map((e) => e.toLowerCase())
       )
     );
 
@@ -51,13 +51,15 @@ export async function GET() {
     byUidSnap.docs.forEach((doc) => collected.set(doc.id, doc.data()));
 
     for (const email of emails) {
-      const byEmailSnap = await adminDb
-        .collection("campRegistrations")
-        .where("parentEmail", "==", email)
-        .get();
-      byEmailSnap.docs.forEach((doc) => {
-        if (!collected.has(doc.id)) collected.set(doc.id, doc.data());
-      });
+      for (const field of ["parentEmail", "email"] as const) {
+        const byEmailSnap = await adminDb
+          .collection("campRegistrations")
+          .where(field, "==", email)
+          .get();
+        byEmailSnap.docs.forEach((doc) => {
+          if (!collected.has(doc.id)) collected.set(doc.id, doc.data());
+        });
+      }
     }
 
     const registrations = Array.from(collected.entries())
