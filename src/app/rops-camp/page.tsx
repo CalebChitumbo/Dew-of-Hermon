@@ -1339,7 +1339,7 @@ function Footer({ onAdminClick }: { onAdminClick: () => void }) {
         <div className="absolute inset-0 grad-footer-up" />
         <div className="absolute inset-0 flex items-end justify-center pb-6">
           <span className="font-display italic text-rops-cream text-2xl md:text-3xl tracking-tight">
-            See you in camp.
+            See you at ROPs X.
           </span>
         </div>
       </div>

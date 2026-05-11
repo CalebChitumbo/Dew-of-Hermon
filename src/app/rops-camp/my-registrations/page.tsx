@@ -206,8 +206,8 @@ function RegistrationCard({ reg }: { reg: MyRegistration }) {
 
       {reg.paymentStatus === "PAID" ? (
         <div className="bg-rops-cream border border-rops-line rounded-sm p-5 font-body text-sm text-rops-ink-2 leading-relaxed">
-          We&rsquo;ve received your payment for {reg.firstName}. See you in
-          camp!
+          We&rsquo;ve received your payment for {reg.firstName}. See you at
+          ROPs X!
         </div>
       ) : (
         <PaymentInstructionsCard
