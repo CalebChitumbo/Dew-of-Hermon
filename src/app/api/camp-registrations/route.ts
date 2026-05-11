@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { randomBytes } from "crypto";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { getCamp, DEFAULT_CAMP_ID } from "@/lib/camps";
 import {
@@ -26,6 +27,11 @@ const VALID_DROPOFF: CampDropoffLocation[] = ["CHURCH", "CAMPSITE"];
 
 function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function optionalEmail(value: unknown): string | null {
+  const trimmed = optionalString(value);
+  return trimmed ? trimmed.toLowerCase() : null;
 }
 
 /**
@@ -170,6 +176,7 @@ export async function POST(request: Request) {
 
     const now = new Date();
     const ref = adminDb.collection("campRegistrations").doc();
+    const claimToken = randomBytes(24).toString("hex");
 
     const registrationData = {
       campId,
@@ -179,7 +186,7 @@ export async function POST(request: Request) {
       dateOfBirth: body.dateOfBirth.trim(),
       gender,
       phone: body.phone.trim(),
-      email: optionalString(body.email),
+      email: optionalEmail(body.email),
       churchOrSchool: optionalString(body.churchOrSchool) ?? "",
       emergencyContactName: body.emergencyContactName.trim(),
       emergencyContactPhone: body.emergencyContactPhone.trim(),
@@ -192,13 +199,14 @@ export async function POST(request: Request) {
       parentName: optionalString(body.parentName),
       parentRelationship: optionalString(body.parentRelationship),
       parentAltPhone: optionalString(body.parentAltPhone),
-      parentEmail: optionalString(body.parentEmail),
+      parentEmail: optionalEmail(body.parentEmail),
       address: optionalString(body.address),
       dropoffLocation,
       notes: optionalString(body.notes),
       consentGiven: !!body.consentGiven,
       submittedByUid: submitter?.uid ?? null,
-      submittedByEmail: submitter?.email ?? null,
+      submittedByEmail: submitter?.email?.toLowerCase() ?? null,
+      claimToken,
       paymentStatus: "UNPAID" as CampPaymentStatus,
       paymentAmount: null,
       paymentReference: null,
@@ -215,6 +223,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         registration: serializeRegistration(ref.id, registrationData),
+        claimToken,
         camp: { id: camp.id, name: camp.name, fee: camp.fee, currency: camp.currency },
       },
       { status: 201 }

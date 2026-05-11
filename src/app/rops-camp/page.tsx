@@ -94,7 +94,10 @@ interface SubmittedRegistration {
   id: string;
   camperName: string;
   parentEmail: string;
+  claimToken: string;
 }
+
+const PENDING_CLAIM_KEY = "ropsPendingClaim";
 
 // ─── ROOT PAGE ──────────────────────────────────────────────────────
 export default function RopsCampPage() {
@@ -726,6 +729,7 @@ function RegistrationForm({
         id: json.registration.id,
         camperName: form.camperName,
         parentEmail: form.parentEmail,
+        claimToken: json.claimToken ?? "",
       });
       onSubmitted();
     } catch {
@@ -1256,6 +1260,19 @@ function Confirmation({
   useEffect(() => {
     sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
+
+  useEffect(() => {
+    if (reg.claimToken && typeof window !== "undefined") {
+      try {
+        window.sessionStorage.setItem(
+          PENDING_CLAIM_KEY,
+          JSON.stringify({ id: reg.id, claimToken: reg.claimToken })
+        );
+      } catch {
+        // sessionStorage may be unavailable (private mode, etc.) — fail silently
+      }
+    }
+  }, [reg.id, reg.claimToken]);
 
   return (
     <section

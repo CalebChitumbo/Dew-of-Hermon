@@ -21,6 +21,33 @@ import { RopsFontStyles } from "@/components/rops-camp/RopsFontStyles";
 
 const camp = CAMPS[0];
 
+const PENDING_CLAIM_KEY = "ropsPendingClaim";
+
+interface PendingClaim {
+  id: string;
+  claimToken: string;
+}
+
+function consumePendingClaim(): PendingClaim | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_CLAIM_KEY);
+    if (!raw) return null;
+    window.sessionStorage.removeItem(PENDING_CLAIM_KEY);
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.id === "string" &&
+      typeof parsed.claimToken === "string"
+    ) {
+      return parsed;
+    }
+  } catch {
+    // ignore parse / storage errors
+  }
+  return null;
+}
+
 interface MyRegistration {
   id: string;
   campId: string;
@@ -46,6 +73,25 @@ export default function MyRegistrationsPage() {
     setLoading(true);
     setError(null);
     try {
+      const pending = consumePendingClaim();
+      if (pending) {
+        // Attach the registration to this account before listing. We ignore
+        // errors here because the registration may still surface via the
+        // email-based fallback in /api/camp-registrations/mine.
+        try {
+          await fetchWithAuth(
+            `/api/camp-registrations/${encodeURIComponent(pending.id)}/claim`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ claimToken: pending.claimToken }),
+            }
+          );
+        } catch {
+          // proceed to list regardless
+        }
+      }
+
       const res = await fetchWithAuth("/api/camp-registrations/mine");
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
