@@ -134,7 +134,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
-    MEMBER: "none",
+    MEMBER: "view",
   },
   departments: {
     SUPER_ADMIN: "edit",
