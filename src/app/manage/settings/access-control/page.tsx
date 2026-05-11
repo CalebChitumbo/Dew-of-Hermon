@@ -34,6 +34,11 @@ import {
   Trash2,
   Users,
   Building2,
+  UserCog,
+  ChevronDown,
+  ChevronRight,
+  Check,
+  X,
 } from "lucide-react";
 import {
   AccessLevel,
@@ -48,6 +53,7 @@ import {
   FEATURE_DEFINITIONS,
   DEFAULT_FEATURE_MIN_ROLES,
   DEFAULT_DEPARTMENT_ACCESS_RULES,
+  DEPARTMENTAL_MANAGERS,
 } from "@/lib/access-control";
 import { roleLabels } from "@/lib/permissions";
 import { getDocs } from "firebase/firestore";
@@ -512,17 +518,43 @@ function AccessControlContent() {
         </CardContent>
       </Card>
 
-      {/* ─── Section 3: Department Access Rules ─── */}
+      {/* ─── Section 3: Departmental Manager Permissions ─── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCog className="h-5 w-5" />
+            Departmental Manager Permissions
+          </CardTitle>
+          <CardDescription>
+            For each departmental manager, choose what their department lead and
+            youth leaders can do. Changes here apply to anyone holding that
+            position in the specific department.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DepartmentalManagerPermissions
+            rules={deptRules}
+            departments={departments}
+            onChange={setDeptRules}
+          />
+        </CardContent>
+      </Card>
+
+      {/* ─── Section 4: Department Access Rules (advanced) ─── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
             Department Access Rules
+            <span className="text-xs font-normal text-clay-400 ml-1">
+              (advanced)
+            </span>
           </CardTitle>
           <CardDescription>
             Grant additional access to features based on department membership or
             leadership. These rules allow users below the minimum role to access
-            features if they belong to specific departments.
+            features if they belong to specific departments. The simpler
+            departmental-manager view above edits the same rules.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1008,5 +1040,332 @@ function AddRuleForm({
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Departmental Manager Permissions ───
+//
+// Department-centric view of the same DepartmentAccessRule list edited by the
+// advanced "Department Access Rules" section. For each managed department it
+// renders one row per feature with two checkboxes — one for the department
+// lead, one for the youth leaders inside that department. Toggling a checkbox
+// adds or removes the matching DepartmentAccessRule.
+
+type DeptManagerRole = "DEPARTMENT_LEAD" | "YOUTH_LEADER";
+
+const DEPT_MANAGER_FEATURES = FEATURE_DEFINITIONS.filter(
+  (f) => f.supportsDepartmentRules
+);
+
+/**
+ * Returns true if the existing rule list already grants `role` access to
+ * `featureKey` within `departmentName`. Handles all the shapes a saved rule
+ * can take (empty allowedRoles = any role, requiresLeadership variations,
+ * combined allowedRoles arrays, etc.).
+ */
+function isRoleGrantedByRules(
+  rules: DepartmentAccessRule[],
+  featureKey: string,
+  departmentName: string,
+  role: DeptManagerRole
+): boolean {
+  for (const rule of rules) {
+    if (rule.featureKey !== featureKey) continue;
+    if (rule.departmentName !== departmentName) continue;
+    // Youth leaders are never department leaders, so a leadership-required
+    // rule cannot grant them access.
+    if (role === "YOUTH_LEADER" && rule.requiresLeadership) continue;
+    if (rule.allowedRoles.length === 0) return true;
+    if (rule.allowedRoles.includes(role)) return true;
+  }
+  return false;
+}
+
+/**
+ * Surgically remove a role's grant for (feature, department) from the rule
+ * list. Existing rules that also grant other roles are preserved (the role is
+ * just trimmed out of allowedRoles). Rules whose allowedRoles would become
+ * empty are dropped entirely.
+ */
+function revokeRoleFromRules(
+  rules: DepartmentAccessRule[],
+  featureKey: string,
+  departmentName: string,
+  role: DeptManagerRole
+): DepartmentAccessRule[] {
+  const next: DepartmentAccessRule[] = [];
+
+  for (const rule of rules) {
+    if (
+      rule.featureKey !== featureKey ||
+      rule.departmentName !== departmentName
+    ) {
+      next.push(rule);
+      continue;
+    }
+
+    if (role === "YOUTH_LEADER" && rule.requiresLeadership) {
+      // Doesn't grant youth leaders anyway.
+      next.push(rule);
+      continue;
+    }
+
+    if (
+      rule.allowedRoles.length > 0 &&
+      !rule.allowedRoles.includes(role)
+    ) {
+      // Doesn't grant the role being revoked.
+      next.push(rule);
+      continue;
+    }
+
+    if (rule.allowedRoles.length === 0) {
+      // "Any role" rule — replace with an explicit list excluding `role`.
+      const remaining: UserRole[] = (
+        ["DEPARTMENT_LEAD", "YOUTH_LEADER", "MEMBER"] as UserRole[]
+      ).filter((r) => r !== role);
+      next.push({ ...rule, allowedRoles: remaining });
+      continue;
+    }
+
+    const remaining = rule.allowedRoles.filter((r) => r !== role);
+    if (remaining.length > 0) {
+      next.push({ ...rule, allowedRoles: remaining });
+    }
+    // else drop the rule
+  }
+
+  return next;
+}
+
+/**
+ * Add a canonical rule granting `role` access to `featureKey` for
+ * `departmentName`. Idempotent — if the rule list already grants the role
+ * access (via any shape of rule), the list is returned unchanged.
+ */
+function grantRoleInRules(
+  rules: DepartmentAccessRule[],
+  featureKey: string,
+  departmentName: string,
+  role: DeptManagerRole
+): DepartmentAccessRule[] {
+  if (isRoleGrantedByRules(rules, featureKey, departmentName, role)) {
+    return rules;
+  }
+  return [
+    ...rules,
+    {
+      featureKey,
+      departmentName,
+      requiresLeadership: role === "DEPARTMENT_LEAD",
+      allowedRoles: [role],
+    },
+  ];
+}
+
+function DepartmentalManagerPermissions({
+  rules,
+  departments,
+  onChange,
+}: {
+  rules: DepartmentAccessRule[];
+  departments: DepartmentOption[];
+  onChange: (rules: DepartmentAccessRule[]) => void;
+}) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  const knownDeptNames = useMemo(
+    () => new Set(departments.map((d) => d.name)),
+    [departments]
+  );
+
+  // Group features by category for readability inside each department card.
+  const featuresByCategory = useMemo(() => {
+    const map = new Map<string, typeof DEPT_MANAGER_FEATURES>();
+    for (const feat of DEPT_MANAGER_FEATURES) {
+      const list = map.get(feat.category) ?? [];
+      list.push(feat);
+      map.set(feat.category, list);
+    }
+    return Array.from(map.entries());
+  }, []);
+
+  const toggleExpanded = (deptName: string) =>
+    setExpanded((prev) => ({ ...prev, [deptName]: !prev[deptName] }));
+
+  const toggleRole = useCallback(
+    (
+      featureKey: string,
+      departmentName: string,
+      role: DeptManagerRole,
+      nextValue: boolean
+    ) => {
+      onChange(
+        nextValue
+          ? grantRoleInRules(rules, featureKey, departmentName, role)
+          : revokeRoleFromRules(rules, featureKey, departmentName, role)
+      );
+    },
+    [rules, onChange]
+  );
+
+  return (
+    <div className="space-y-3">
+      {DEPARTMENTAL_MANAGERS.map((manager) => {
+        const deptName = manager.departmentName;
+        const displayName = manager.displayName ?? manager.departmentName;
+        const isExpanded = expanded[deptName] ?? false;
+        const departmentExists = knownDeptNames.has(deptName);
+
+        // Show a quick summary count of granted (feature × role) pairs so
+        // the admin gets a sense of how locked-down each department is
+        // without expanding it.
+        let leadCount = 0;
+        let youthCount = 0;
+        for (const feat of DEPT_MANAGER_FEATURES) {
+          if (isRoleGrantedByRules(rules, feat.key, deptName, "DEPARTMENT_LEAD"))
+            leadCount++;
+          if (isRoleGrantedByRules(rules, feat.key, deptName, "YOUTH_LEADER"))
+            youthCount++;
+        }
+
+        return (
+          <div
+            key={deptName}
+            className="border border-clay-200 rounded-lg overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={() => toggleExpanded(deptName)}
+              className="w-full px-4 py-3 bg-clay-50 hover:bg-clay-100 transition-colors flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4 text-clay-500 flex-shrink-0" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-clay-500 flex-shrink-0" />
+                )}
+                <div className="text-left min-w-0">
+                  <div className="font-medium text-sm text-clay-700 truncate">
+                    {displayName}
+                  </div>
+                  {!departmentExists && (
+                    <div className="text-[11px] text-amber-600">
+                      Department record not found in Firestore — run the
+                      seed-departmental-managers script.
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Badge variant="outline" className="text-[10px] bg-white">
+                  Lead: {leadCount}
+                </Badge>
+                <Badge variant="outline" className="text-[10px] bg-white">
+                  Youth Leaders: {youthCount}
+                </Badge>
+              </div>
+            </button>
+
+            {isExpanded && (
+              <div className="divide-y divide-clay-100">
+                {featuresByCategory.map(([category, features]) => (
+                  <div key={category} className="px-4 py-3">
+                    <h5 className="text-[11px] font-semibold uppercase tracking-wide text-clay-500 mb-2">
+                      {category}
+                    </h5>
+                    <div className="space-y-1.5">
+                      {features.map((feat) => {
+                        const leadAllowed = isRoleGrantedByRules(
+                          rules,
+                          feat.key,
+                          deptName,
+                          "DEPARTMENT_LEAD"
+                        );
+                        const youthAllowed = isRoleGrantedByRules(
+                          rules,
+                          feat.key,
+                          deptName,
+                          "YOUTH_LEADER"
+                        );
+
+                        return (
+                          <div
+                            key={feat.key}
+                            className="flex flex-col sm:flex-row sm:items-center gap-2 py-1.5 px-2 rounded hover:bg-clay-50/60"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm text-clay-700">
+                                {feat.label}
+                              </div>
+                              <div className="text-[11px] text-clay-400">
+                                {feat.description}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                              <RoleToggle
+                                label="Lead"
+                                checked={leadAllowed}
+                                onChange={(v) =>
+                                  toggleRole(
+                                    feat.key,
+                                    deptName,
+                                    "DEPARTMENT_LEAD",
+                                    v
+                                  )
+                                }
+                              />
+                              <RoleToggle
+                                label="Youth Leaders"
+                                checked={youthAllowed}
+                                onChange={(v) =>
+                                  toggleRole(
+                                    feat.key,
+                                    deptName,
+                                    "YOUTH_LEADER",
+                                    v
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RoleToggle({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  const Icon = checked ? Check : X;
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className={`flex items-center gap-1.5 h-7 px-2 rounded-md border text-xs transition-colors ${
+        checked
+          ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+          : "bg-white border-clay-200 text-clay-400 hover:bg-clay-50"
+      }`}
+      aria-pressed={checked}
+    >
+      <Icon className="h-3 w-3" />
+      <span className="whitespace-nowrap">{label}</span>
+    </button>
   );
 }
