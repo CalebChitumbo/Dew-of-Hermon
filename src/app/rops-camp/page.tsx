@@ -1251,13 +1251,17 @@ function Confirmation({
 }) {
   const { firebaseUser, loading: authLoading } = useAuth();
   const firstName = reg.camperName.split(/\s+/)[0] || reg.camperName;
+  const sectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
   return (
-    <section className="bg-rops-cream py-24 px-6 md:px-10 rops-grain min-h-[80vh] flex items-center">
+    <section
+      ref={sectionRef}
+      className="bg-rops-cream py-24 px-6 md:px-10 rops-grain min-h-[80vh] flex items-center"
+    >
       <div className="max-w-2xl mx-auto text-center">
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-rops-forest mb-8 rise rise-1">
           <Check size={36} className="text-rops-cream" strokeWidth={2.5} />
@@ -1266,7 +1270,7 @@ function Confirmation({
           Registration Received
         </div>
         <h2 className="rise rise-2 font-display text-rops-ink text-5xl tracking-tight mb-4">
-          See you<span className="italic"> in camp,</span>
+          See you at<span className="italic"> ROPs X,</span>
           <br />
           {firstName}!
         </h2>
