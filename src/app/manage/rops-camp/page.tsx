@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -148,8 +147,6 @@ function RopsCampAdminInner() {
     });
   }, [rows, search, statusFilter]);
 
-  const capacityPct = Math.min(100, Math.round((rows.length / camp.capacity) * 100));
-
   const quickToggle = async (row: RegistrationRow) => {
     const next: CampPaymentStatus = row.paymentStatus === "PAID" ? "UNPAID" : "PAID";
     try {
@@ -217,9 +214,8 @@ function RopsCampAdminInner() {
         <StatCard
           icon={Users}
           label="Registered"
-          value={`${stats.total} / ${camp.capacity}`}
+          value={stats.total}
           accent="bg-teal/10 text-teal"
-          extra={<Progress value={capacityPct} className="mt-2 h-1.5" />}
         />
         <StatCard
           icon={CheckCircle2}
