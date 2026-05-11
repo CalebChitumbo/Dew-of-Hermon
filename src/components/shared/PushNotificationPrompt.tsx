@@ -2,10 +2,58 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { requestPushPermissionAndToken, onForegroundMessage } from "@/lib/fcm";
+import {
+  requestPushPermissionAndToken,
+  onForegroundMessage,
+  type PushPermissionFailureReason,
+} from "@/lib/fcm";
 import { useToast } from "@/hooks/use-toast";
 import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+function failureMessage(reason: PushPermissionFailureReason): {
+  title: string;
+  description: string;
+} {
+  switch (reason) {
+    case "denied":
+      return {
+        title: "Notifications blocked",
+        description:
+          "Notifications are blocked for this site. Enable them in your browser's site settings, then try again.",
+      };
+    case "dismissed":
+      return {
+        title: "Permission needed",
+        description:
+          'Click "Enable" again and choose "Allow" on the browser prompt to receive push alerts.',
+      };
+    case "unsupported":
+      return {
+        title: "Not supported on this browser",
+        description:
+          "Your browser doesn't support web push notifications. Try a recent version of Chrome, Edge, Firefox, or Safari 16.4+.",
+      };
+    case "sw_failed":
+      return {
+        title: "Couldn't enable notifications",
+        description:
+          "We couldn't register the background service. Please reload the page and try again.",
+      };
+    case "config_missing":
+      return {
+        title: "Notifications unavailable",
+        description:
+          "Push notifications aren't fully configured for this app. Please contact support.",
+      };
+    case "token_failed":
+      return {
+        title: "Couldn't enable notifications",
+        description:
+          "We couldn't register your device with the notification service. Please try again in a moment.",
+      };
+  }
+}
 
 /**
  * Shows a non-intrusive banner prompting the user to enable push notifications.
@@ -63,18 +111,26 @@ export function PushNotificationPrompt() {
     if (!firebaseUser) return;
     setRequesting(true);
     try {
-      const token = await requestPushPermissionAndToken(firebaseUser.uid);
-      if (token) {
+      const result = await requestPushPermissionAndToken(firebaseUser.uid);
+      if (result.ok) {
         toast({
           title: "Notifications enabled",
           description: "You'll now receive push notifications for service reminders and assignments.",
         });
+        setShowBanner(false);
       } else {
-        toast({
-          title: "Notifications blocked",
-          description: "Please enable notifications in your browser settings to receive push alerts.",
-          variant: "destructive",
-        });
+        const { title, description } = failureMessage(result.reason);
+        toast({ title, description, variant: "destructive" });
+        // Keep the banner open so the user can retry after a transient failure,
+        // but hide it on terminal failures (denied / unsupported) where retrying
+        // from this UI won't help.
+        if (
+          result.reason === "denied" ||
+          result.reason === "unsupported" ||
+          result.reason === "config_missing"
+        ) {
+          setShowBanner(false);
+        }
       }
     } catch (error) {
       console.error("Push registration failed:", error);
@@ -84,7 +140,6 @@ export function PushNotificationPrompt() {
         variant: "destructive",
       });
     } finally {
-      setShowBanner(false);
       setRequesting(false);
     }
   };
