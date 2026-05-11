@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   query,
@@ -77,6 +77,43 @@ function greeting(now: Date): string {
   return "Good evening";
 }
 
+// Hero gradient drifts a little with the time of day — morning is cooler & dewy,
+// afternoon is warmer gold, evening leans deeper amber. Same palette throughout.
+function heroBackground(now: Date): string {
+  const h = now.getHours();
+  if (h < 12) {
+    return "radial-gradient(circle at 0% 0%, rgba(200,150,62,0.13), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.12), transparent 50%), linear-gradient(135deg, #FFFDF8 0%, #FFFFFF 60%, rgba(74,155,142,0.05) 100%)";
+  }
+  if (h < 17) {
+    return "radial-gradient(circle at 0% 0%, rgba(200,150,62,0.18), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.08), transparent 50%), linear-gradient(135deg, #FFF8F0 0%, #FFFFFF 55%, rgba(200,150,62,0.10) 100%)";
+  }
+  return "radial-gradient(circle at 0% 0%, rgba(154,114,48,0.20), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.10), transparent 55%), linear-gradient(135deg, #FFF8F0 0%, #FAEBD7 55%, rgba(154,114,48,0.12) 100%)";
+}
+
+// Tweens a number from its previous value up to the target with an ease-out cubic.
+// Avoids any animation dep — small enough to inline.
+function useCountUp(target: number, duration = 900): number {
+  const [value, setValue] = useState(0);
+  const prev = useRef(0);
+  useEffect(() => {
+    if (Number.isNaN(target)) return;
+    let raf = 0;
+    const start = performance.now();
+    const initial = prev.current;
+    const tick = (t: number) => {
+      const elapsed = t - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(initial + (target - initial) * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+      else prev.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
 const EVENT_TYPE_META: Record<
   EventType,
   { label: string; tone: string; icon: React.ElementType }
@@ -116,14 +153,34 @@ function ReadinessRing({
         ? ["#E0B872", "#C8963E", "#9A7230"]
         : ["#FCA5A5", "#EF4444", "#B91C1C"];
 
+  // Animate-in: render the ring at 0% on first paint, then transition to
+  // the real offset so it "draws" itself in. Subsequent data changes
+  // animate smoothly via the same CSS transition.
+  const [hasAnimated, setHasAnimated] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setHasAnimated(true), 80);
+    return () => window.clearTimeout(t);
+  }, []);
+  const renderedOffset = hasAnimated ? dashOffset : circumference;
+
+  const isFull = total > 0 && filled >= total;
+  const displayedPercent = useCountUp(Math.round(percentage));
+
   return (
     <div className="relative inline-flex items-center justify-center">
       {/* Soft halo behind the ring */}
       <span
         aria-hidden
-        className="absolute inset-0 rounded-full blur-2xl opacity-30"
+        className="absolute inset-0 rounded-full blur-2xl opacity-30 transition-colors duration-700"
         style={{ backgroundColor: color }}
       />
+      {/* When fully staffed, breathe a gentle teal glow */}
+      {isFull && (
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-full animate-ring-glow"
+        />
+      )}
       <svg
         width={size}
         height={size}
@@ -154,12 +211,12 @@ function ReadinessRing({
           fill="none"
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={dashOffset}
-          className="transition-all duration-700 ease-out"
+          strokeDashoffset={renderedOffset}
+          className="transition-all duration-[1100ms] ease-out"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-display font-bold text-clay-700 leading-none">
+        <span className="text-3xl font-display font-bold text-clay-700 leading-none tabular-nums">
           {total > 0 ? `${filled}/${total}` : "—"}
         </span>
         <span className="text-[10px] text-clay-400 uppercase tracking-[0.16em] mt-1.5">
@@ -167,10 +224,32 @@ function ReadinessRing({
         </span>
         {total > 0 && (
           <span
-            className="text-[10px] font-medium mt-0.5"
+            className="text-[10px] font-medium mt-0.5 tabular-nums transition-colors duration-700"
             style={{ color }}
           >
-            {Math.round(percentage)}%
+            {displayedPercent}%
+          </span>
+        )}
+        {isFull && (
+          <span className="mt-1.5 inline-flex items-center gap-1 text-[9px] font-medium uppercase tracking-[0.14em] text-teal">
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 14 14"
+              fill="none"
+              className="text-teal"
+            >
+              <path
+                d="M3 7.5 L6 10.5 L11 4.5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="24"
+                className="animate-draw-check"
+              />
+            </svg>
+            Fully staffed
           </span>
         )}
       </div>
@@ -188,6 +267,9 @@ function PulseTile({
   value,
   hint,
   highlight = false,
+  size = "default",
+  progress,
+  trend,
 }: {
   href: string;
   icon: React.ElementType;
@@ -196,11 +278,37 @@ function PulseTile({
   value: React.ReactNode;
   hint?: string;
   highlight?: boolean;
+  size?: "default" | "wide" | "tall";
+  progress?: { filled: number; total: number; tone?: "gold" | "teal" | "red" };
+  trend?: { label: string; direction?: "up" | "down" | "flat" };
 }) {
+  // If value is a plain number, animate it counting up.
+  const numericValue = typeof value === "number" ? value : null;
+  const countedValue = useCountUp(numericValue ?? 0);
+  const displayed = numericValue !== null ? countedValue : value;
+
+  const spanClass =
+    size === "wide"
+      ? "md:col-span-2"
+      : size === "tall"
+        ? "md:row-span-2"
+        : "";
+
+  const progressGradient =
+    progress?.tone === "teal"
+      ? "from-teal-light via-teal to-teal-dark"
+      : progress?.tone === "red"
+        ? "from-red-300 via-red-400 to-red-500"
+        : "from-gold-light via-gold to-gold-dark";
+
+  const progressPct = progress && progress.total > 0
+    ? Math.min(100, Math.round((progress.filled / progress.total) * 100))
+    : 0;
+
   return (
-    <Link href={href} className="block group focus:outline-none">
+    <Link href={href} className={`block group focus:outline-none ${spanClass}`}>
       <Card
-        className={`relative h-full overflow-hidden border-clay-200/70 bg-gradient-to-br from-white to-cream/70 transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-gold/60 group-hover:shadow-[0_10px_30px_-12px_rgba(200,150,62,0.35)] group-focus-visible:ring-2 group-focus-visible:ring-gold/50 ${
+        className={`relative h-full overflow-hidden border-clay-200/70 bg-gradient-to-br from-white to-cream/70 transition-all duration-300 ease-out group-hover:-translate-y-1 group-hover:border-gold/60 group-hover:shadow-[0_18px_40px_-18px_rgba(200,150,62,0.45)] group-focus-visible:ring-2 group-focus-visible:ring-gold/50 ${
           highlight ? "border-red-200/80 bg-gradient-to-br from-red-50/40 to-cream/40" : ""
         }`}
       >
@@ -210,35 +318,77 @@ function PulseTile({
           className={`absolute inset-x-0 top-0 h-0.5 ${
             highlight
               ? "bg-gradient-to-r from-red-400/0 via-red-400/70 to-red-400/0"
-              : "bg-gradient-to-r from-gold/0 via-gold/40 to-gold/0"
+              : "bg-gradient-to-r from-gold/0 via-gold/50 to-gold/0"
           } opacity-0 group-hover:opacity-100 transition-opacity`}
         />
         {/* Subtle corner glow */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-10 -right-10 h-24 w-24 rounded-full bg-gold/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          className="pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full bg-gold/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
         />
+        {/* Wide tiles get an extra ambient blob */}
+        {size === "wide" && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -bottom-12 -left-8 h-32 w-32 rounded-full bg-teal/10 blur-3xl opacity-60"
+          />
+        )}
 
         <CardContent className="relative p-4 md:p-5 flex flex-col gap-3 h-full">
           <div className="flex items-center justify-between">
             <div
-              className={`relative flex h-10 w-10 items-center justify-center rounded-xl ${iconTone} ring-1 ring-inset ring-white/40 shadow-sm transition-transform duration-300 group-hover:scale-105`}
+              className={`relative flex h-10 w-10 items-center justify-center rounded-xl ${iconTone} ring-1 ring-inset ring-white/40 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3`}
             >
               <Icon className="h-5 w-5" />
             </div>
-            <ChevronRight className="h-4 w-4 text-clay-300 transition-all duration-300 group-hover:text-gold group-hover:translate-x-0.5" />
+            <div className="flex items-center gap-2">
+              {trend && (
+                <span
+                  className={`hidden sm:inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                    trend.direction === "up"
+                      ? "bg-teal/10 text-teal"
+                      : trend.direction === "down"
+                        ? "bg-red-50 text-red-500"
+                        : "bg-clay-100 text-clay-500"
+                  }`}
+                >
+                  {trend.direction === "up" ? "↑" : trend.direction === "down" ? "↓" : "·"}
+                  {trend.label}
+                </span>
+              )}
+              <ChevronRight className="h-4 w-4 text-clay-300 transition-all duration-300 group-hover:text-gold group-hover:translate-x-0.5" />
+            </div>
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] font-medium">
               {label}
             </p>
-            <p className="text-2xl md:text-[1.6rem] font-display font-bold text-clay-700 mt-1 leading-tight">
-              {value}
+            <p
+              className={`font-display font-bold text-clay-700 mt-1 leading-tight tabular-nums ${
+                size === "wide"
+                  ? "text-3xl md:text-4xl"
+                  : "text-2xl md:text-[1.6rem]"
+              }`}
+            >
+              {displayed}
             </p>
             {hint && (
               <p className="text-xs text-clay-400 mt-1 line-clamp-1">
                 {hint}
               </p>
+            )}
+            {progress && progress.total > 0 && (
+              <div className="mt-3">
+                <div className="h-1.5 rounded-full bg-clay-100/80 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full bg-gradient-to-r ${progressGradient} transition-[width] duration-1000 ease-out shadow-[0_0_8px_rgba(200,150,62,0.35)]`}
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-[10px] text-clay-400 tabular-nums">
+                  {progressPct}% complete
+                </p>
+              </div>
             )}
           </div>
           {highlight && (
@@ -297,6 +447,123 @@ function ActivityItem({
     </Link>
   ) : (
     inner
+  );
+}
+
+// ─── Service Readiness Panel ─────────────────────────────────────────────
+
+function ServiceReadinessPanel({
+  nextEvent,
+  nextService,
+  filled,
+  total,
+  confirmedCount,
+  pendingCount,
+  openCount,
+}: {
+  nextEvent: AppEvent;
+  nextService: Service | null;
+  filled: number;
+  total: number;
+  confirmedCount: number;
+  pendingCount: number;
+  openCount: number;
+}) {
+  const confirmedDisplay = useCountUp(confirmedCount);
+  const pendingDisplay = useCountUp(pendingCount);
+  const openDisplay = useCountUp(openCount);
+  const isFull = total > 0 && filled >= total;
+
+  return (
+    <section>
+      <Card
+        className="relative overflow-hidden border-clay-200/70"
+        style={{
+          backgroundImage: isFull
+            ? "linear-gradient(135deg, #FFFFFF 0%, rgba(74,155,142,0.06) 60%, rgba(74,155,142,0.10) 100%)"
+            : "linear-gradient(135deg, #FFFFFF 0%, #FFF8F0 60%, rgba(200,150,62,0.05) 100%)",
+        }}
+      >
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full blur-3xl transition-colors duration-700 ${
+            isFull ? "bg-teal/15" : "bg-gold/10"
+          }`}
+        />
+        <CardHeader className="pb-3 relative">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg ring-1 ring-inset transition-colors duration-700 ${
+                    isFull
+                      ? "bg-teal/15 ring-teal/20"
+                      : "bg-gold/15 ring-gold/20"
+                  }`}
+                >
+                  <ClipboardList
+                    className={`h-4 w-4 transition-colors duration-700 ${
+                      isFull ? "text-teal" : "text-gold-dark"
+                    }`}
+                  />
+                </span>
+                Next service at a glance
+              </CardTitle>
+              <CardDescription className="ml-10">
+                {nextEvent.title} ·{" "}
+                {format(nextEvent.startDate, "EEE, MMM d")}
+                {nextService?.serviceTime ? ` · ${nextService.serviceTime}` : ""}
+              </CardDescription>
+            </div>
+            <Link href="/manage/services">
+              <Button variant="outline" size="sm">
+                View full rota
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="relative">
+          {isFull && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-teal/25 bg-teal/8 px-3 py-2 text-xs font-medium text-teal-dark animate-float-up">
+              <Sparkles className="h-3.5 w-3.5 animate-sparkle-pulse" />
+              <span>Every role is filled. The team is ready.</span>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+            <div className="flex justify-center md:justify-start">
+              <ReadinessRing filled={filled} total={total} size={140} />
+            </div>
+            <div className="md:col-span-2 grid grid-cols-3 gap-3 text-center">
+              <div className="rounded-xl border border-teal/15 bg-white/70 backdrop-blur-sm py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-12px_rgba(74,155,142,0.4)]">
+                <p className="text-3xl font-display font-bold text-teal leading-none tabular-nums">
+                  {confirmedDisplay}
+                </p>
+                <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
+                  Confirmed
+                </p>
+              </div>
+              <div className="rounded-xl border border-gold/20 bg-white/70 backdrop-blur-sm py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-12px_rgba(200,150,62,0.4)]">
+                <p className="text-3xl font-display font-bold text-gold-dark leading-none tabular-nums">
+                  {pendingDisplay}
+                </p>
+                <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
+                  Pending
+                </p>
+              </div>
+              <div className="rounded-xl border border-red-200/60 bg-white/70 backdrop-blur-sm py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_-12px_rgba(239,68,68,0.35)]">
+                <p className="text-3xl font-display font-bold text-red-500 leading-none tabular-nums">
+                  {openDisplay}
+                </p>
+                <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
+                  Open
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
@@ -755,6 +1022,19 @@ export default function DashboardPage() {
   const filledCount = assignments.length;
   const unassignedCount = Math.max(0, totalRoles - filledCount);
 
+  // Days-until-next chip in the hero
+  const daysUntilNext = useMemo(() => {
+    if (!nextEvent) return null;
+    const diff = nextEvent.startDate.getTime() - Date.now();
+    if (diff < 0) return 0;
+    return Math.ceil(diff / 86400000);
+  }, [nextEvent]);
+
+  // Count-up values for the hero admin stats. Hooks always run, gated visually.
+  // heroFollowUps is declared further down once activeFollowUpCount is defined.
+  const heroMembers = useCountUp(activeMemberCount);
+  const heroApprovals = useCountUp(pendingApprovalCount);
+
   const myDeptRoleIds = useMemo(() => {
     if (!userData || !isDeptLead) return null;
     const ids = new Set(
@@ -787,6 +1067,7 @@ export default function DashboardPage() {
     () => followUps.filter((f) => f.status === "NEW_CONTACT").length,
     [followUps]
   );
+  const heroFollowUps = useCountUp(activeFollowUpCount);
   const pendingFollowUpApprovalCount = useMemo(
     () => followUps.filter((f) => f.status === "PENDING_LEAD_APPROVAL").length,
     [followUps]
@@ -873,12 +1154,32 @@ export default function DashboardPage() {
     <div className="space-y-6 md:space-y-8">
       {/* ── Welcome Hero ─────────────────────────────────────────────── */}
       <section
-        className="relative overflow-hidden rounded-2xl border border-clay-200/70 bg-white/70 p-6 md:p-8 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 0% 0%, rgba(200,150,62,0.10), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.08), transparent 50%), linear-gradient(135deg, #FFF8F0 0%, #FFFFFF 60%, rgba(200,150,62,0.06) 100%)",
-        }}
+        className="relative overflow-hidden rounded-2xl border border-clay-200/70 bg-white/70 p-6 md:p-8 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_12px_32px_-16px_rgba(91,58,41,0.18)]"
+        style={{ backgroundImage: heroBackground(now) }}
       >
+        {/* Dew-drop pattern overlay — leans into the "Dew of Hermon" name */}
+        <svg
+          aria-hidden
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.05]"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern
+              id="dew-pattern"
+              x="0"
+              y="0"
+              width="44"
+              height="44"
+              patternUnits="userSpaceOnUse"
+            >
+              <circle cx="11" cy="11" r="1.6" fill="#5B3A29" />
+              <circle cx="33" cy="27" r="1" fill="#5B3A29" />
+              <circle cx="20" cy="36" r="0.8" fill="#5B3A29" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#dew-pattern)" />
+        </svg>
+
         {/* Decorative orbs */}
         <span
           aria-hidden
@@ -889,10 +1190,18 @@ export default function DashboardPage() {
           className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-teal/15 blur-3xl"
         />
 
+        {/* Slow shimmer sweep — like sunlight moving across the hero */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          <span className="absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/35 to-transparent animate-shimmer" />
+        </span>
+
         <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-clay-400">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold animate-sparkle-pulse" />
               {format(now, "EEEE, MMMM d")}
             </p>
             <h1 className="text-3xl md:text-4xl font-display font-bold text-clay-700 mt-2 leading-tight">
@@ -910,6 +1219,17 @@ export default function DashboardPage() {
                   {userData.lifeGroup} life group
                 </Badge>
               )}
+              {daysUntilNext !== null && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-white/70 backdrop-blur-sm border border-gold/30 text-clay-600 shadow-sm">
+                  <Clock className="h-3 w-3 text-gold-dark" />
+                  {daysUntilNext === 0
+                    ? "Today"
+                    : daysUntilNext === 1
+                      ? "Tomorrow"
+                      : `${daysUntilNext} days`}
+                  <span className="text-clay-400">until next</span>
+                </span>
+              )}
             </div>
             <p className="text-sm md:text-base text-clay-600 mt-4 max-w-2xl leading-relaxed">
               {headline}
@@ -921,24 +1241,24 @@ export default function DashboardPage() {
             <div className="relative shrink-0 rounded-xl border border-clay-200/60 bg-white/70 backdrop-blur-sm px-4 py-3 md:px-5 md:py-4 shadow-sm">
               <div className="grid grid-cols-3 gap-5 md:gap-6 divide-x divide-clay-100">
                 <div className="text-center pr-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-clay-700 leading-none">
-                    {activeMemberCount}
+                  <p className="text-2xl md:text-3xl font-display font-bold text-clay-700 leading-none tabular-nums">
+                    {heroMembers}
                   </p>
                   <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
                     Members
                   </p>
                 </div>
                 <div className="text-center px-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-gold-dark leading-none">
-                    {pendingApprovalCount}
+                  <p className="text-2xl md:text-3xl font-display font-bold text-gold-dark leading-none tabular-nums">
+                    {heroApprovals}
                   </p>
                   <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
                     Approvals
                   </p>
                 </div>
                 <div className="text-center pl-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-teal leading-none">
-                    {activeFollowUpCount}
+                  <p className="text-2xl md:text-3xl font-display font-bold text-teal leading-none tabular-nums">
+                    {heroFollowUps}
                   </p>
                   <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
                     Follow-ups
@@ -1019,7 +1339,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-clay-700">
-                    You're free right now.
+                    You&apos;re free right now.
                   </p>
                   <p className="text-xs text-clay-400 mt-0.5">
                     No upcoming role assignments. Set your availability so leads
@@ -1037,7 +1357,7 @@ export default function DashboardPage() {
         </Card>
       </section>
 
-      {/* ── Ministry Pulse Grid ─────────────────────────────────────── */}
+      {/* ── Ministry Pulse Grid (Bento) ─────────────────────────────── */}
       <section>
         <div className="flex items-baseline justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -1047,8 +1367,8 @@ export default function DashboardPage() {
             <span className="h-px flex-1 w-16 bg-gradient-to-r from-clay-200 to-transparent" />
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-          {/* Service Readiness — leaders & admins */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-[minmax(0,1fr)] gap-3 md:gap-4">
+          {/* Service Readiness — leaders & admins (featured tile) */}
           {(isAdmin || isDeptLead || isYouthLeader) && (
             <PulseTile
               href="/manage/services"
@@ -1060,8 +1380,23 @@ export default function DashboardPage() {
                 scopedTotal > 0
                   ? `${Math.max(0, scopedTotal - scopedFilled)} role${
                       scopedTotal - scopedFilled === 1 ? "" : "s"
-                    } open`
+                    } open for the next service`
                   : "No roles configured yet"
+              }
+              size="wide"
+              progress={
+                scopedTotal > 0
+                  ? {
+                      filled: scopedFilled,
+                      total: scopedTotal,
+                      tone:
+                        scopedFilled / scopedTotal >= 0.8
+                          ? "teal"
+                          : scopedFilled / scopedTotal >= 0.5
+                            ? "gold"
+                            : "red",
+                    }
+                  : undefined
               }
               highlight={scopedTotal > 0 && scopedFilled < scopedTotal * 0.5}
             />
@@ -1103,6 +1438,18 @@ export default function DashboardPage() {
             />
           )}
 
+          {/* Members — admins */}
+          {isAdmin && (
+            <PulseTile
+              href="/manage/members"
+              icon={Users}
+              iconTone="bg-teal/10 text-teal"
+              label="Active members"
+              value={activeMemberCount}
+              hint="Directory & roles"
+            />
+          )}
+
           {/* This week's devotional — everyone */}
           <PulseTile
             href="/department/campus-ministry"
@@ -1116,18 +1463,6 @@ export default function DashboardPage() {
                 : "No devotional yet"
             }
           />
-
-          {/* Members — admins */}
-          {isAdmin && (
-            <PulseTile
-              href="/manage/members"
-              icon={Users}
-              iconTone="bg-teal/10 text-teal"
-              label="Active members"
-              value={activeMemberCount}
-              hint="Directory & roles"
-            />
-          )}
 
           {/* Life Groups — for life group members */}
           {!isAdmin && userData.lifeGroup && (
@@ -1221,26 +1556,37 @@ export default function DashboardPage() {
                   return (
                     <li
                       key={evt.id}
-                      className="group/item flex items-start gap-3 rounded-lg px-2 py-3 -mx-2 transition-colors hover:bg-cream/70"
+                      className="group/item flex items-start gap-3 rounded-xl px-2 py-3 -mx-2 transition-all hover:bg-cream/70 hover:translate-x-0.5"
                     >
-                      <div
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${meta.tone} ring-1 ring-inset ring-white/40 shadow-sm transition-transform group-hover/item:scale-105`}
-                      >
-                        <Icon className="h-5 w-5" />
+                      {/* Calendar-tile style date chip */}
+                      <div className="relative flex flex-col items-center justify-center h-12 w-12 shrink-0 rounded-xl bg-white border border-clay-200/80 shadow-sm overflow-hidden transition-transform group-hover/item:scale-105">
+                        <span
+                          aria-hidden
+                          className="absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-gold to-gold-dark"
+                        />
+                        <span className="relative text-[9px] uppercase tracking-wider font-semibold text-white leading-none mt-1">
+                          {format(evt.startDate, "MMM")}
+                        </span>
+                        <span className="relative text-lg font-display font-bold text-clay-700 leading-none mt-1.5 tabular-nums">
+                          {format(evt.startDate, "d")}
+                        </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium text-clay-700 truncate">
                             {evt.title}
                           </p>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${meta.tone}`}
+                          >
+                            <Icon className="h-2.5 w-2.5" />
                             {meta.label}
-                          </Badge>
+                          </span>
                         </div>
                         <p className="text-xs text-clay-400 mt-1 flex items-center gap-3 flex-wrap">
                           <span className="inline-flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {format(evt.startDate, "EEE, MMM d")}
+                            {format(evt.startDate, "EEE")}
                           </span>
                           <span className="inline-flex items-center gap-1 truncate">
                             <MapPin className="h-3 w-3" />
@@ -1369,82 +1715,15 @@ export default function DashboardPage() {
 
       {/* ── Service-readiness deep panel (admins/leads only) ───────── */}
       {(isAdmin || isDeptLead) && nextEvent && (
-        <section>
-          <Card
-            className="relative overflow-hidden border-clay-200/70"
-            style={{
-              backgroundImage:
-                "linear-gradient(135deg, #FFFFFF 0%, #FFF8F0 60%, rgba(200,150,62,0.05) 100%)",
-            }}
-          >
-            <span
-              aria-hidden
-              className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-gold/10 blur-3xl"
-            />
-            <CardHeader className="pb-3 relative">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
-                      <ClipboardList className="h-4 w-4 text-gold-dark" />
-                    </span>
-                    Next service at a glance
-                  </CardTitle>
-                  <CardDescription className="ml-10">
-                    {nextEvent.title} ·{" "}
-                    {format(nextEvent.startDate, "EEE, MMM d")}
-                    {nextService?.serviceTime
-                      ? ` · ${nextService.serviceTime}`
-                      : ""}
-                  </CardDescription>
-                </div>
-                <Link href="/manage/services">
-                  <Button variant="outline" size="sm">
-                    View full rota
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="relative">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                <div className="flex justify-center md:justify-start">
-                  <ReadinessRing
-                    filled={isDeptLead ? scopedFilled : filledCount}
-                    total={isDeptLead ? scopedTotal : totalRoles}
-                    size={140}
-                  />
-                </div>
-                <div className="md:col-span-2 grid grid-cols-3 gap-3 text-center">
-                  <div className="rounded-xl border border-teal/15 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
-                    <p className="text-3xl font-display font-bold text-teal leading-none">
-                      {assignments.filter((a) => a.status === "CONFIRMED").length}
-                    </p>
-                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
-                      Confirmed
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-gold/20 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
-                    <p className="text-3xl font-display font-bold text-gold-dark leading-none">
-                      {assignments.filter((a) => a.status === "PENDING").length}
-                    </p>
-                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
-                      Pending
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-red-200/60 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
-                    <p className="text-3xl font-display font-bold text-red-500 leading-none">
-                      {unassignedCount}
-                    </p>
-                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
-                      Open
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+        <ServiceReadinessPanel
+          nextEvent={nextEvent}
+          nextService={nextService}
+          filled={isDeptLead ? scopedFilled : filledCount}
+          total={isDeptLead ? scopedTotal : totalRoles}
+          confirmedCount={assignments.filter((a) => a.status === "CONFIRMED").length}
+          pendingCount={assignments.filter((a) => a.status === "PENDING").length}
+          openCount={unassignedCount}
+        />
       )}
     </div>
   );

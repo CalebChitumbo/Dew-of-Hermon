@@ -43,6 +43,36 @@ const config: Config = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        shimmer: {
+          "0%": { transform: "translateX(-30%) skewX(-12deg)" },
+          "60%": { transform: "translateX(360%) skewX(-12deg)" },
+          "100%": { transform: "translateX(360%) skewX(-12deg)" },
+        },
+        "ring-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 0 rgba(74,155,142,0))" },
+          "50%": { filter: "drop-shadow(0 0 14px rgba(74,155,142,0.55))" },
+        },
+        "float-up": {
+          "0%": { transform: "translateY(8px)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        "sparkle-pulse": {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.85" },
+          "50%": { transform: "scale(1.18)", opacity: "1" },
+        },
+        "draw-check": {
+          "0%": { strokeDashoffset: "24" },
+          "100%": { strokeDashoffset: "0" },
+        },
+      },
+      animation: {
+        shimmer: "shimmer 7s ease-in-out infinite",
+        "ring-glow": "ring-glow 2.6s ease-in-out infinite",
+        "float-up": "float-up 0.55s ease-out both",
+        "sparkle-pulse": "sparkle-pulse 1.8s ease-in-out infinite",
+        "draw-check": "draw-check 0.6s ease-out forwards",
+      },
     },
   },
   plugins: [],
