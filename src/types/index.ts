@@ -384,3 +384,43 @@ export interface FeatureDefinition {
   /** Whether this feature supports department-based access rules */
   supportsDepartmentRules: boolean;
 }
+
+// ─── Fundraising / Braai ───
+
+export type BraaiPhase = "PREPARATION" | "EVENT_DAY";
+
+/** A planned Sunday fundraising braai. */
+export interface BraaiEvent {
+  id: string;
+  title: string;
+  /** Date of the braai (event day). */
+  eventDate: Date;
+  venue: string | null;
+  notes: string | null;
+  createdBy: string;
+  createdByName: string;
+  isArchived: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** One responsibility on the braai roster assigned to a Fundraising team member. */
+export interface BraaiAssignment {
+  id: string;
+  braaiEventId: string;
+  /** Stable key for the responsibility (matches BRAAI_RESPONSIBILITIES). */
+  responsibilityKey: string;
+  responsibilityName: string;
+  phase: BraaiPhase;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhone: string | null;
+  status: AssignmentStatus;
+  emailSent: boolean;
+  emailSentAt: Date | null;
+  confirmedAt: Date | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}

@@ -125,6 +125,13 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     route: "/manage/rops-camp",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
+  {
+    key: "fundraising",
+    label: "Fundraising",
+    description: "Plan fundraising activities and assign braai responsibilities",
+    route: "/manage/fundraising",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
 ];
 
 /** The default permissions that match the current hardcoded behavior */
@@ -235,6 +242,13 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     MEMBER: "view",
   },
   rops_camp: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  fundraising: {
     SUPER_ADMIN: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
@@ -518,6 +532,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     supportsDepartmentRules: true,
   },
   {
+    key: "plan_fundraising_braai",
+    label: "Plan Fundraising Braai",
+    description:
+      "Plan Sunday fundraising braais and assign team responsibilities",
+    category: "Fundraising",
+    supportsDepartmentRules: true,
+  },
+  {
     key: "view_fundraising_reports",
     label: "View Fundraising Reports",
     description: "View campaign totals, donor lists, and contribution summaries",
@@ -582,6 +604,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   view_communications_reports: "ADMIN",
   manage_fundraising: "ADMIN",
   view_fundraising_reports: "ADMIN",
+  plan_fundraising_braai: "ADMIN",
   manage_transport_logistics: "ADMIN",
   view_transport_assignments: "ADMIN",
   manage_food_logistics: "ADMIN",
@@ -689,6 +712,12 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     departmentName: "Fundraising",
     requiresLeadership: false,
     allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
+  },
+  {
+    featureKey: "plan_fundraising_braai",
+    departmentName: "Fundraising",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
   },
   {
     featureKey: "manage_transport_logistics",

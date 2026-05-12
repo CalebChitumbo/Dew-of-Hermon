@@ -17,6 +17,7 @@ import {
   UsersRound,
   Music,
   Tent,
+  Flame,
 } from "lucide-react";
 import { canAccessPage } from "@/lib/access-control";
 import type { PagePermissions, UserRole } from "@/types";
@@ -47,6 +48,7 @@ export const allNavItems: NavItem[] = [
   { label: "Discipleship", href: "/department/discipleship", icon: Heart, pageKey: "discipleship" },
   { label: "Latreou", href: "/latreou", icon: Music, pageKey: "latreou" },
   { label: "ROPs Camp", href: "/manage/rops-camp", icon: Tent, pageKey: "rops_camp" },
+  { label: "Fundraising", href: "/manage/fundraising", icon: Flame, pageKey: "fundraising" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
   { label: "Templates", href: "/manage/templates", icon: Mail, pageKey: "templates" },
   { label: "Reports", href: "/manage/reports", icon: BarChart3, pageKey: "reports" },
