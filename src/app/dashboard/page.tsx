@@ -760,33 +760,50 @@ export default function DashboardPage() {
     return unsub;
   }, [userData]);
 
-  // Next upcoming fundraising braai (for chairperson + Fundraising lead)
+  // Next upcoming fundraising braai (for chairperson + Fundraising lead).
+  // The query window starts a day before "today" because braai eventDates are
+  // stored at UTC midnight of the selected day — a braai scheduled for today
+  // would otherwise be excluded once the local clock passes midnight UTC.
+  // Final "is today or later" filtering happens client-side against the local
+  // start of day.
   useEffect(() => {
     if (!userData || !canPlanBraai) {
       setNextBraai(null);
       return;
     }
+    const windowStart = new Date();
+    windowStart.setHours(0, 0, 0, 0);
+    windowStart.setDate(windowStart.getDate() - 1);
     const q = query(
       safeCollection("braaiEvents"),
-      where("eventDate", ">=", Timestamp.fromDate(new Date())),
+      where("eventDate", ">=", Timestamp.fromDate(windowStart)),
       orderBy("eventDate", "asc"),
-      limit(1)
+      limit(5)
     );
     const unsub = onSnapshot(
       q,
       (snap) => {
-        if (snap.empty) {
-          setNextBraai(null);
-          return;
-        }
-        const d = snap.docs[0];
-        const data = d.data();
-        setNextBraai({
-          id: d.id,
-          title: data.title || "Sunday Fundraising Braai",
-          eventDate: toDate(data.eventDate),
-          venue: data.venue || null,
-        });
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const next = snap.docs
+          .map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              title: (data.title as string) || "Sunday Fundraising Braai",
+              eventDate: toDate(data.eventDate),
+              venue: (data.venue as string | null) || null,
+              isArchived: Boolean(data.isArchived),
+            };
+          })
+          .filter((b) => !b.isArchived && b.eventDate >= todayStart)
+          .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())[0];
+        setNextBraai(next ? {
+          id: next.id,
+          title: next.title,
+          eventDate: next.eventDate,
+          venue: next.venue,
+        } : null);
       },
       (err) => console.warn("dashboard: braai listener", err.message)
     );
