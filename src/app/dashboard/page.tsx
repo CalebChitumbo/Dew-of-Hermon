@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   query,
@@ -306,7 +306,7 @@ function ActivityItem({
 // ─── Main Dashboard ──────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { userData } = useAuth();
+  const { firebaseUser, userData } = useAuth();
   const { canPlanBraai } = useFundraisingAccess();
   const now = useMemo(() => new Date(), []);
 
@@ -760,17 +760,91 @@ export default function DashboardPage() {
     return unsub;
   }, [userData]);
 
-  // Next upcoming fundraising braai (for chairperson + Fundraising lead).
-  // The query window starts a day before "today" because braai eventDates are
-  // stored at UTC midnight of the selected day — a braai scheduled for today
-  // would otherwise be excluded once the local clock passes midnight UTC.
-  // Final "is today or later" filtering happens client-side against the local
-  // start of day.
+  // Next upcoming fundraising braai for the dashboard tile.
+  //
+  // We pull from the API (which uses the Admin SDK and so works even before
+  // the new Firestore rules for braaiEvents/braaiAssignments have been
+  // deployed) and then layer a real-time listener on top as an enhancement.
+  // Without the API fallback, an undeployed-rules state would show "No braai
+  // scheduled yet" indefinitely because the listener silently fails with
+  // permission-denied.
+  const fetchNextBraaiViaApi = useCallback(async () => {
+    if (!firebaseUser || !canPlanBraai) return;
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const res = await fetch("/api/fundraising/braai/events", {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const events = (data.events || []) as Array<{
+        id: string;
+        title: string;
+        eventDate: string | null;
+        venue: string | null;
+        isArchived: boolean;
+        assignmentCount: number;
+        confirmedCount: number;
+        declinedCount: number;
+      }>;
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const upcoming = events
+        .filter(
+          (e) =>
+            !e.isArchived &&
+            e.eventDate &&
+            new Date(e.eventDate).getTime() >= todayStart.getTime()
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.eventDate as string).getTime() -
+            new Date(b.eventDate as string).getTime()
+        );
+      const next = upcoming[0];
+      if (!next) {
+        setNextBraai(null);
+        setBraaiAssignmentCount(0);
+        setBraaiConfirmedCount(0);
+        setBraaiPendingCount(0);
+        return;
+      }
+      setNextBraai({
+        id: next.id,
+        title: next.title || "Sunday Fundraising Braai",
+        eventDate: new Date(next.eventDate as string),
+        venue: next.venue || null,
+      });
+      setBraaiAssignmentCount(next.assignmentCount);
+      setBraaiConfirmedCount(next.confirmedCount);
+      setBraaiPendingCount(
+        Math.max(
+          0,
+          next.assignmentCount - next.confirmedCount - next.declinedCount
+        )
+      );
+    } catch (err) {
+      console.warn("dashboard: braai API fetch failed", err);
+    }
+  }, [firebaseUser, canPlanBraai]);
+
   useEffect(() => {
     if (!userData || !canPlanBraai) {
       setNextBraai(null);
+      setBraaiAssignmentCount(0);
+      setBraaiConfirmedCount(0);
+      setBraaiPendingCount(0);
       return;
     }
+    fetchNextBraaiViaApi();
+  }, [userData, canPlanBraai, fetchNextBraaiViaApi]);
+
+  // Real-time enhancement: when the (eventually deployed) Firestore rules
+  // allow client reads, keep the tile fresh as people get assigned. We only
+  // *overwrite* the state when the listener returns data — a silent failure
+  // (permission-denied) leaves the API-driven state intact.
+  useEffect(() => {
+    if (!userData || !canPlanBraai) return;
     const windowStart = new Date();
     windowStart.setHours(0, 0, 0, 0);
     windowStart.setDate(windowStart.getDate() - 1);
@@ -798,26 +872,25 @@ export default function DashboardPage() {
           })
           .filter((b) => !b.isArchived && b.eventDate >= todayStart)
           .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())[0];
-        setNextBraai(next ? {
-          id: next.id,
-          title: next.title,
-          eventDate: next.eventDate,
-          venue: next.venue,
-        } : null);
+        if (next) {
+          setNextBraai({
+            id: next.id,
+            title: next.title,
+            eventDate: next.eventDate,
+            venue: next.venue,
+          });
+        }
       },
       (err) => console.warn("dashboard: braai listener", err.message)
     );
     return unsub;
   }, [userData, canPlanBraai]);
 
-  // Tally assignments on the next braai
+  // Real-time assignment tally for the next braai. Same fall-through pattern:
+  // the API fetch above seeded the counts, and this listener keeps them live
+  // when Firestore rules permit client reads.
   useEffect(() => {
-    if (!nextBraai || !canPlanBraai) {
-      setBraaiAssignmentCount(0);
-      setBraaiConfirmedCount(0);
-      setBraaiPendingCount(0);
-      return;
-    }
+    if (!nextBraai || !canPlanBraai) return;
     const q = query(
       safeCollection("braaiAssignments"),
       where("braaiEventId", "==", nextBraai.id)
@@ -836,10 +909,20 @@ export default function DashboardPage() {
         setBraaiConfirmedCount(confirmed);
         setBraaiPendingCount(pending);
       },
-      (err) => console.warn("dashboard: braai assignment listener", err.message)
+      (err) =>
+        console.warn("dashboard: braai assignment listener", err.message)
     );
     return unsub;
   }, [nextBraai, canPlanBraai]);
+
+  // Re-fetch when the tab regains focus so a braai you just created in
+  // another tab — or the rules being freshly deployed — shows up promptly.
+  useEffect(() => {
+    if (!canPlanBraai) return;
+    const onFocus = () => fetchNextBraaiViaApi();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [canPlanBraai, fetchNextBraaiViaApi]);
 
   // ─── Derivations ───────────────────────────────────────────────────────
 
