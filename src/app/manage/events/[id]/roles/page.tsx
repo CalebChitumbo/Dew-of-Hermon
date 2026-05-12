@@ -128,6 +128,7 @@ export default function EventRoleBoardPage() {
   const [coreAssignTarget, setCoreAssignTarget] = useState<CoreAssignTarget | null>(null);
   const [userSearch, setUserSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [generatingRoles, setGeneratingRoles] = useState(false);
 
   // Access control: DEPARTMENT_LEAD+ can view this page
   const hasAccess = userData ? hasMinRole(userData.role, "DEPARTMENT_LEAD") : false;
@@ -287,6 +288,53 @@ export default function EventRoleBoardPage() {
       toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setAssigning(false);
+    }
+  }
+
+  async function handleGenerateRoles() {
+    if (!eventId) return;
+    setGeneratingRoles(true);
+    try {
+      const res = await fetch(
+        `/api/events/${eventId}/department-roles/generate`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate roles");
+      }
+      if (data.alreadyExisted) {
+        toast({
+          title: "Roles already exist",
+          description: "Department roles are already set up for this event.",
+        });
+      } else if (data.created > 0) {
+        const missing = (data.missingDepartments as string[]) || [];
+        toast({
+          title: `Created ${data.created} role${data.created === 1 ? "" : "s"}`,
+          description:
+            missing.length > 0
+              ? `Skipped ${missing.length} missing department${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}. Ask an admin to add these in Departments.`
+              : "Department roles are now ready to be assigned.",
+          variant: "success",
+        });
+      } else {
+        const missing = (data.missingDepartments as string[]) || [];
+        toast({
+          title: "No roles were created",
+          description:
+            missing.length > 0
+              ? `None of the role-template departments exist yet: ${missing.join(", ")}. Add them in Departments first.`
+              : "No role templates were found.",
+          variant: "destructive",
+        });
+      }
+      await fetchData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setGeneratingRoles(false);
     }
   }
 
@@ -629,9 +677,39 @@ export default function EventRoleBoardPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Users className="h-10 w-10 text-clay-300 mx-auto mb-3" />
-            <p className="text-clay-500">
-              Department roles will appear here once the event is approved.
-            </p>
+            {event.approvalStatus !== "APPROVED" ? (
+              <p className="text-clay-500">
+                Department roles will appear here once the event is approved.
+              </p>
+            ) : (
+              <>
+                <p className="text-clay-600 font-medium">
+                  No department roles set up for this event yet.
+                </p>
+                <p className="text-sm text-clay-400 mt-1 max-w-md mx-auto">
+                  This usually means the role-template departments
+                  (e.g.&nbsp;Media&nbsp;&amp; Technical, Hospitality) aren&apos;t
+                  configured under those exact names. Admins can regenerate
+                  them below.
+                </p>
+                {isAdmin && (
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    className="mt-4"
+                    onClick={handleGenerateRoles}
+                    disabled={generatingRoles}
+                  >
+                    {generatingRoles ? (
+                      <LoadingSpinner size="sm" className="mr-2" />
+                    ) : (
+                      <UserPlus className="mr-2 h-4 w-4" />
+                    )}
+                    Generate department roles
+                  </Button>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
