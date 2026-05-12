@@ -38,6 +38,8 @@ import { format, isPast, isFuture, parseISO, isToday } from "date-fns";
 
 interface EnrichedAssignment {
   id: string;
+  kind?: "service" | "braai";
+  parentId?: string;
   serviceId: string;
   roleId: string;
   roleName: string;
@@ -54,6 +56,13 @@ interface EnrichedAssignment {
   createdAt: string;
   updatedAt: string;
   confirmedAt?: string | null;
+}
+
+function buildAssignmentUrl(assignment: EnrichedAssignment): string {
+  if (assignment.kind === "braai") {
+    return `/api/fundraising/braai/events/${assignment.parentId ?? assignment.serviceId}/assignments/${assignment.id}`;
+  }
+  return `/api/services/${assignment.serviceId}/assignments/${assignment.id}`;
 }
 
 export default function MySchedulePage() {
@@ -174,21 +183,18 @@ export default function MySchedulePage() {
       const assignment = assignments.find((a) => a.id === assignmentId);
       if (!assignment) throw new Error("Assignment not found");
 
-      const response = await fetch(
-        `/api/services/${assignment.serviceId}/assignments/${assignmentId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            status: "CONFIRMED",
-            callerRole: userData?.role,
-            callerId: firebaseUser.uid,
-          }),
-        }
-      );
+      const response = await fetch(buildAssignmentUrl(assignment), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          status: "CONFIRMED",
+          callerRole: userData?.role,
+          callerId: firebaseUser.uid,
+        }),
+      });
 
       if (!response.ok) {
         const data = await response.json();
@@ -222,21 +228,18 @@ export default function MySchedulePage() {
       const assignment = assignments.find((a) => a.id === assignmentId);
       if (!assignment) throw new Error("Assignment not found");
 
-      const response = await fetch(
-        `/api/services/${assignment.serviceId}/assignments/${assignmentId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            status: "DECLINED",
-            callerRole: userData?.role,
-            callerId: firebaseUser.uid,
-          }),
-        }
-      );
+      const response = await fetch(buildAssignmentUrl(assignment), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          status: "DECLINED",
+          callerRole: userData?.role,
+          callerId: firebaseUser.uid,
+        }),
+      });
 
       if (!response.ok) {
         const data = await response.json();

@@ -11,16 +11,20 @@ import { Separator } from "@/components/ui/separator";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { getVisibleNavItems } from "@/components/layout/nav-config";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
+import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { userData, signOut } = useAuth();
   const { pagePermissions } = useAccessControl();
   const { canManage: canManageCamp } = useCampLeadAccess();
+  const { canPlanBraai } = useFundraisingAccess();
 
   if (!userData) return null;
 
-  const extraKeys = canManageCamp ? ["rops_camp"] : [];
+  const extraKeys: string[] = [];
+  if (canManageCamp) extraKeys.push("rops_camp");
+  if (canPlanBraai) extraKeys.push("fundraising");
   const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {

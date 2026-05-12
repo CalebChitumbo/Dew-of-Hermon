@@ -168,6 +168,26 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ─── Fundraising Braai ───
+    // Events and assignments for Sunday fundraising braais. Writes always go
+    // through the API (which checks the Fundraising department lead rule),
+    // but reads need to be permissive so members can see their own assignments
+    // and the live dashboard tally on the chairperson's screen.
+    match /braaiEvents/{eventId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /braaiAssignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create: if isDeptLead();
+      // Dept leads (and admins) can update any assignment; an assignee can
+      // confirm/decline their own braai duty without needing planner rights.
+      allow update: if isDeptLead()
+        || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow delete: if isDeptLead();
+    }
+
     // ─── Worship Song Suggestions (Latreou) ───
     // Any signed-in user can read & propose suggestions. Suggesters can delete
     // their own open submission. Worship leads (and admins) can update

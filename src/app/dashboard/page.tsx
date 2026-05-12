@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   query,
@@ -47,7 +47,10 @@ import {
   BookOpen,
   Inbox,
   Tent,
+  Flame,
 } from "lucide-react";
+import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
+import { BRAAI_TOTAL_RESPONSIBILITIES } from "@/lib/braai";
 import { format, formatDistanceToNow } from "date-fns";
 import type {
   AppEvent,
@@ -303,7 +306,8 @@ function ActivityItem({
 // ─── Main Dashboard ──────────────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { userData } = useAuth();
+  const { firebaseUser, userData } = useAuth();
+  const { canPlanBraai } = useFundraisingAccess();
   const now = useMemo(() => new Date(), []);
 
   // Core service-prep data
@@ -328,6 +332,17 @@ export default function DashboardPage() {
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [activeMemberCount, setActiveMemberCount] = useState(0);
   const [followUps, setFollowUps] = useState<FollowUpCard[]>([]);
+
+  // Fundraising braai (for chairperson + Fundraising lead)
+  const [nextBraai, setNextBraai] = useState<{
+    id: string;
+    title: string;
+    eventDate: Date;
+    venue: string | null;
+  } | null>(null);
+  const [braaiAssignmentCount, setBraaiAssignmentCount] = useState(0);
+  const [braaiConfirmedCount, setBraaiConfirmedCount] = useState(0);
+  const [braaiPendingCount, setBraaiPendingCount] = useState(0);
 
   const [loadingCore, setLoadingCore] = useState(true);
 
@@ -744,6 +759,170 @@ export default function DashboardPage() {
     );
     return unsub;
   }, [userData]);
+
+  // Next upcoming fundraising braai for the dashboard tile.
+  //
+  // We pull from the API (which uses the Admin SDK and so works even before
+  // the new Firestore rules for braaiEvents/braaiAssignments have been
+  // deployed) and then layer a real-time listener on top as an enhancement.
+  // Without the API fallback, an undeployed-rules state would show "No braai
+  // scheduled yet" indefinitely because the listener silently fails with
+  // permission-denied.
+  const fetchNextBraaiViaApi = useCallback(async () => {
+    if (!firebaseUser || !canPlanBraai) return;
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const res = await fetch("/api/fundraising/braai/events", {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const events = (data.events || []) as Array<{
+        id: string;
+        title: string;
+        eventDate: string | null;
+        venue: string | null;
+        isArchived: boolean;
+        assignmentCount: number;
+        confirmedCount: number;
+        declinedCount: number;
+      }>;
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const upcoming = events
+        .filter(
+          (e) =>
+            !e.isArchived &&
+            e.eventDate &&
+            new Date(e.eventDate).getTime() >= todayStart.getTime()
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.eventDate as string).getTime() -
+            new Date(b.eventDate as string).getTime()
+        );
+      const next = upcoming[0];
+      if (!next) {
+        setNextBraai(null);
+        setBraaiAssignmentCount(0);
+        setBraaiConfirmedCount(0);
+        setBraaiPendingCount(0);
+        return;
+      }
+      setNextBraai({
+        id: next.id,
+        title: next.title || "Sunday Fundraising Braai",
+        eventDate: new Date(next.eventDate as string),
+        venue: next.venue || null,
+      });
+      setBraaiAssignmentCount(next.assignmentCount);
+      setBraaiConfirmedCount(next.confirmedCount);
+      setBraaiPendingCount(
+        Math.max(
+          0,
+          next.assignmentCount - next.confirmedCount - next.declinedCount
+        )
+      );
+    } catch (err) {
+      console.warn("dashboard: braai API fetch failed", err);
+    }
+  }, [firebaseUser, canPlanBraai]);
+
+  useEffect(() => {
+    if (!userData || !canPlanBraai) {
+      setNextBraai(null);
+      setBraaiAssignmentCount(0);
+      setBraaiConfirmedCount(0);
+      setBraaiPendingCount(0);
+      return;
+    }
+    fetchNextBraaiViaApi();
+  }, [userData, canPlanBraai, fetchNextBraaiViaApi]);
+
+  // Real-time enhancement: when the (eventually deployed) Firestore rules
+  // allow client reads, keep the tile fresh as people get assigned. We only
+  // *overwrite* the state when the listener returns data — a silent failure
+  // (permission-denied) leaves the API-driven state intact.
+  useEffect(() => {
+    if (!userData || !canPlanBraai) return;
+    const windowStart = new Date();
+    windowStart.setHours(0, 0, 0, 0);
+    windowStart.setDate(windowStart.getDate() - 1);
+    const q = query(
+      safeCollection("braaiEvents"),
+      where("eventDate", ">=", Timestamp.fromDate(windowStart)),
+      orderBy("eventDate", "asc"),
+      limit(5)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const next = snap.docs
+          .map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              title: (data.title as string) || "Sunday Fundraising Braai",
+              eventDate: toDate(data.eventDate),
+              venue: (data.venue as string | null) || null,
+              isArchived: Boolean(data.isArchived),
+            };
+          })
+          .filter((b) => !b.isArchived && b.eventDate >= todayStart)
+          .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())[0];
+        if (next) {
+          setNextBraai({
+            id: next.id,
+            title: next.title,
+            eventDate: next.eventDate,
+            venue: next.venue,
+          });
+        }
+      },
+      (err) => console.warn("dashboard: braai listener", err.message)
+    );
+    return unsub;
+  }, [userData, canPlanBraai]);
+
+  // Real-time assignment tally for the next braai. Same fall-through pattern:
+  // the API fetch above seeded the counts, and this listener keeps them live
+  // when Firestore rules permit client reads.
+  useEffect(() => {
+    if (!nextBraai || !canPlanBraai) return;
+    const q = query(
+      safeCollection("braaiAssignments"),
+      where("braaiEventId", "==", nextBraai.id)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        let confirmed = 0;
+        let pending = 0;
+        snap.docs.forEach((d) => {
+          const status = d.data().status;
+          if (status === "CONFIRMED") confirmed += 1;
+          else if (status === "PENDING") pending += 1;
+        });
+        setBraaiAssignmentCount(snap.size);
+        setBraaiConfirmedCount(confirmed);
+        setBraaiPendingCount(pending);
+      },
+      (err) =>
+        console.warn("dashboard: braai assignment listener", err.message)
+    );
+    return unsub;
+  }, [nextBraai, canPlanBraai]);
+
+  // Re-fetch when the tab regains focus so a braai you just created in
+  // another tab — or the rules being freshly deployed — shows up promptly.
+  useEffect(() => {
+    if (!canPlanBraai) return;
+    const onFocus = () => fetchNextBraaiViaApi();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [canPlanBraai, fetchNextBraaiViaApi]);
 
   // ─── Derivations ───────────────────────────────────────────────────────
 
@@ -1165,6 +1344,39 @@ export default function DashboardPage() {
             />
           )}
 
+          {/* Fundraising Braai — chairperson, admins, Fundraising lead */}
+          {canPlanBraai && (
+            <PulseTile
+              href={
+                nextBraai
+                  ? `/manage/fundraising/braai/${nextBraai.id}`
+                  : "/manage/fundraising"
+              }
+              icon={Flame}
+              iconTone="bg-red-50 text-red-600"
+              label="Braai readiness"
+              value={
+                nextBraai
+                  ? `${braaiAssignmentCount}/${BRAAI_TOTAL_RESPONSIBILITIES}`
+                  : "—"
+              }
+              hint={
+                nextBraai
+                  ? braaiPendingCount > 0
+                    ? `${braaiPendingCount} awaiting confirmation`
+                    : braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES
+                      ? `${BRAAI_TOTAL_RESPONSIBILITIES - braaiAssignmentCount} responsibilities open`
+                      : `Confirmed: ${braaiConfirmedCount}/${braaiAssignmentCount}`
+                  : "No braai scheduled yet"
+              }
+              highlight={
+                Boolean(nextBraai) &&
+                (braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES ||
+                  braaiPendingCount > 0)
+              }
+            />
+          )}
+
           {/* ROPs Camp registration — everyone (public page, parents-facing) */}
           <PulseTile
             href="/rops-camp"
@@ -1278,6 +1490,74 @@ export default function DashboardPage() {
 
         {/* Side column: Roles needing attention + Activity */}
         <div className="space-y-6">
+          {canPlanBraai && nextBraai &&
+            (braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES ||
+              braaiPendingCount > 0) && (
+              <Card className="relative overflow-hidden border-red-200/70 bg-gradient-to-br from-red-50/50 via-white to-cream/40">
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-red-300/0 via-red-400/70 to-red-300/0"
+                />
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2 text-red-700">
+                    <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-red-100/80 ring-1 ring-inset ring-red-200/60">
+                      <Flame className="h-4 w-4" />
+                    </span>
+                    Braai needing attention
+                  </CardTitle>
+                  <CardDescription className="ml-10">
+                    {nextBraai.title} &middot;{" "}
+                    {format(nextBraai.eventDate, "EEE, MMM d")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-1.5 text-sm">
+                    {braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES && (
+                      <li className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 -mx-2 hover:bg-white/60 transition-colors">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                          <span className="text-clay-600">
+                            Unassigned responsibilities
+                          </span>
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-red-600 border-red-200 bg-white"
+                        >
+                          {BRAAI_TOTAL_RESPONSIBILITIES - braaiAssignmentCount}
+                        </Badge>
+                      </li>
+                    )}
+                    {braaiPendingCount > 0 && (
+                      <li className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 -mx-2 hover:bg-white/60 transition-colors">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-gold" />
+                          <span className="text-clay-600">
+                            Awaiting confirmation
+                          </span>
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-gold-dark border-gold/40 bg-white"
+                        >
+                          {braaiPendingCount}
+                        </Badge>
+                      </li>
+                    )}
+                  </ul>
+                  <Link
+                    href={`/manage/fundraising/braai/${nextBraai.id}`}
+                    className="block mt-4"
+                  >
+                    <Button variant="gold" size="sm" className="w-full shadow-sm">
+                      <Flame className="mr-2 h-4 w-4" />
+                      Follow up
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
+
           {(isAdmin || isDeptLead) && unassignedRoles.length > 0 && (
             <Card className="relative overflow-hidden border-red-200/70 bg-gradient-to-br from-red-50/50 via-white to-cream/40">
               <span
