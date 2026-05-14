@@ -36,11 +36,15 @@ export function Sidebar() {
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-clay-200">
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6 border-b border-clay-200">
-        <span className="text-3xl">&#x1F3FA;</span>
-        <div>
-          <h1 className="font-display text-lg text-clay-700">Potter&apos;s Wheel</h1>
-          <p className="text-[10px] text-clay-400 -mt-1">Dew of Hermon</p>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/church-logo.png"
+          alt="Tabernacle of David Assembly — City Mission Church"
+          width={52}
+          height={40}
+          className="h-10 w-auto"
+        />
+        <h1 className="font-display text-lg text-clay-700">Dew of Hermon</h1>
       </div>
 
       {/* Navigation */}

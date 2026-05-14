@@ -1,7 +1,7 @@
 {
-  "name": "Potter's Wheel Ministry",
-  "short_name": "Potter's Wheel",
-  "description": "Ministry management for Dew of Hermon Youth Ministry",
+  "name": "Dew of Hermon",
+  "short_name": "Dew of Hermon",
+  "description": "Dew of Hermon Youth Ministry — Tabernacle of David Assembly, City Mission Church",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFF8F0",

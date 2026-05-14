@@ -8,9 +8,14 @@ import { PushNotificationPrompt } from "@/components/shared/PushNotificationProm
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Potter's Wheel | Dew of Hermon Youth Ministry",
+  title: "Dew of Hermon | Youth Ministry",
   description:
-    "Ministry management platform for the Potter's Wheel Sunday service at Dew of Hermon Youth Ministry, Tabernacle of David Assembly.",
+    "Dew of Hermon Youth Ministry — Tabernacle of David Assembly, City Mission Church. Home of the Potter's Wheel Sunday service.",
+  icons: {
+    icon: "/images/church-logo.png",
+    shortcut: "/images/church-logo.png",
+    apple: "/images/church-logo.png",
+  },
 };
 
 export const viewport: Viewport = {

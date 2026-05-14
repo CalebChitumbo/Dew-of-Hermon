@@ -31,7 +31,7 @@ function initFirebase(config) {
     const { title, body, icon, link } = payload.notification || {};
     const data = payload.data || {};
 
-    const notificationTitle = title || "Potter's Wheel";
+    const notificationTitle = title || "Dew of Hermon";
     const notificationOptions = {
       body: body || "You have a new notification",
       icon: icon || "/icons/icon-192.png",
