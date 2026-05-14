@@ -102,7 +102,7 @@ export default function LoginPage() {
               className="relative mx-auto h-auto w-56 max-w-full"
             />
           </div>
-          <CardTitle className="font-display text-[2.25rem] leading-tight tracking-tight text-clay-700">
+          <CardTitle className="font-['Cormorant_Garamond'] italic text-[3rem] font-medium leading-[1.05] tracking-tight text-clay-700">
             Dew of Hermon
           </CardTitle>
           <CardDescription className="text-clay-500">
