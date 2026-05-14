@@ -156,15 +156,15 @@ export default function RegisterPage() {
       <CardHeader className="text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/images/church-logo.svg"
-          alt="Tabernacle of David Assembly"
-          width={64}
-          height={84}
-          className="mx-auto mb-4"
+          src="/images/church-logo.png"
+          alt="Tabernacle of David Assembly — City Mission Church"
+          width={240}
+          height={182}
+          className="mx-auto mb-4 h-auto w-60 max-w-full"
         />
         <CardTitle className="text-3xl text-clay-700">Join Dew of Hermon</CardTitle>
         <CardDescription>
-          Tabernacle of David Assembly · City Mission Church
+          Create your account to get started
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   description:
     "Dew of Hermon Youth Ministry — Tabernacle of David Assembly, City Mission Church. Home of the Potter's Wheel Sunday service.",
   icons: {
-    icon: "/images/church-logo.svg",
-    shortcut: "/images/church-logo.svg",
-    apple: "/images/church-logo.svg",
+    icon: "/images/church-logo.png",
+    shortcut: "/images/church-logo.png",
+    apple: "/images/church-logo.png",
   },
 };
 

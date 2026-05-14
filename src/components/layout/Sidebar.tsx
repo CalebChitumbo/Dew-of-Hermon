@@ -38,15 +38,13 @@ export function Sidebar() {
       <div className="flex h-16 items-center gap-3 px-6 border-b border-clay-200">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/images/church-logo.svg"
-          alt="Tabernacle of David Assembly"
-          width={32}
-          height={42}
+          src="/images/church-logo.png"
+          alt="Tabernacle of David Assembly — City Mission Church"
+          width={52}
+          height={40}
+          className="h-10 w-auto"
         />
-        <div>
-          <h1 className="font-display text-lg text-clay-700">Dew of Hermon</h1>
-          <p className="text-[10px] text-clay-400 -mt-1">Tabernacle of David Assembly</p>
-        </div>
+        <h1 className="font-display text-lg text-clay-700">Dew of Hermon</h1>
       </div>
 
       {/* Navigation */}

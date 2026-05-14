@@ -45,10 +45,11 @@ export function Header() {
             </Button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/images/church-logo.svg"
+              src="/images/church-logo.png"
               alt="Tabernacle of David Assembly"
-              width={22}
+              width={37}
               height={28}
+              className="h-7 w-auto"
             />
             <span className="font-display text-sm text-clay-700">
               Dew of Hermon
@@ -72,10 +73,11 @@ export function Header() {
               <div className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/images/church-logo.svg"
+                  src="/images/church-logo.png"
                   alt="Tabernacle of David Assembly"
-                  width={26}
+                  width={45}
                   height={34}
+                  className="h-[34px] w-auto"
                 />
                 <span className="font-display text-clay-700">
                   Dew of Hermon
