@@ -43,9 +43,15 @@ export function Header() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="text-xl">&#x1F3FA;</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/church-logo.svg"
+              alt="Tabernacle of David Assembly"
+              width={22}
+              height={28}
+            />
             <span className="font-display text-sm text-clay-700">
-              Potter&apos;s Wheel
+              Dew of Hermon
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -64,9 +70,15 @@ export function Header() {
           <div className="fixed left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
             <div className="flex h-14 items-center justify-between px-4 border-b border-clay-200 flex-shrink-0">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">&#x1F3FA;</span>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/church-logo.svg"
+                  alt="Tabernacle of David Assembly"
+                  width={26}
+                  height={34}
+                />
                 <span className="font-display text-clay-700">
-                  Potter&apos;s Wheel
+                  Dew of Hermon
                 </span>
               </div>
               <Button

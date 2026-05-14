@@ -83,12 +83,19 @@ export default function LoginPage() {
       </Link>
       <Card className="border-clay-200 shadow-lg">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 text-5xl">&#x1F3FA;</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/church-logo.svg"
+          alt="Tabernacle of David Assembly"
+          width={64}
+          height={84}
+          className="mx-auto mb-4"
+        />
         <CardTitle className="text-3xl text-clay-700">
-          Potter&apos;s Wheel
+          Dew of Hermon
         </CardTitle>
         <CardDescription>
-          Dew of Hermon Youth Ministry
+          Tabernacle of David Assembly · City Mission Church
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

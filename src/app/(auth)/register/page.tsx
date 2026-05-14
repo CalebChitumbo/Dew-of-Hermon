@@ -154,10 +154,17 @@ export default function RegisterPage() {
   return (
     <Card className="border-clay-200 shadow-lg">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 text-5xl">&#x1F3FA;</div>
-        <CardTitle className="text-3xl text-clay-700">Join Potter&apos;s Wheel</CardTitle>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/church-logo.svg"
+          alt="Tabernacle of David Assembly"
+          width={64}
+          height={84}
+          className="mx-auto mb-4"
+        />
+        <CardTitle className="text-3xl text-clay-700">Join Dew of Hermon</CardTitle>
         <CardDescription>
-          Create your account to get started
+          Tabernacle of David Assembly · City Mission Church
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>

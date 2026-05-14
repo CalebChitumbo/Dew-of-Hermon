@@ -47,7 +47,7 @@ export default function SeedPage() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f9fafb", fontFamily: "system-ui, sans-serif" }}>
       <div style={{ maxWidth: 480, width: "100%", padding: 32, background: "white", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Setup Potter&apos;s Wheel</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Setup Dew of Hermon</h1>
         <p style={{ color: "#6b7280", marginBottom: 24, fontSize: 14, lineHeight: 1.5 }}>
           This will populate the database with departments, service roles, and checklist templates.
           It will also upgrade your account to Super Admin.
