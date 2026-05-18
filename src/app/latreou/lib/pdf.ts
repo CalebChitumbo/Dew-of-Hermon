@@ -2,21 +2,23 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format, parseISO } from "date-fns";
 import type { LatreouCycle, Song } from "./types";
-
-const PAGE_MARGIN = 56;
-const HEADING_COLOR: [number, number, number] = [91, 58, 41];
-const SUBHEADING_COLOR: [number, number, number] = [125, 90, 60];
-const BODY_COLOR: [number, number, number] = [62, 37, 24];
-const ACCENT: [number, number, number] = [200, 150, 62];
-const LINK_COLOR: [number, number, number] = [44, 110, 175];
-
-function slugify(s: string): string {
-  return (s || "latreou-cycle")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60) || "latreou-cycle";
-}
+import {
+  PAGE_MARGIN,
+  HEADING_COLOR,
+  SUBHEADING_COLOR,
+  BODY_COLOR,
+  ACCENT,
+  LINK_COLOR,
+  ALT_ROW,
+  slugify,
+  makeCursor,
+  ensureRoom,
+  drawSectionHeading,
+  drawSubHeading,
+  drawParagraph,
+  drawLabelValue,
+  type Cursor,
+} from "@/lib/pdf-helpers";
 
 function formatDateOrDash(iso: string): string {
   if (!iso) return "—";
@@ -34,85 +36,6 @@ function formatShortDate(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-type Cursor = {
-  y: number;
-  pageHeight: number;
-  pageWidth: number;
-  contentWidth: number;
-};
-
-function makeCursor(doc: jsPDF): Cursor {
-  return {
-    y: PAGE_MARGIN,
-    pageHeight: doc.internal.pageSize.getHeight(),
-    pageWidth: doc.internal.pageSize.getWidth(),
-    contentWidth: doc.internal.pageSize.getWidth() - PAGE_MARGIN * 2,
-  };
-}
-
-function ensureRoom(doc: jsPDF, cur: Cursor, needed: number): void {
-  if (cur.y + needed > cur.pageHeight - PAGE_MARGIN) {
-    doc.addPage();
-    cur.y = PAGE_MARGIN;
-  }
-}
-
-function drawSectionHeading(doc: jsPDF, cur: Cursor, text: string): void {
-  ensureRoom(doc, cur, 36);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.setTextColor(...HEADING_COLOR);
-  doc.text(text.toUpperCase(), PAGE_MARGIN, cur.y);
-  cur.y += 6;
-  doc.setDrawColor(...ACCENT);
-  doc.setLineWidth(1.2);
-  doc.line(PAGE_MARGIN, cur.y, PAGE_MARGIN + 60, cur.y);
-  cur.y += 18;
-}
-
-function drawSubHeading(doc: jsPDF, cur: Cursor, text: string): void {
-  ensureRoom(doc, cur, 24);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(...SUBHEADING_COLOR);
-  doc.text(text, PAGE_MARGIN, cur.y);
-  cur.y += 14;
-}
-
-function drawParagraph(
-  doc: jsPDF,
-  cur: Cursor,
-  text: string,
-  opts: { italic?: boolean; size?: number; color?: [number, number, number] } = {}
-): void {
-  if (!text) {
-    drawParagraph(doc, cur, "—", opts);
-    return;
-  }
-  const size = opts.size ?? 11;
-  doc.setFont("helvetica", opts.italic ? "italic" : "normal");
-  doc.setFontSize(size);
-  doc.setTextColor(...(opts.color ?? BODY_COLOR));
-  const lines = doc.splitTextToSize(text, cur.contentWidth) as string[];
-  const lineHeight = size * 1.35;
-  for (const line of lines) {
-    ensureRoom(doc, cur, lineHeight);
-    doc.text(line, PAGE_MARGIN, cur.y);
-    cur.y += lineHeight;
-  }
-}
-
-function drawLabelValue(
-  doc: jsPDF,
-  cur: Cursor,
-  label: string,
-  value: string
-): void {
-  drawSubHeading(doc, cur, label);
-  drawParagraph(doc, cur, value || "—");
-  cur.y += 4;
 }
 
 function drawCover(doc: jsPDF, cur: Cursor, cycle: LatreouCycle): void {
@@ -195,7 +118,7 @@ function drawSongTable(
       textColor: BODY_COLOR,
       fontSize: 10,
     },
-    alternateRowStyles: { fillColor: [255, 248, 240] },
+    alternateRowStyles: { fillColor: ALT_ROW },
     columnStyles: {
       0: { cellWidth: 28, halign: "center" },
       1: { cellWidth: "auto" },
@@ -210,6 +133,7 @@ function drawSongTable(
       ) {
         const link = songs[data.row.index].youtubeLink;
         const { x, y, width, height } = data.cell;
+        void width;
         doc.setTextColor(...LINK_COLOR);
         doc.textWithLink("▶ YouTube", x + 4, y + height / 2 + 3, { url: link });
         doc.setTextColor(...BODY_COLOR);
@@ -310,7 +234,7 @@ function drawRehearsals(doc: jsPDF, cur: Cursor, cycle: LatreouCycle): void {
       fontStyle: "bold",
     },
     bodyStyles: { textColor: BODY_COLOR, fontSize: 10 },
-    alternateRowStyles: { fillColor: [255, 248, 240] },
+    alternateRowStyles: { fillColor: ALT_ROW },
     columnStyles: {
       0: { cellWidth: 110 },
       1: { cellWidth: 50 },
@@ -377,5 +301,5 @@ export function buildLatreouPdf(cycle: LatreouCycle): void {
   drawScripture(doc, cur, cycle);
   drawPrayer(doc, cur, cycle);
 
-  doc.save(`latreou-${slugify(cycle.cycleName)}.pdf`);
+  doc.save(`latreou-${slugify(cycle.cycleName, "latreou-cycle")}.pdf`);
 }

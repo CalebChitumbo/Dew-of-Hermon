@@ -33,6 +33,7 @@ import {
   Calendar,
   MapPin,
   Clock,
+  ClipboardList,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -560,6 +561,35 @@ export default function EventRoleBoardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Post-Event Report entry point */}
+      {(() => {
+        const effectiveEnd = event.endDate ?? event.startDate;
+        const hasEnded = effectiveEnd <= new Date();
+        const isCreator = userData?.id === event.createdBy;
+        if (!hasEnded || !(isCreator || isAdmin)) return null;
+        return (
+          <Card className="border-clay-200 bg-cream/40">
+            <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <ClipboardList className="h-5 w-5 text-clay-500 flex-shrink-0" />
+              <div className="flex-1 text-sm text-clay-700">
+                <p className="font-semibold">Post-event report</p>
+                <p className="text-clay-500">
+                  {isCreator
+                    ? "This event has ended — please submit your report."
+                    : "View or manage this event's report."}
+                </p>
+              </div>
+              <Link href={`/manage/events/reports/${event.id}`}>
+                <Button variant="gold" className="gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  {isCreator ? "Open report" : "View report"}
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Overall Progress */}
       <Card className={cn("border", progressBg(overallPct))}>
