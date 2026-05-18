@@ -216,6 +216,56 @@ export interface EventDepartmentRole {
   createdAt: Date;
 }
 
+// ─── Event Reports (Post-Event Reporting) ───
+
+export type EventReportStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "REVIEWED"
+  | "CHANGES_REQUESTED";
+
+export type ObjectivesMetRating = 1 | 2 | 3 | 4 | 5;
+
+export interface EventReportFinances {
+  budget: number | null;
+  actualSpend: number | null;
+  notes: string | null;
+}
+
+export interface EventReport {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventStartDate: Date;
+  eventEndDate: Date | null;
+  eventType: EventType;
+  createdByDepartmentId: string | null;
+
+  initiatorId: string;
+  initiatorName: string;
+  initiatorEmail: string | null;
+
+  attendanceCount: number | null;
+  objectivesMetRating: ObjectivesMetRating | null;
+  highlights: string;
+  challenges: string;
+  lessonsLearned: string;
+  recommendations: string;
+  finances: EventReportFinances | null;
+  mediaLink: string | null;
+  additionalComments: string | null;
+
+  status: EventReportStatus;
+  submittedAt: Date | null;
+  reviewedBy: string | null;
+  reviewedByName: string | null;
+  reviewedAt: Date | null;
+  reviewComments: string | null;
+
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ─── Follow-Up Pipeline ───
 
 export interface FollowUpCard {

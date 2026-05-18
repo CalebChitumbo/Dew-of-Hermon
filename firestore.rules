@@ -136,6 +136,18 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ─── Event Reports (Post-Event Reporting) ───
+    // The initiator can read their own report; admins/dept leads can read all
+    // (the API still gates which UI surfaces show reports to whom). All writes
+    // flow through the API which enforces ownership, workflow transitions, and
+    // denormalization of event metadata.
+    match /eventReports/{reportId} {
+      allow read: if isSignedIn() && (
+        resource.data.initiatorId == request.auth.uid || isDeptLead()
+      );
+      allow write: if false;
+    }
+
     // ─── Follow-Up Cards ───
     match /followUpCards/{cardId} {
       allow read: if isSignedIn();

@@ -63,6 +63,20 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
   {
+    key: "event_reports_submit",
+    label: "Event Reports (Submit)",
+    description: "Submit post-event reports for events you initiated",
+    route: "/manage/events/reports",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
+  {
+    key: "event_reports_review",
+    label: "Event Report Reviews",
+    description: "Review post-event reports submitted by event initiators",
+    route: "/manage/events/reports/review",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
+  {
     key: "campus_ministry",
     label: "Campus Ministry",
     description: "Campus ministry activities and follow-ups",
@@ -182,6 +196,20 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     SUPER_ADMIN: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  event_reports_submit: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "edit",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  event_reports_review: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "view",
+    DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
     MEMBER: "none",
   },
@@ -366,6 +394,22 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     description: "Approve or reject event requests",
     category: "Events",
     supportsDepartmentRules: true,
+  },
+  {
+    key: "submit_event_report",
+    label: "Submit Event Reports",
+    description: "Submit post-event reports for events you initiated",
+    category: "Events",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "review_event_reports",
+    label: "Review Event Reports",
+    description:
+      "Mark post-event reports as reviewed or request changes from event initiators",
+    category: "Events",
+    lockedMinRole: "SUPER_ADMIN",
+    supportsDepartmentRules: false,
   },
   // Follow-Up
   {
@@ -581,6 +625,8 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
 /** Default minimum role for each feature (matches current hardcoded behavior) */
 export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   approve_events: "ADMIN",
+  submit_event_report: "DEPARTMENT_LEAD",
+  review_event_reports: "SUPER_ADMIN",
   submit_follow_up: "ADMIN",
   manage_follow_ups: "ADMIN",
   view_assigned_follow_ups: "ADMIN",

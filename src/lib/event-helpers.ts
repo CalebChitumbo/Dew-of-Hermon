@@ -131,6 +131,42 @@ export async function notifyTargetedMembers(
 }
 
 /**
+ * Notify all active Chairpersons (SUPER_ADMIN) that a post-event report has been
+ * submitted and is awaiting review.
+ */
+export async function notifyChairpersonsOfReportSubmission(
+  eventId: string,
+  eventTitle: string,
+  initiatorName: string
+): Promise<void> {
+  try {
+    const chairpersonsSnap = await adminDb
+      .collection("users")
+      .where("role", "==", "SUPER_ADMIN")
+      .where("isActive", "==", true)
+      .get();
+
+    for (const doc of chairpersonsSnap.docs) {
+      const data = doc.data();
+      await createNotificationWithEmail({
+        userId: doc.id,
+        title: "New Event Report Submitted",
+        message: `${initiatorName} submitted a post-event report for "${eventTitle}". Please review.`,
+        type: "event",
+        link: `/manage/events/reports/review/${eventId}`,
+        recipientEmail: data.email,
+        email: {
+          subject: `Event Report Submitted: ${eventTitle}`,
+          text: `${initiatorName} has submitted the post-event report for "${eventTitle}". Log in to review the report.`,
+        },
+      }).catch(console.error);
+    }
+  } catch (err) {
+    console.error("Failed to notify chairpersons of report submission:", err);
+  }
+}
+
+/**
  * Notify department managers that their role assignments are ready for an event.
  */
 export async function notifyDepartmentManagers(
