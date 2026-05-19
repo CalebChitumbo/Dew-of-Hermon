@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus, Banknote } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus, Banknote, Mic, Target, Ticket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasMinRole } from "@/lib/permissions";
 
@@ -93,6 +93,11 @@ export default function NewEventPage() {
       assignedUserName: null,
     }))
   );
+  const [speaker, setSpeaker] = useState("");
+  const [objective, setObjective] = useState("");
+  const [isPaid, setIsPaid] = useState(false);
+  const [attendanceFee, setAttendanceFee] = useState("");
+  const [attendanceFeeCurrency, setAttendanceFeeCurrency] = useState("ZMW");
   const [transportRequired, setTransportRequired] = useState(false);
   const [transportNeeds, setTransportNeeds] = useState("");
   const [budgetRequested, setBudgetRequested] = useState(false);
@@ -179,6 +184,33 @@ export default function NewEventPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title || !date || !venue || !userData) return;
+    if (!objective.trim()) {
+      toast({
+        title: "Objective required",
+        description: "Describe what this event aims to achieve.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (isPaid) {
+      const fee = Number(attendanceFee);
+      if (!Number.isFinite(fee) || fee <= 0) {
+        toast({
+          title: "Attendance fee required",
+          description: "Enter a positive fee, or switch to free attendance.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!attendanceFeeCurrency.trim()) {
+        toast({
+          title: "Currency required",
+          description: "Enter the currency for the attendance fee.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     if (transportRequired && !transportNeeds.trim()) {
       toast({
         title: "Transport details required",
@@ -235,6 +267,11 @@ export default function NewEventPage() {
           lifeGroupTarget: lifeGroupTarget || null,
           createdByDepartmentId: createdByDepartmentId || null,
           coreRoles: coreRoles.filter((r) => r.assignedUserName),
+          speaker: speaker.trim() || null,
+          objective: objective.trim(),
+          isPaid,
+          attendanceFee: isPaid ? Number(attendanceFee) : null,
+          attendanceFeeCurrency: isPaid ? attendanceFeeCurrency.trim() : null,
           transportRequired,
           transportNeeds: transportRequired ? transportNeeds.trim() : null,
           budgetRequested,
@@ -468,15 +505,113 @@ export default function NewEventPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="objective" className="flex items-center gap-1.5">
+                <Target className="h-3.5 w-3.5 text-[#C8963E]" />
+                Objective *
+              </Label>
+              <Textarea
+                id="objective"
+                placeholder="What does this event aim to achieve?"
+                rows={2}
+                value={objective}
+                onChange={(e) => setObjective(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                placeholder="Brief description of the event"
+                placeholder="Any additional details or context (optional)"
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="speaker" className="flex items-center gap-1.5">
+                <Mic className="h-3.5 w-3.5 text-[#C8963E]" />
+                Speaker
+              </Label>
+              <Input
+                id="speaker"
+                placeholder="Name of the speaker (leave blank if none)"
+                value={speaker}
+                onChange={(e) => setSpeaker(e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Attendance Fee */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Ticket className="h-4 w-4 text-[#C8963E]" />
+              Attendance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-clay-500">
+              Is there a cost for attendees, or is the event free to attend?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPaid(false)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  !isPaid
+                    ? "border-green-500 bg-green-50 text-green-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Free to attend
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPaid(true)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  isPaid
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Payment required
+              </button>
+            </div>
+            {isPaid && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <Label htmlFor="attendance-fee" className="text-sm">
+                    Fee per attendee *
+                  </Label>
+                  <Input
+                    id="attendance-fee"
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    placeholder="e.g. 50"
+                    value={attendanceFee}
+                    onChange={(e) => setAttendanceFee(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="attendance-fee-currency" className="text-sm">
+                    Currency *
+                  </Label>
+                  <Input
+                    id="attendance-fee-currency"
+                    placeholder="ZMW"
+                    value={attendanceFeeCurrency}
+                    onChange={(e) => setAttendanceFeeCurrency(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -789,6 +924,8 @@ export default function NewEventPage() {
               !title ||
               !date ||
               !venue ||
+              !objective.trim() ||
+              (isPaid && (!attendanceFee.trim() || !attendanceFeeCurrency.trim())) ||
               (transportRequired && !transportNeeds.trim()) ||
               (budgetRequested &&
                 (!budgetAmount.trim() ||

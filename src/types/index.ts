@@ -100,6 +100,11 @@ export interface AppEvent {
   approvedAt: Date | null;
   createdByDepartmentId: string | null;
   coreRoles: EventCoreRole[];
+  speaker: string | null;
+  objective: string | null;
+  isPaid: boolean;
+  attendanceFee: number | null;
+  attendanceFeeCurrency: string | null;
   transportRequired: boolean;
   transportNeeds: string | null;
   transportRequestId: string | null;

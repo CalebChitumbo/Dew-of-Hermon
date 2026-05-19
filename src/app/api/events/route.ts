@@ -190,6 +190,11 @@ export async function GET(request: Request) {
         approvedAt: data.approvedAt?.toDate?.()?.toISOString() || null,
         createdByDepartmentId: data.createdByDepartmentId || null,
         coreRoles: data.coreRoles || [],
+        speaker: data.speaker || null,
+        objective: data.objective || null,
+        isPaid: data.isPaid || false,
+        attendanceFee: data.attendanceFee ?? null,
+        attendanceFeeCurrency: data.attendanceFeeCurrency || null,
         transportRequired: data.transportRequired || false,
         transportNeeds: data.transportNeeds || null,
         transportRequestId: data.transportRequestId || null,
@@ -242,6 +247,11 @@ export async function POST(request: Request) {
       lifeGroupTarget,
       createdByDepartmentId,
       coreRoles,
+      speaker,
+      objective,
+      isPaid,
+      attendanceFee,
+      attendanceFeeCurrency,
       transportRequired,
       transportNeeds,
       budgetRequested,
@@ -278,6 +288,40 @@ export async function POST(request: Request) {
         { error: `Invalid lifeGroupTarget. Must be one of: ${validLifeGroups.join(", ")} or null` },
         { status: 400 }
       );
+    }
+
+    const speakerValue =
+      typeof speaker === "string" && speaker.trim() ? speaker.trim() : null;
+    const objectiveValue =
+      typeof objective === "string" && objective.trim() ? objective.trim() : null;
+    if (!objectiveValue) {
+      return NextResponse.json(
+        { error: "objective is required" },
+        { status: 400 }
+      );
+    }
+
+    const paidAttendance = Boolean(isPaid);
+    const feeAmount = paidAttendance ? Number(attendanceFee) : null;
+    const feeCurrency =
+      paidAttendance &&
+      typeof attendanceFeeCurrency === "string" &&
+      attendanceFeeCurrency.trim()
+        ? attendanceFeeCurrency.trim()
+        : null;
+    if (paidAttendance) {
+      if (feeAmount === null || !Number.isFinite(feeAmount) || feeAmount <= 0) {
+        return NextResponse.json(
+          { error: "attendanceFee must be a positive number when isPaid is true" },
+          { status: 400 }
+        );
+      }
+      if (!feeCurrency) {
+        return NextResponse.json(
+          { error: "attendanceFeeCurrency is required when isPaid is true" },
+          { status: 400 }
+        );
+      }
     }
 
     const needsTransport = Boolean(transportRequired);
@@ -357,6 +401,11 @@ export async function POST(request: Request) {
         assignedUserId: r.assignedUserId || null,
         assignedUserName: r.assignedUserName || null,
       })),
+      speaker: speakerValue,
+      objective: objectiveValue,
+      isPaid: paidAttendance,
+      attendanceFee: feeAmount,
+      attendanceFeeCurrency: feeCurrency,
       transportRequired: needsTransport,
       transportNeeds: transportNeedsValue,
       transportRequestId: null,

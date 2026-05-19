@@ -28,6 +28,9 @@ import {
   Bus,
   Send,
   Banknote,
+  Mic,
+  Target,
+  Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -162,6 +165,11 @@ export default function EventApprovalsPage() {
           approvedAt: data.approvedAt ? parseFirestoreDate(data.approvedAt) : null,
           createdByDepartmentId: data.createdByDepartmentId || null,
           coreRoles: data.coreRoles || [],
+          speaker: data.speaker || null,
+          objective: data.objective || null,
+          isPaid: data.isPaid || false,
+          attendanceFee: data.attendanceFee ?? null,
+          attendanceFeeCurrency: data.attendanceFeeCurrency || null,
           transportRequired: data.transportRequired || false,
           transportNeeds: data.transportNeeds || null,
           transportRequestId: data.transportRequestId || null,
@@ -517,11 +525,45 @@ export default function EventApprovalsPage() {
                   </div>
                 </div>
 
+                {event.objective && (
+                  <div className="text-sm bg-clay-50 rounded-md px-3 py-2 space-y-1">
+                    <p className="text-xs font-semibold text-clay-500 uppercase tracking-wide flex items-center gap-1">
+                      <Target className="h-3 w-3" />
+                      Objective
+                    </p>
+                    <p className="text-clay-700 whitespace-pre-wrap">
+                      {event.objective}
+                    </p>
+                  </div>
+                )}
+
                 {event.description && (
                   <p className="text-sm text-clay-600 bg-clay-50 rounded-md px-3 py-2">
                     {event.description}
                   </p>
                 )}
+
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-clay-600">
+                  {event.speaker && (
+                    <span className="flex items-center gap-1.5">
+                      <Mic className="h-3.5 w-3.5 text-clay-400" />
+                      Speaker: <strong className="text-clay-800">{event.speaker}</strong>
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1.5">
+                    <Ticket className="h-3.5 w-3.5 text-clay-400" />
+                    {event.isPaid && event.attendanceFee !== null ? (
+                      <>
+                        Fee:{" "}
+                        <strong className="text-clay-800">
+                          {event.attendanceFeeCurrency} {event.attendanceFee.toLocaleString()}
+                        </strong>
+                      </>
+                    ) : (
+                      <span className="text-green-700 font-medium">Free to attend</span>
+                    )}
+                  </span>
+                </div>
 
                 {/* Core Roles */}
                 {event.coreRoles && event.coreRoles.length > 0 && (
