@@ -12,6 +12,13 @@ export type LifeGroup = "BRIDGE" | "ANCHOR" | "CORNERSTONE";
 
 export type EventApprovalStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
 
+export type TransportRequestStatus =
+  | "PENDING_DETAILS"
+  | "PENDING_TREASURER"
+  | "APPROVED"
+  | "REJECTED_TREASURER"
+  | "CANCELLED";
+
 export type FollowUpStatus =
   | "PENDING_LEAD_APPROVAL"
   | "REJECTED"
@@ -87,6 +94,53 @@ export interface AppEvent {
   approvedAt: Date | null;
   createdByDepartmentId: string | null;
   coreRoles: EventCoreRole[];
+  transportRequired: boolean;
+  transportNeeds: string | null;
+  transportRequestId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TransportRequestStatusHistoryEntry {
+  status: TransportRequestStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+export interface TransportRequest {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventStartDate: Date;
+  needsDescription: string;
+  status: TransportRequestStatus;
+
+  // Coordinator-supplied
+  vehicleType: string | null;
+  vehicleCount: number | null;
+  estimatedCost: number | null;
+  currency: string | null;
+  pickupLocation: string | null;
+  dropoffLocation: string | null;
+  pickupTime: Date | null;
+  returnTime: Date | null;
+  coordinatorNotes: string | null;
+
+  // Actor metadata
+  routedBy: string | null;
+  routedByName: string | null;
+  routedAt: Date | null;
+  filledBy: string | null;
+  filledByName: string | null;
+  filledAt: Date | null;
+  treasurerId: string | null;
+  treasurerName: string | null;
+  treasurerDecidedAt: Date | null;
+  treasurerComments: string | null;
+
+  statusHistory: TransportRequestStatusHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }

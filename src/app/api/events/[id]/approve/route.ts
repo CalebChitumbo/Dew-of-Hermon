@@ -7,6 +7,7 @@ import {
   notifyTargetedMembers,
   notifyDepartmentManagers,
 } from "@/lib/event-helpers";
+import { cancelTransportRequestForEvent } from "@/lib/transport-helpers";
 import { UserRole } from "@/types";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 
@@ -91,6 +92,33 @@ export async function PATCH(
     const now = new Date();
 
     if (action === "APPROVE") {
+      // Block approval when transport is required but not yet approved.
+      if (eventData.transportRequired) {
+        const reqId = eventData.transportRequestId;
+        if (!reqId) {
+          return NextResponse.json(
+            {
+              error:
+                "This event needs transport. Notify the Transport Coordinator before approving.",
+            },
+            { status: 409 }
+          );
+        }
+        const reqDoc = await adminDb
+          .collection("transportRequests")
+          .doc(reqId)
+          .get();
+        const reqStatus = reqDoc.exists ? reqDoc.data()?.status : null;
+        if (reqStatus !== "APPROVED") {
+          return NextResponse.json(
+            {
+              error: `Transport request is not yet treasurer-approved (current status: ${reqStatus ?? "missing"}).`,
+            },
+            { status: 409 }
+          );
+        }
+      }
+
       await eventRef.update({
         approvalStatus: "APPROVED",
         approvedBy: caller.uid,
@@ -141,6 +169,15 @@ export async function PATCH(
         approvalComments: comments || null,
         updatedAt: now,
       });
+
+      // Cascade-cancel any linked transport request
+      if (eventData.transportRequired && eventData.transportRequestId) {
+        cancelTransportRequestForEvent(
+          eventId,
+          { uid: caller.uid, name: caller.name },
+          comments || "Parent event was rejected."
+        ).catch(console.error);
+      }
 
       // Notify event creator
       const creatorId = eventData.createdBy;

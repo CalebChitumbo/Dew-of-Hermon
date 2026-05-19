@@ -186,6 +186,9 @@ export async function GET(request: Request) {
         approvedAt: data.approvedAt?.toDate?.()?.toISOString() || null,
         createdByDepartmentId: data.createdByDepartmentId || null,
         coreRoles: data.coreRoles || [],
+        transportRequired: data.transportRequired || false,
+        transportNeeds: data.transportNeeds || null,
+        transportRequestId: data.transportRequestId || null,
         createdBy: data.createdBy || "",
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,
@@ -230,6 +233,8 @@ export async function POST(request: Request) {
       lifeGroupTarget,
       createdByDepartmentId,
       coreRoles,
+      transportRequired,
+      transportNeeds,
     } = body;
 
     if (!title || !type || !startDate || !venue) {
@@ -262,8 +267,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // Determine approval status
-    const autoApproved = await canAutoApprove(caller.role, caller.leadsDepartmentIds);
+    const needsTransport = Boolean(transportRequired);
+    const transportNeedsValue =
+      needsTransport && typeof transportNeeds === "string" && transportNeeds.trim().length > 0
+        ? transportNeeds.trim()
+        : null;
+    if (needsTransport && !transportNeedsValue) {
+      return NextResponse.json(
+        { error: "transportNeeds is required when transportRequired is true" },
+        { status: 400 }
+      );
+    }
+
+    // Determine approval status. Events that require transport always go
+    // through the approval queue so the events coordinator can route the
+    // transport request — even when the creator would normally auto-approve.
+    const eligibleForAutoApproval = await canAutoApprove(
+      caller.role,
+      caller.leadsDepartmentIds
+    );
+    const autoApproved = eligibleForAutoApproval && !needsTransport;
     const approvalStatus = autoApproved ? "APPROVED" : "PENDING_APPROVAL";
 
     const now = new Date();
@@ -286,6 +309,9 @@ export async function POST(request: Request) {
         assignedUserId: r.assignedUserId || null,
         assignedUserName: r.assignedUserName || null,
       })),
+      transportRequired: needsTransport,
+      transportNeeds: transportNeedsValue,
+      transportRequestId: null,
       createdBy: caller.uid,
       createdAt: now,
       updatedAt: now,

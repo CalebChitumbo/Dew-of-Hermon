@@ -325,6 +325,9 @@ export async function GET(request: NextRequest) {
         approvedAt: data.approvedAt?.toDate?.() || null,
         createdByDepartmentId: data.createdByDepartmentId || null,
         coreRoles: data.coreRoles || [],
+        transportRequired: data.transportRequired || false,
+        transportNeeds: data.transportNeeds || null,
+        transportRequestId: data.transportRequestId || null,
         createdAt: data.createdAt?.toDate?.() || new Date(),
         updatedAt: data.updatedAt?.toDate?.() || new Date(),
       });

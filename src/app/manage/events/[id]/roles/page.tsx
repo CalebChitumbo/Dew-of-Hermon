@@ -175,6 +175,9 @@ export default function EventRoleBoardPage() {
         approvedAt: d.approvedAt ? parseFirestoreDate(d.approvedAt) : null,
         createdByDepartmentId: d.createdByDepartmentId || null,
         coreRoles: d.coreRoles || [],
+        transportRequired: d.transportRequired || false,
+        transportNeeds: d.transportNeeds || null,
+        transportRequestId: d.transportRequestId || null,
         createdAt: parseFirestoreDate(d.createdAt),
         updatedAt: parseFirestoreDate(d.updatedAt),
       });

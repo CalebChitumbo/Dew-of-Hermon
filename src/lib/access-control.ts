@@ -146,6 +146,22 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     route: "/manage/fundraising",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
+  {
+    key: "transport_requests",
+    label: "Transport Requests",
+    description:
+      "Transport coordinator queue: cost incoming transport requests for approved events",
+    route: "/manage/transport/requests",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
+  {
+    key: "transport_approvals",
+    label: "Transport Approvals (Treasurer)",
+    description:
+      "Treasurer queue: confirm funds availability for costed transport requests",
+    route: "/manage/finance/transport-approvals",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
 ];
 
 /** The default permissions that match the current hardcoded behavior */
@@ -277,6 +293,20 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     MEMBER: "none",
   },
   fundraising: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  transport_requests: {
+    SUPER_ADMIN: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  transport_approvals: {
     SUPER_ADMIN: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
@@ -620,6 +650,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     category: "Food Logistics",
     supportsDepartmentRules: true,
   },
+  {
+    key: "approve_transport_budget",
+    label: "Approve Transport Budget",
+    description:
+      "Confirm funds availability for transport requests submitted by the Transport Coordinator",
+    category: "Finance",
+    supportsDepartmentRules: true,
+  },
 ];
 
 /** Default minimum role for each feature (matches current hardcoded behavior) */
@@ -655,6 +693,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   view_transport_assignments: "ADMIN",
   manage_food_logistics: "ADMIN",
   view_food_logistics: "ADMIN",
+  approve_transport_budget: "ADMIN",
 };
 
 /** Default department access rules (matches current hardcoded behavior) */
@@ -789,6 +828,12 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     requiresLeadership: false,
     allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
   },
+  {
+    featureKey: "approve_transport_budget",
+    departmentName: "Finance",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
 ];
 
 /**
@@ -813,6 +858,7 @@ export const DEPARTMENTAL_MANAGERS: ReadonlyArray<{
   { departmentName: "Life Groups" },
   { departmentName: "Campus Ministry" },
   { departmentName: "Food Logistics" },
+  { departmentName: "Finance", displayName: "Finance (Treasurer)" },
 ];
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {

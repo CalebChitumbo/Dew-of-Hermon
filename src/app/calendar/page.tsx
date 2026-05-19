@@ -161,6 +161,9 @@ export default function CalendarPage() {
           approvedAt: data.approvedAt ? parseFirestoreDate(data.approvedAt) : null,
           createdByDepartmentId: data.createdByDepartmentId || null,
           coreRoles: data.coreRoles || [],
+          transportRequired: data.transportRequired || false,
+          transportNeeds: data.transportNeeds || null,
+          transportRequestId: data.transportRequestId || null,
           createdAt: parseFirestoreDate(data.createdAt),
           updatedAt: parseFirestoreDate(data.updatedAt),
         };

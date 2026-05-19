@@ -47,6 +47,7 @@ const departments = [
   { name: "Communications & Media", icon: "📣", order: 15, description: "Announcements, social media, publicity, and external communications" },
   { name: "Fundraising", icon: "💰", order: 16, description: "Fundraising campaigns, donor relations, and financial mobilisation" },
   { name: "Food Logistics", icon: "🍽️", order: 17, description: "Meal planning, catering logistics, and food provision for events and camps" },
+  { name: "Finance", icon: "🏦", order: 18, description: "Treasury oversight: confirm funds availability for departmental requests such as transport, catering, and events" },
 ];
 
 // ─── Institutions ───

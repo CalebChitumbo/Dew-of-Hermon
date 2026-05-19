@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasMinRole } from "@/lib/permissions";
 
@@ -93,6 +93,8 @@ export default function NewEventPage() {
       assignedUserName: null,
     }))
   );
+  const [transportRequired, setTransportRequired] = useState(false);
+  const [transportNeeds, setTransportNeeds] = useState("");
 
   // Access: DEPARTMENT_LEAD+
   const hasAccess = userData ? hasMinRole(userData.role, "DEPARTMENT_LEAD") : false;
@@ -173,6 +175,15 @@ export default function NewEventPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title || !date || !venue || !userData) return;
+    if (transportRequired && !transportNeeds.trim()) {
+      toast({
+        title: "Transport details required",
+        description:
+          "Please describe what transport is needed so the coordinator can plan and cost it.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -192,6 +203,8 @@ export default function NewEventPage() {
           lifeGroupTarget: lifeGroupTarget || null,
           createdByDepartmentId: createdByDepartmentId || null,
           coreRoles: coreRoles.filter((r) => r.assignedUserName),
+          transportRequired,
+          transportNeeds: transportRequired ? transportNeeds.trim() : null,
         }),
       });
 
@@ -575,6 +588,67 @@ export default function NewEventPage() {
           </CardContent>
         </Card>
 
+        {/* Transport */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Bus className="h-4 w-4 text-[#C8963E]" />
+              Transport
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-clay-500">
+              If transport is needed for this event, flag it here. The Events
+              Coordinator will route the request to the Transport Coordinator
+              for costing before the event is approved.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setTransportRequired(false)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  !transportRequired
+                    ? "border-clay-400 bg-clay-50 text-clay-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                No transport needed
+              </button>
+              <button
+                type="button"
+                onClick={() => setTransportRequired(true)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  transportRequired
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Transport required
+              </button>
+            </div>
+            {transportRequired && (
+              <div className="space-y-1.5">
+                <Label htmlFor="transport-needs" className="text-sm">
+                  Describe transport needs *
+                </Label>
+                <Textarea
+                  id="transport-needs"
+                  placeholder="e.g. Pickup from UNZA and TAU campuses, ~40 people, return after the event ends"
+                  rows={3}
+                  value={transportNeeds}
+                  onChange={(e) => setTransportNeeds(e.target.value)}
+                />
+                <p className="text-xs text-clay-400">
+                  The Transport Coordinator will use this to plan vehicles,
+                  schedule, and cost.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Submit */}
         <div className="flex gap-3">
           <Link href="/calendar" className="flex-1">
@@ -584,7 +658,13 @@ export default function NewEventPage() {
           </Link>
           <Button
             type="submit"
-            disabled={submitting || !title || !date || !venue}
+            disabled={
+              submitting ||
+              !title ||
+              !date ||
+              !venue ||
+              (transportRequired && !transportNeeds.trim())
+            }
             className="flex-1 bg-[#C8963E] hover:bg-[#B8862E] text-white"
           >
             {submitting ? (

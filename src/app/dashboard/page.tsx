@@ -384,6 +384,9 @@ export default function DashboardPage() {
           approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
           createdByDepartmentId: data.createdByDepartmentId ?? null,
           coreRoles: data.coreRoles ?? [],
+          transportRequired: data.transportRequired ?? false,
+          transportNeeds: data.transportNeeds ?? null,
+          transportRequestId: data.transportRequestId ?? null,
           createdAt: toDate(data.createdAt),
           updatedAt: toDate(data.updatedAt),
         });
@@ -641,6 +644,9 @@ export default function DashboardPage() {
               approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
               createdByDepartmentId: data.createdByDepartmentId ?? null,
               coreRoles: data.coreRoles ?? [],
+              transportRequired: data.transportRequired ?? false,
+              transportNeeds: data.transportNeeds ?? null,
+              transportRequestId: data.transportRequestId ?? null,
               createdAt: toDate(data.createdAt),
               updatedAt: toDate(data.updatedAt),
             };

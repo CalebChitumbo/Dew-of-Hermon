@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { getDocs, query, where, Timestamp } from "firebase/firestore";
+import { getDocs, query, where, Timestamp, documentId } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
-import { AppEvent, EventType } from "@/types";
+import { AppEvent, EventType, TransportRequest, TransportRequestStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,8 @@ import {
   MessageSquare,
   Shield,
   Users,
+  Bus,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +65,30 @@ interface PendingEvent extends AppEvent {
   departmentName?: string;
 }
 
+type TransportSummary = Pick<
+  TransportRequest,
+  | "id"
+  | "status"
+  | "vehicleType"
+  | "vehicleCount"
+  | "estimatedCost"
+  | "currency"
+  | "pickupLocation"
+  | "dropoffLocation"
+  | "pickupTime"
+  | "returnTime"
+  | "coordinatorNotes"
+  | "treasurerComments"
+>;
+
+const TRANSPORT_STATUS_LABEL: Record<TransportRequestStatus, string> = {
+  PENDING_DETAILS: "Awaiting Transport Coordinator",
+  PENDING_TREASURER: "Awaiting Treasurer",
+  APPROVED: "Transport Approved",
+  REJECTED_TREASURER: "Transport Rejected by Treasurer",
+  CANCELLED: "Transport Cancelled",
+};
+
 type ActionState = {
   eventId: string;
   action: "APPROVE" | "REJECT" | "REQUEST_CHANGES";
@@ -74,11 +100,13 @@ export default function EventApprovalsPage() {
   const { toast } = useToast();
 
   const [pendingEvents, setPendingEvents] = useState<PendingEvent[]>([]);
+  const [transportByEvent, setTransportByEvent] = useState<Record<string, TransportSummary>>({});
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [actionState, setActionState] = useState<ActionState>(null);
   const [comments, setComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [notifyingEventId, setNotifyingEventId] = useState<string | null>(null);
 
   // Access: uses configurable page permissions; final approval permission enforced server-side
   const hasAccess = userData ? canAccessPage("events_approvals") : false;
@@ -112,6 +140,9 @@ export default function EventApprovalsPage() {
           approvedAt: data.approvedAt ? parseFirestoreDate(data.approvedAt) : null,
           createdByDepartmentId: data.createdByDepartmentId || null,
           coreRoles: data.coreRoles || [],
+          transportRequired: data.transportRequired || false,
+          transportNeeds: data.transportNeeds || null,
+          transportRequestId: data.transportRequestId || null,
           createdBy: data.createdBy || "",
           createdAt: parseFirestoreDate(data.createdAt),
           updatedAt: parseFirestoreDate(data.updatedAt),
@@ -120,6 +151,41 @@ export default function EventApprovalsPage() {
 
       events.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setPendingEvents(events);
+
+      // Fetch transport requests for events that have one
+      const requestIds = events
+        .map((e) => e.transportRequestId)
+        .filter((id): id is string => Boolean(id));
+      const summaries: Record<string, TransportSummary> = {};
+      if (requestIds.length > 0) {
+        // Firestore 'in' queries support up to 30 IDs
+        for (let i = 0; i < requestIds.length; i += 30) {
+          const chunk = requestIds.slice(i, i + 30);
+          const tSnap = await getDocs(
+            query(safeCollection("transportRequests"), where(documentId(), "in", chunk))
+          );
+          tSnap.docs.forEach((d) => {
+            const td = d.data();
+            const event = events.find((e) => e.transportRequestId === d.id);
+            if (!event) return;
+            summaries[event.id] = {
+              id: d.id,
+              status: td.status as TransportRequestStatus,
+              vehicleType: td.vehicleType ?? null,
+              vehicleCount: td.vehicleCount ?? null,
+              estimatedCost: td.estimatedCost ?? null,
+              currency: td.currency ?? null,
+              pickupLocation: td.pickupLocation ?? null,
+              dropoffLocation: td.dropoffLocation ?? null,
+              pickupTime: td.pickupTime ? parseFirestoreDate(td.pickupTime) : null,
+              returnTime: td.returnTime ? parseFirestoreDate(td.returnTime) : null,
+              coordinatorNotes: td.coordinatorNotes ?? null,
+              treasurerComments: td.treasurerComments ?? null,
+            };
+          });
+        }
+      }
+      setTransportByEvent(summaries);
     } catch (error) {
       console.error("Failed to fetch pending events:", error);
       setFetchError(true);
@@ -131,6 +197,33 @@ export default function EventApprovalsPage() {
   useEffect(() => {
     fetchPendingEvents();
   }, [fetchPendingEvents]);
+
+  async function handleNotifyTransport(eventId: string) {
+    setNotifyingEventId(eventId);
+    try {
+      const res = await fetch("/api/transport-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to notify transport coordinator");
+      }
+      toast({
+        title: "Transport Coordinator Notified",
+        description:
+          "The request has been sent. You'll be notified when costing and treasurer approval are complete.",
+        variant: "success",
+      });
+      await fetchPendingEvents();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Something went wrong";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setNotifyingEventId(null);
+    }
+  }
 
   async function handleAction() {
     if (!actionState) return;
@@ -286,6 +379,15 @@ export default function EventApprovalsPage() {
                       >
                         Pending Approval
                       </Badge>
+                      {event.transportRequired && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1"
+                        >
+                          <Bus className="h-3 w-3" />
+                          Transport Required
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -337,6 +439,97 @@ export default function EventApprovalsPage() {
                           )}
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Transport panel */}
+                {event.transportRequired && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Bus className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-semibold text-amber-800">
+                          Transport Required
+                        </p>
+                        {event.transportNeeds && (
+                          <p className="text-sm text-clay-700">{event.transportNeeds}</p>
+                        )}
+                        {(() => {
+                          const t = transportByEvent[event.id];
+                          if (!event.transportRequestId) {
+                            return (
+                              <p className="text-xs text-amber-700">
+                                Not yet routed. Click <strong>Notify Transport Coordinator</strong> below to start costing.
+                              </p>
+                            );
+                          }
+                          if (!t) {
+                            return (
+                              <p className="text-xs text-clay-500">Loading transport request…</p>
+                            );
+                          }
+                          return (
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-amber-700">
+                                {TRANSPORT_STATUS_LABEL[t.status]}
+                              </p>
+                              {t.status === "APPROVED" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-clay-700">
+                                  {t.vehicleType && (
+                                    <p>
+                                      <span className="text-clay-500">Vehicle:</span>{" "}
+                                      <strong>
+                                        {t.vehicleCount ?? "?"} × {t.vehicleType}
+                                      </strong>
+                                    </p>
+                                  )}
+                                  {t.estimatedCost !== null && (
+                                    <p>
+                                      <span className="text-clay-500">Cost:</span>{" "}
+                                      <strong>
+                                        {t.currency} {t.estimatedCost.toLocaleString()}
+                                      </strong>
+                                    </p>
+                                  )}
+                                  {t.pickupLocation && (
+                                    <p>
+                                      <span className="text-clay-500">Pickup:</span> {t.pickupLocation}
+                                    </p>
+                                  )}
+                                  {t.dropoffLocation && (
+                                    <p>
+                                      <span className="text-clay-500">Drop-off:</span> {t.dropoffLocation}
+                                    </p>
+                                  )}
+                                  {t.pickupTime && (
+                                    <p>
+                                      <span className="text-clay-500">Depart:</span>{" "}
+                                      {format(t.pickupTime, "EEE, d MMM h:mm a")}
+                                    </p>
+                                  )}
+                                  {t.returnTime && (
+                                    <p>
+                                      <span className="text-clay-500">Return:</span>{" "}
+                                      {format(t.returnTime, "EEE, d MMM h:mm a")}
+                                    </p>
+                                  )}
+                                  {t.coordinatorNotes && (
+                                    <p className="sm:col-span-2">
+                                      <span className="text-clay-500">Notes:</span> {t.coordinatorNotes}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              {t.status === "REJECTED_TREASURER" && t.treasurerComments && (
+                                <p className="text-xs text-red-700 bg-red-50 rounded px-2 py-1">
+                                  Treasurer: {t.treasurerComments}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -412,45 +605,77 @@ export default function EventApprovalsPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-clay-100">
-                    <Button
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
-                      onClick={() =>
-                        setActionState({ eventId: event.id, action: "APPROVE" })
-                      }
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-amber-300 text-amber-700 hover:bg-amber-50 gap-1.5"
-                      onClick={() => {
-                        setActionState({
-                          eventId: event.id,
-                          action: "REQUEST_CHANGES",
-                        });
-                        setComments("");
-                      }}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      Request Changes
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-red-300 text-red-700 hover:bg-red-50 gap-1.5"
-                      onClick={() => {
-                        setActionState({ eventId: event.id, action: "REJECT" });
-                        setComments("");
-                      }}
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Reject
-                    </Button>
-                  </div>
+                  (() => {
+                    const transport = transportByEvent[event.id];
+                    const needsRouting =
+                      event.transportRequired && !event.transportRequestId;
+                    const transportBlocking =
+                      event.transportRequired &&
+                      transport?.status !== "APPROVED";
+                    const approveTooltip = needsRouting
+                      ? "Notify the Transport Coordinator first"
+                      : transport && transport.status !== "APPROVED"
+                        ? TRANSPORT_STATUS_LABEL[transport.status]
+                        : undefined;
+                    return (
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-clay-100">
+                        {needsRouting && (
+                          <Button
+                            size="sm"
+                            className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                            onClick={() => handleNotifyTransport(event.id)}
+                            disabled={notifyingEventId === event.id}
+                          >
+                            {notifyingEventId === event.id ? (
+                              <LoadingSpinner size="sm" className="mr-1" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                            Notify Transport Coordinator
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white gap-1.5 disabled:opacity-50"
+                          onClick={() =>
+                            setActionState({ eventId: event.id, action: "APPROVE" })
+                          }
+                          disabled={transportBlocking}
+                          title={approveTooltip}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-amber-300 text-amber-700 hover:bg-amber-50 gap-1.5"
+                          onClick={() => {
+                            setActionState({
+                              eventId: event.id,
+                              action: "REQUEST_CHANGES",
+                            });
+                            setComments("");
+                          }}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          Request Changes
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-red-300 text-red-700 hover:bg-red-50 gap-1.5"
+                          onClick={() => {
+                            setActionState({ eventId: event.id, action: "REJECT" });
+                            setComments("");
+                          }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    );
+                  })()
                 )}
               </CardContent>
             </Card>

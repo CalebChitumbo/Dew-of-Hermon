@@ -175,6 +175,9 @@ function ChecklistContent() {
               approvedAt: eData.approvedAt?.toDate?.() || null,
               createdByDepartmentId: eData.createdByDepartmentId || null,
               coreRoles: eData.coreRoles || [],
+              transportRequired: eData.transportRequired || false,
+              transportNeeds: eData.transportNeeds || null,
+              transportRequestId: eData.transportRequestId || null,
               createdAt: eData.createdAt?.toDate?.() || new Date(),
               updatedAt: eData.updatedAt?.toDate?.() || new Date(),
             });

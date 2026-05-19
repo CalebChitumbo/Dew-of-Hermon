@@ -12,6 +12,7 @@ import { NotificationBell } from "@/components/shared/NotificationBell";
 import { getVisibleNavItems } from "@/components/layout/nav-config";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
+import { useTransportAccess } from "@/hooks/useTransportAccess";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -19,12 +20,15 @@ export function Sidebar() {
   const { pagePermissions } = useAccessControl();
   const { canManage: canManageCamp } = useCampLeadAccess();
   const { canPlanBraai } = useFundraisingAccess();
+  const { canManageTransport, canApproveTransportBudget } = useTransportAccess();
 
   if (!userData) return null;
 
   const extraKeys: string[] = [];
   if (canManageCamp) extraKeys.push("rops_camp");
   if (canPlanBraai) extraKeys.push("fundraising");
+  if (canManageTransport) extraKeys.push("transport_requests");
+  if (canApproveTransportBudget) extraKeys.push("transport_approvals");
   const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {
