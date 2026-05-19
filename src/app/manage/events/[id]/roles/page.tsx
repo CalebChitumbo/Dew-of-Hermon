@@ -178,6 +178,11 @@ export default function EventRoleBoardPage() {
         transportRequired: d.transportRequired || false,
         transportNeeds: d.transportNeeds || null,
         transportRequestId: d.transportRequestId || null,
+        budgetRequested: d.budgetRequested || false,
+        budgetAmount: d.budgetAmount ?? null,
+        budgetCurrency: d.budgetCurrency || null,
+        budgetPurpose: d.budgetPurpose || null,
+        budgetRequestId: d.budgetRequestId || null,
         createdAt: parseFirestoreDate(d.createdAt),
         updatedAt: parseFirestoreDate(d.updatedAt),
       });

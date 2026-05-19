@@ -7,6 +7,10 @@ import {
   notifyTargetedMembers,
   notifyDepartmentManagers,
 } from "@/lib/event-helpers";
+import {
+  createBudgetRequest,
+  notifyTreasurersOfBudgetRequest,
+} from "@/lib/budget-helpers";
 import { EventType, UserRole, LifeGroup } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -189,6 +193,11 @@ export async function GET(request: Request) {
         transportRequired: data.transportRequired || false,
         transportNeeds: data.transportNeeds || null,
         transportRequestId: data.transportRequestId || null,
+        budgetRequested: data.budgetRequested || false,
+        budgetAmount: data.budgetAmount ?? null,
+        budgetCurrency: data.budgetCurrency || null,
+        budgetPurpose: data.budgetPurpose || null,
+        budgetRequestId: data.budgetRequestId || null,
         createdBy: data.createdBy || "",
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,
@@ -235,6 +244,10 @@ export async function POST(request: Request) {
       coreRoles,
       transportRequired,
       transportNeeds,
+      budgetRequested,
+      budgetAmount,
+      budgetCurrency,
+      budgetPurpose,
     } = body;
 
     if (!title || !type || !startDate || !venue) {
@@ -279,14 +292,49 @@ export async function POST(request: Request) {
       );
     }
 
-    // Determine approval status. Events that require transport always go
-    // through the approval queue so the events coordinator can route the
-    // transport request — even when the creator would normally auto-approve.
+    const wantsBudget = Boolean(budgetRequested);
+    const budgetAmountValue = wantsBudget ? Number(budgetAmount) : null;
+    const budgetCurrencyValue =
+      wantsBudget && typeof budgetCurrency === "string" && budgetCurrency.trim()
+        ? budgetCurrency.trim()
+        : null;
+    const budgetPurposeValue =
+      wantsBudget && typeof budgetPurpose === "string" && budgetPurpose.trim()
+        ? budgetPurpose.trim()
+        : null;
+    if (wantsBudget) {
+      if (
+        budgetAmountValue === null ||
+        !Number.isFinite(budgetAmountValue) ||
+        budgetAmountValue <= 0
+      ) {
+        return NextResponse.json(
+          { error: "budgetAmount must be a positive number when budgetRequested is true" },
+          { status: 400 }
+        );
+      }
+      if (!budgetCurrencyValue) {
+        return NextResponse.json(
+          { error: "budgetCurrency is required when budgetRequested is true" },
+          { status: 400 }
+        );
+      }
+      if (!budgetPurposeValue) {
+        return NextResponse.json(
+          { error: "budgetPurpose is required when budgetRequested is true" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Determine approval status. Events with transport or budget needs always
+    // go through the approval queue so the financial/logistical side can be
+    // reviewed — even when the creator would normally auto-approve.
     const eligibleForAutoApproval = await canAutoApprove(
       caller.role,
       caller.leadsDepartmentIds
     );
-    const autoApproved = eligibleForAutoApproval && !needsTransport;
+    const autoApproved = eligibleForAutoApproval && !needsTransport && !wantsBudget;
     const approvalStatus = autoApproved ? "APPROVED" : "PENDING_APPROVAL";
 
     const now = new Date();
@@ -312,12 +360,43 @@ export async function POST(request: Request) {
       transportRequired: needsTransport,
       transportNeeds: transportNeedsValue,
       transportRequestId: null,
+      budgetRequested: wantsBudget,
+      budgetAmount: budgetAmountValue,
+      budgetCurrency: budgetCurrencyValue,
+      budgetPurpose: budgetPurposeValue,
+      budgetRequestId: null,
       createdBy: caller.uid,
       createdAt: now,
       updatedAt: now,
     };
 
     const docRef = await adminDb.collection("events").add(eventData);
+
+    // If the event requests extra funds, auto-create the budget request and
+    // notify the treasurer(s). The events coordinator does not need to route
+    // this manually — there's no costing step like with transport.
+    if (wantsBudget && budgetAmountValue !== null && budgetCurrencyValue && budgetPurposeValue) {
+      try {
+        const budgetRequestId = await createBudgetRequest({
+          eventId: docRef.id,
+          eventTitle: title,
+          eventStartDate: new Date(startDate),
+          requestedAmount: budgetAmountValue,
+          currency: budgetCurrencyValue,
+          purpose: budgetPurposeValue,
+          requestedBy: caller.uid,
+          requestedByName: caller.name,
+        });
+        notifyTreasurersOfBudgetRequest(
+          budgetRequestId,
+          title,
+          budgetAmountValue,
+          budgetCurrencyValue
+        ).catch(console.error);
+      } catch (err) {
+        console.error("Failed to create budget request:", err);
+      }
+    }
 
     // Notify Events & Fellowship managers if event needs approval
     if (approvalStatus === "PENDING_APPROVAL") {

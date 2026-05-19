@@ -54,7 +54,7 @@ export const allNavItems: NavItem[] = [
   { label: "ROPs Camp", href: "/manage/rops-camp", icon: Tent, pageKey: "rops_camp" },
   { label: "Fundraising", href: "/manage/fundraising", icon: Flame, pageKey: "fundraising" },
   { label: "Transport Requests", href: "/manage/transport/requests", icon: Bus, pageKey: "transport_requests" },
-  { label: "Transport Approvals", href: "/manage/finance/transport-approvals", icon: Banknote, pageKey: "transport_approvals" },
+  { label: "Accounts Approvals", href: "/manage/finance/approvals", icon: Banknote, pageKey: "accounts_approvals" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
   { label: "Templates", href: "/manage/templates", icon: Mail, pageKey: "templates" },
   { label: "Reports", href: "/manage/reports", icon: BarChart3, pageKey: "reports" },

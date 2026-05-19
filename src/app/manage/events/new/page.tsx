@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasMinRole } from "@/lib/permissions";
 
@@ -95,6 +95,10 @@ export default function NewEventPage() {
   );
   const [transportRequired, setTransportRequired] = useState(false);
   const [transportNeeds, setTransportNeeds] = useState("");
+  const [budgetRequested, setBudgetRequested] = useState(false);
+  const [budgetAmount, setBudgetAmount] = useState("");
+  const [budgetCurrency, setBudgetCurrency] = useState("ZMW");
+  const [budgetPurpose, setBudgetPurpose] = useState("");
 
   // Access: DEPARTMENT_LEAD+
   const hasAccess = userData ? hasMinRole(userData.role, "DEPARTMENT_LEAD") : false;
@@ -185,6 +189,34 @@ export default function NewEventPage() {
       return;
     }
 
+    if (budgetRequested) {
+      const amount = Number(budgetAmount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        toast({
+          title: "Budget amount required",
+          description: "Enter a positive amount you are requesting from the treasury.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!budgetCurrency.trim()) {
+        toast({
+          title: "Currency required",
+          description: "Enter the currency for the requested funds (e.g. ZMW).",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!budgetPurpose.trim()) {
+        toast({
+          title: "Purpose required",
+          description: "Describe what the requested funds will be used for.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const startDate = new Date(`${date}T${time || "09:00"}`);
@@ -205,6 +237,10 @@ export default function NewEventPage() {
           coreRoles: coreRoles.filter((r) => r.assignedUserName),
           transportRequired,
           transportNeeds: transportRequired ? transportNeeds.trim() : null,
+          budgetRequested,
+          budgetAmount: budgetRequested ? Number(budgetAmount) : null,
+          budgetCurrency: budgetRequested ? budgetCurrency.trim() : null,
+          budgetPurpose: budgetRequested ? budgetPurpose.trim() : null,
         }),
       });
 
@@ -649,6 +685,96 @@ export default function NewEventPage() {
           </CardContent>
         </Card>
 
+        {/* Budget Request */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Banknote className="h-4 w-4 text-[#C8963E]" />
+              Funds Request
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-clay-500">
+              If this event needs extra funds from the treasury (e.g. catering,
+              materials, honoraria), request it here. The treasurer will review
+              and confirm what can be funded before the event is approved.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setBudgetRequested(false)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  !budgetRequested
+                    ? "border-clay-400 bg-clay-50 text-clay-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                No funds needed
+              </button>
+              <button
+                type="button"
+                onClick={() => setBudgetRequested(true)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  budgetRequested
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Request funds
+              </button>
+            </div>
+            {budgetRequested && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label htmlFor="budget-amount" className="text-sm">
+                      Amount *
+                    </Label>
+                    <Input
+                      id="budget-amount"
+                      type="number"
+                      min={1}
+                      step="0.01"
+                      placeholder="e.g. 1500"
+                      value={budgetAmount}
+                      onChange={(e) => setBudgetAmount(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="budget-currency" className="text-sm">
+                      Currency *
+                    </Label>
+                    <Input
+                      id="budget-currency"
+                      placeholder="ZMW"
+                      value={budgetCurrency}
+                      onChange={(e) => setBudgetCurrency(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="budget-purpose" className="text-sm">
+                    What are the funds for? *
+                  </Label>
+                  <Textarea
+                    id="budget-purpose"
+                    placeholder="e.g. Refreshments for ~60 attendees and printed booklets"
+                    rows={3}
+                    value={budgetPurpose}
+                    onChange={(e) => setBudgetPurpose(e.target.value)}
+                  />
+                  <p className="text-xs text-clay-400">
+                    The treasurer may approve the full amount, reduce it, or
+                    reject the request with feedback.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Submit */}
         <div className="flex gap-3">
           <Link href="/calendar" className="flex-1">
@@ -663,7 +789,11 @@ export default function NewEventPage() {
               !title ||
               !date ||
               !venue ||
-              (transportRequired && !transportNeeds.trim())
+              (transportRequired && !transportNeeds.trim()) ||
+              (budgetRequested &&
+                (!budgetAmount.trim() ||
+                  !budgetCurrency.trim() ||
+                  !budgetPurpose.trim()))
             }
             className="flex-1 bg-[#C8963E] hover:bg-[#B8862E] text-white"
           >

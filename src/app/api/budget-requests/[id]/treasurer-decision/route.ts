@@ -3,11 +3,10 @@ import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 import {
-  transitionTransportRequest,
-  notifyEventsLeadOfTransportDecision,
-  notifyTransportCoordinators,
-} from "@/lib/transport-helpers";
-import type { UserRole, TransportRequestStatus } from "@/types";
+  transitionBudgetRequest,
+  notifyEventsLeadOfBudgetDecision,
+} from "@/lib/budget-helpers";
+import type { UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -32,16 +31,10 @@ async function getCaller() {
   }
 }
 
-type Action = "APPROVE" | "REQUEST_CHANGES" | "REJECT";
+type Action = "APPROVE" | "REJECT";
 
-const STATUS_BY_ACTION: Record<Action, TransportRequestStatus> = {
-  APPROVE: "APPROVED",
-  REQUEST_CHANGES: "PENDING_DETAILS",
-  REJECT: "REJECTED_TREASURER",
-};
-
-// ─── PATCH /api/transport-requests/[id]/treasurer-decision ───
-// Body: { action: "APPROVE" | "REQUEST_CHANGES" | "REJECT", comments?: string }
+// ─── PATCH /api/budget-requests/[id]/treasurer-decision ───
+// Body: { action: "APPROVE" | "REJECT", approvedAmount?: number, comments?: string }
 
 export async function PATCH(
   request: Request,
@@ -67,28 +60,30 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const { action, comments } = (await request.json()) as {
+    const body = (await request.json()) as {
       action: Action;
+      approvedAmount?: number;
       comments?: string;
     };
+    const { action, approvedAmount, comments } = body;
 
-    if (!action || !(action in STATUS_BY_ACTION)) {
+    if (action !== "APPROVE" && action !== "REJECT") {
       return NextResponse.json(
-        { error: "Invalid action. Must be APPROVE, REQUEST_CHANGES, or REJECT" },
+        { error: "Invalid action. Must be APPROVE or REJECT" },
         { status: 400 }
       );
     }
 
     const trimmedComments =
       typeof comments === "string" && comments.trim() ? comments.trim() : null;
-    if ((action === "REQUEST_CHANGES" || action === "REJECT") && !trimmedComments) {
+    if (action === "REJECT" && !trimmedComments) {
       return NextResponse.json(
-        { error: `Comments are required for ${action}` },
+        { error: "Comments are required for REJECT" },
         { status: 400 }
       );
     }
 
-    const requestRef = adminDb.collection("transportRequests").doc(id);
+    const requestRef = adminDb.collection("budgetRequests").doc(id);
     const requestDoc = await requestRef.get();
     if (!requestDoc.exists) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -103,15 +98,39 @@ export async function PATCH(
       );
     }
 
-    const now = new Date();
-    const newStatus = STATUS_BY_ACTION[action];
+    const requestedAmount: number = current.requestedAmount ?? 0;
+    const currency: string = current.currency ?? "";
 
-    await transitionTransportRequest(
+    let finalApprovedAmount: number | null = null;
+    if (action === "APPROVE") {
+      const candidate = Number(approvedAmount ?? requestedAmount);
+      if (!Number.isFinite(candidate) || candidate < 0) {
+        return NextResponse.json(
+          { error: "approvedAmount must be a non-negative number" },
+          { status: 400 }
+        );
+      }
+      if (candidate > requestedAmount) {
+        return NextResponse.json(
+          {
+            error: `approvedAmount (${candidate}) cannot exceed requestedAmount (${requestedAmount})`,
+          },
+          { status: 400 }
+        );
+      }
+      finalApprovedAmount = candidate;
+    }
+
+    const now = new Date();
+    const newStatus = action === "APPROVE" ? "APPROVED" : "REJECTED";
+
+    await transitionBudgetRequest(
       id,
       newStatus,
       { uid: caller.uid, name: caller.name },
       trimmedComments,
       {
+        approvedAmount: finalApprovedAmount,
         treasurerId: caller.uid,
         treasurerName: caller.name,
         treasurerDecidedAt: now,
@@ -119,7 +138,7 @@ export async function PATCH(
       }
     );
 
-    // Resolve the event creator for downstream notifications
+    // Look up event creator for notifications
     let creatorId: string | null = null;
     try {
       const eventDoc = await adminDb
@@ -133,28 +152,26 @@ export async function PATCH(
       console.error("Failed to load event creator:", err);
     }
 
-    if (action === "APPROVE" || action === "REJECT") {
-      notifyEventsLeadOfTransportDecision({
-        requestId: id,
-        eventId: current.eventId,
-        eventTitle: current.eventTitle,
-        eventCreatorId: creatorId,
-        decision: action === "APPROVE" ? "APPROVED" : "REJECTED",
-        comments: trimmedComments,
-      }).catch(console.error);
-    } else {
-      // REQUEST_CHANGES → back to the coordinator
-      notifyTransportCoordinators(
-        id,
-        current.eventTitle,
-        `Treasurer requested changes to the transport request for "${current.eventTitle}".${trimmedComments ? ` Notes: ${trimmedComments}` : ""}`
-      ).catch(console.error);
-    }
+    notifyEventsLeadOfBudgetDecision({
+      requestId: id,
+      eventId: current.eventId,
+      eventTitle: current.eventTitle,
+      eventCreatorId: creatorId,
+      decision: newStatus,
+      approvedAmount: finalApprovedAmount,
+      currency,
+      requestedAmount,
+      comments: trimmedComments,
+    }).catch(console.error);
 
-    return NextResponse.json({ success: true, status: newStatus });
+    return NextResponse.json({
+      success: true,
+      status: newStatus,
+      approvedAmount: finalApprovedAmount,
+    });
   } catch (error) {
     console.error(
-      "PATCH /api/transport-requests/[id]/treasurer-decision error:",
+      "PATCH /api/budget-requests/[id]/treasurer-decision error:",
       error
     );
     return NextResponse.json(

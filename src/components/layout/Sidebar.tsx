@@ -20,7 +20,7 @@ export function Sidebar() {
   const { pagePermissions } = useAccessControl();
   const { canManage: canManageCamp } = useCampLeadAccess();
   const { canPlanBraai } = useFundraisingAccess();
-  const { canManageTransport, canApproveTransportBudget } = useTransportAccess();
+  const { canManageTransport, canApproveAccounts } = useTransportAccess();
 
   if (!userData) return null;
 
@@ -28,7 +28,7 @@ export function Sidebar() {
   if (canManageCamp) extraKeys.push("rops_camp");
   if (canPlanBraai) extraKeys.push("fundraising");
   if (canManageTransport) extraKeys.push("transport_requests");
-  if (canApproveTransportBudget) extraKeys.push("transport_approvals");
+  if (canApproveAccounts) extraKeys.push("accounts_approvals");
   const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {

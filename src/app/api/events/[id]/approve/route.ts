@@ -8,6 +8,7 @@ import {
   notifyDepartmentManagers,
 } from "@/lib/event-helpers";
 import { cancelTransportRequestForEvent } from "@/lib/transport-helpers";
+import { cancelBudgetRequestForEvent } from "@/lib/budget-helpers";
 import { UserRole } from "@/types";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 
@@ -119,6 +120,33 @@ export async function PATCH(
         }
       }
 
+      // Block approval when the event requested funds but the treasurer
+      // hasn't decided yet. Once decided (APPROVED or REJECTED), the events
+      // coordinator can proceed and weigh the outcome themselves.
+      if (eventData.budgetRequested) {
+        const reqId = eventData.budgetRequestId;
+        if (!reqId) {
+          return NextResponse.json(
+            {
+              error:
+                "This event has a pending budget request but no request was created. Please contact an administrator.",
+            },
+            { status: 409 }
+          );
+        }
+        const reqDoc = await adminDb
+          .collection("budgetRequests")
+          .doc(reqId)
+          .get();
+        const reqStatus = reqDoc.exists ? reqDoc.data()?.status : null;
+        if (reqStatus === "PENDING_TREASURER") {
+          return NextResponse.json(
+            { error: "Budget request is still awaiting the treasurer's review." },
+            { status: 409 }
+          );
+        }
+      }
+
       await eventRef.update({
         approvalStatus: "APPROVED",
         approvedBy: caller.uid,
@@ -173,6 +201,15 @@ export async function PATCH(
       // Cascade-cancel any linked transport request
       if (eventData.transportRequired && eventData.transportRequestId) {
         cancelTransportRequestForEvent(
+          eventId,
+          { uid: caller.uid, name: caller.name },
+          comments || "Parent event was rejected."
+        ).catch(console.error);
+      }
+
+      // Cascade-cancel any linked budget request
+      if (eventData.budgetRequested && eventData.budgetRequestId) {
+        cancelBudgetRequestForEvent(
           eventId,
           { uid: caller.uid, name: caller.name },
           comments || "Parent event was rejected."

@@ -452,6 +452,11 @@ function AssignmentBoardContent() {
               transportRequired: eData.transportRequired || false,
               transportNeeds: eData.transportNeeds || null,
               transportRequestId: eData.transportRequestId || null,
+              budgetRequested: eData.budgetRequested || false,
+              budgetAmount: eData.budgetAmount ?? null,
+              budgetCurrency: eData.budgetCurrency || null,
+              budgetPurpose: eData.budgetPurpose || null,
+              budgetRequestId: eData.budgetRequestId || null,
               createdAt: eData.createdAt?.toDate?.() || new Date(),
               updatedAt: eData.updatedAt?.toDate?.() || new Date(),
             };

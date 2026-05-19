@@ -8,7 +8,7 @@ import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
-import { AppEvent, EventType, TransportRequest, TransportRequestStatus } from "@/types";
+import { AppEvent, EventType, TransportRequest, TransportRequestStatus, BudgetRequest, BudgetRequestStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ import {
   Users,
   Bus,
   Send,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -89,6 +90,24 @@ const TRANSPORT_STATUS_LABEL: Record<TransportRequestStatus, string> = {
   CANCELLED: "Transport Cancelled",
 };
 
+type BudgetSummary = Pick<
+  BudgetRequest,
+  | "id"
+  | "status"
+  | "requestedAmount"
+  | "currency"
+  | "purpose"
+  | "approvedAmount"
+  | "treasurerComments"
+>;
+
+const BUDGET_STATUS_LABEL: Record<BudgetRequestStatus, string> = {
+  PENDING_TREASURER: "Awaiting Treasurer",
+  APPROVED: "Budget Approved",
+  REJECTED: "Budget Rejected",
+  CANCELLED: "Budget Cancelled",
+};
+
 type ActionState = {
   eventId: string;
   action: "APPROVE" | "REJECT" | "REQUEST_CHANGES";
@@ -102,6 +121,8 @@ export default function EventApprovalsPage() {
   const [pendingEvents, setPendingEvents] = useState<PendingEvent[]>([]);
   const [transportByEvent, setTransportByEvent] = useState<Record<string, TransportSummary>>({});
   const [transportFetchError, setTransportFetchError] = useState<string | null>(null);
+  const [budgetByEvent, setBudgetByEvent] = useState<Record<string, BudgetSummary>>({});
+  const [budgetFetchError, setBudgetFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [actionState, setActionState] = useState<ActionState>(null);
@@ -144,6 +165,11 @@ export default function EventApprovalsPage() {
           transportRequired: data.transportRequired || false,
           transportNeeds: data.transportNeeds || null,
           transportRequestId: data.transportRequestId || null,
+          budgetRequested: data.budgetRequested || false,
+          budgetAmount: data.budgetAmount ?? null,
+          budgetCurrency: data.budgetCurrency || null,
+          budgetPurpose: data.budgetPurpose || null,
+          budgetRequestId: data.budgetRequestId || null,
           createdBy: data.createdBy || "",
           createdAt: parseFirestoreDate(data.createdAt),
           updatedAt: parseFirestoreDate(data.updatedAt),
@@ -203,6 +229,43 @@ export default function EventApprovalsPage() {
       }
       setTransportByEvent(summaries);
       setTransportFetchError(transportError);
+
+      // Fetch budget requests for events that have one (parallel to transport).
+      const budgetIds = events
+        .map((e) => e.budgetRequestId)
+        .filter((id): id is string => Boolean(id));
+      const budgetSummaries: Record<string, BudgetSummary> = {};
+      let budgetError: string | null = null;
+      if (budgetIds.length > 0) {
+        try {
+          for (let i = 0; i < budgetIds.length; i += 30) {
+            const chunk = budgetIds.slice(i, i + 30);
+            const bSnap = await getDocs(
+              query(safeCollection("budgetRequests"), where(documentId(), "in", chunk))
+            );
+            bSnap.docs.forEach((d) => {
+              const bd = d.data();
+              const event = events.find((e) => e.budgetRequestId === d.id);
+              if (!event) return;
+              budgetSummaries[event.id] = {
+                id: d.id,
+                status: bd.status as BudgetRequestStatus,
+                requestedAmount: bd.requestedAmount ?? 0,
+                currency: bd.currency ?? "",
+                purpose: bd.purpose ?? "",
+                approvedAmount: bd.approvedAmount ?? null,
+                treasurerComments: bd.treasurerComments ?? null,
+              };
+            });
+          }
+        } catch (budgetErr) {
+          console.error("Failed to fetch budget requests:", budgetErr);
+          budgetError =
+            budgetErr instanceof Error ? budgetErr.message : "Unknown error";
+        }
+      }
+      setBudgetByEvent(budgetSummaries);
+      setBudgetFetchError(budgetError);
     } catch (error) {
       console.error("Failed to fetch pending events:", error);
       setFetchError(true);
@@ -423,6 +486,15 @@ export default function EventApprovalsPage() {
                           Transport Required
                         </Badge>
                       )}
+                      {event.budgetRequested && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1"
+                        >
+                          <Banknote className="h-3 w-3" />
+                          Funds Requested
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -588,6 +660,101 @@ export default function EventApprovalsPage() {
                   </div>
                 )}
 
+                {/* Budget panel */}
+                {event.budgetRequested && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Banknote className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-semibold text-amber-800">
+                          Funds Requested
+                          {event.budgetAmount !== null && event.budgetCurrency && (
+                            <span className="ml-2 font-medium text-clay-700">
+                              {event.budgetCurrency} {event.budgetAmount.toLocaleString()}
+                            </span>
+                          )}
+                        </p>
+                        {event.budgetPurpose && (
+                          <p className="text-sm text-clay-700">{event.budgetPurpose}</p>
+                        )}
+                        {(() => {
+                          const b = budgetByEvent[event.id];
+                          if (!b) {
+                            if (budgetFetchError) {
+                              return (
+                                <div className="space-y-1">
+                                  <p className="text-xs text-red-700">
+                                    Couldn&apos;t load budget status:{" "}
+                                    <code className="bg-red-50 px-1 rounded">
+                                      {budgetFetchError}
+                                    </code>
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => fetchPendingEvents()}
+                                    className="text-xs text-amber-700 underline hover:text-amber-800"
+                                  >
+                                    Retry
+                                  </button>
+                                </div>
+                              );
+                            }
+                            return (
+                              <p className="text-xs text-clay-500">Loading budget request…</p>
+                            );
+                          }
+                          const reduced =
+                            b.status === "APPROVED" &&
+                            b.approvedAmount !== null &&
+                            b.approvedAmount < b.requestedAmount;
+                          return (
+                            <div className="space-y-1">
+                              <p
+                                className={cn(
+                                  "text-xs font-medium",
+                                  b.status === "APPROVED"
+                                    ? "text-green-700"
+                                    : b.status === "REJECTED"
+                                      ? "text-red-700"
+                                      : "text-amber-700"
+                                )}
+                              >
+                                {BUDGET_STATUS_LABEL[b.status]}
+                                {reduced && " (reduced)"}
+                              </p>
+                              {b.status === "APPROVED" && b.approvedAmount !== null && (
+                                <p className="text-xs text-clay-700">
+                                  Approved: <strong>
+                                    {b.currency} {b.approvedAmount.toLocaleString()}
+                                  </strong>
+                                  {reduced && (
+                                    <span className="text-clay-500">
+                                      {" "}
+                                      (requested {b.currency} {b.requestedAmount.toLocaleString()})
+                                    </span>
+                                  )}
+                                </p>
+                              )}
+                              {b.treasurerComments && (
+                                <p
+                                  className={cn(
+                                    "text-xs rounded px-2 py-1",
+                                    b.status === "REJECTED"
+                                      ? "text-red-700 bg-red-50"
+                                      : "text-clay-700 bg-clay-50"
+                                  )}
+                                >
+                                  Treasurer: {b.treasurerComments}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Submitted info */}
                 <p className="text-xs text-clay-400">
                   Submitted {format(event.createdAt, "d MMM yyyy 'at' h:mm a")}
@@ -661,16 +828,22 @@ export default function EventApprovalsPage() {
                 ) : (
                   (() => {
                     const transport = transportByEvent[event.id];
+                    const budget = budgetByEvent[event.id];
                     const needsRouting =
                       event.transportRequired && !event.transportRequestId;
                     const transportBlocking =
                       event.transportRequired &&
                       transport?.status !== "APPROVED";
+                    const budgetBlocking =
+                      event.budgetRequested &&
+                      (budget?.status === "PENDING_TREASURER" || !budget);
                     const approveTooltip = needsRouting
                       ? "Notify the Transport Coordinator first"
                       : transport && transport.status !== "APPROVED"
                         ? TRANSPORT_STATUS_LABEL[transport.status]
-                        : undefined;
+                        : budgetBlocking
+                          ? "Awaiting treasurer's decision on funds"
+                          : undefined;
                     return (
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-clay-100">
                         {needsRouting && (
@@ -694,7 +867,7 @@ export default function EventApprovalsPage() {
                           onClick={() =>
                             setActionState({ eventId: event.id, action: "APPROVE" })
                           }
-                          disabled={transportBlocking}
+                          disabled={transportBlocking || budgetBlocking}
                           title={approveTooltip}
                         >
                           <CheckCircle2 className="h-4 w-4" />

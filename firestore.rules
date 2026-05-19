@@ -132,6 +132,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── Budget Requests ───
+    // Extra-funds requests submitted with an event for the treasurer to
+    // confirm. Same access pattern as transport requests — reads open,
+    // writes through the API only.
+    match /budgetRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     // ─── Reminder Logs ───
     match /reminderLogs/{logId} {
       allow read: if isAdmin();

@@ -387,6 +387,11 @@ export default function DashboardPage() {
           transportRequired: data.transportRequired ?? false,
           transportNeeds: data.transportNeeds ?? null,
           transportRequestId: data.transportRequestId ?? null,
+          budgetRequested: data.budgetRequested ?? false,
+          budgetAmount: data.budgetAmount ?? null,
+          budgetCurrency: data.budgetCurrency ?? null,
+          budgetPurpose: data.budgetPurpose ?? null,
+          budgetRequestId: data.budgetRequestId ?? null,
           createdAt: toDate(data.createdAt),
           updatedAt: toDate(data.updatedAt),
         });
@@ -647,6 +652,11 @@ export default function DashboardPage() {
               transportRequired: data.transportRequired ?? false,
               transportNeeds: data.transportNeeds ?? null,
               transportRequestId: data.transportRequestId ?? null,
+              budgetRequested: data.budgetRequested ?? false,
+              budgetAmount: data.budgetAmount ?? null,
+              budgetCurrency: data.budgetCurrency ?? null,
+              budgetPurpose: data.budgetPurpose ?? null,
+              budgetRequestId: data.budgetRequestId ?? null,
               createdAt: toDate(data.createdAt),
               updatedAt: toDate(data.updatedAt),
             };

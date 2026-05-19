@@ -328,6 +328,11 @@ export async function GET(request: NextRequest) {
         transportRequired: data.transportRequired || false,
         transportNeeds: data.transportNeeds || null,
         transportRequestId: data.transportRequestId || null,
+        budgetRequested: data.budgetRequested || false,
+        budgetAmount: data.budgetAmount ?? null,
+        budgetCurrency: data.budgetCurrency || null,
+        budgetPurpose: data.budgetPurpose || null,
+        budgetRequestId: data.budgetRequestId || null,
         createdAt: data.createdAt?.toDate?.() || new Date(),
         updatedAt: data.updatedAt?.toDate?.() || new Date(),
       });

@@ -12,7 +12,7 @@ interface TransportAccess {
   /** True for SUPER_ADMIN, ADMIN, or any DEPARTMENT_LEAD of Transport & Logistics. */
   canManageTransport: boolean;
   /** True for SUPER_ADMIN, ADMIN, or any DEPARTMENT_LEAD of Finance (Treasurer). */
-  canApproveTransportBudget: boolean;
+  canApproveAccounts: boolean;
 }
 
 /**
@@ -54,14 +54,14 @@ export function useTransportAccess(): TransportAccess {
     return {
       loading: true,
       canManageTransport: false,
-      canApproveTransportBudget: false,
+      canApproveAccounts: false,
     };
   }
   if (needsDeptLookup && deptMap === null) {
     return {
       loading: true,
       canManageTransport: false,
-      canApproveTransportBudget: false,
+      canApproveAccounts: false,
     };
   }
 
@@ -80,8 +80,8 @@ export function useTransportAccess(): TransportAccess {
       map,
       config
     ),
-    canApproveTransportBudget: checkFeatureAccess(
-      "approve_transport_budget",
+    canApproveAccounts: checkFeatureAccess(
+      "approve_accounts",
       userData.role,
       deps,
       leads,

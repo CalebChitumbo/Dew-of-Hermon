@@ -19,6 +19,12 @@ export type TransportRequestStatus =
   | "REJECTED_TREASURER"
   | "CANCELLED";
 
+export type BudgetRequestStatus =
+  | "PENDING_TREASURER"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED";
+
 export type FollowUpStatus =
   | "PENDING_LEAD_APPROVAL"
   | "REJECTED"
@@ -97,6 +103,11 @@ export interface AppEvent {
   transportRequired: boolean;
   transportNeeds: string | null;
   transportRequestId: string | null;
+  budgetRequested: boolean;
+  budgetAmount: number | null;
+  budgetCurrency: string | null;
+  budgetPurpose: string | null;
+  budgetRequestId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -141,6 +152,40 @@ export interface TransportRequest {
   treasurerComments: string | null;
 
   statusHistory: TransportRequestStatusHistoryEntry[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BudgetRequestStatusHistoryEntry {
+  status: BudgetRequestStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+export interface BudgetRequest {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventStartDate: Date;
+
+  requestedAmount: number;
+  currency: string;
+  purpose: string;
+  requestedBy: string;
+  requestedByName: string;
+
+  status: BudgetRequestStatus;
+
+  // Treasurer decision
+  approvedAmount: number | null;
+  treasurerId: string | null;
+  treasurerName: string | null;
+  treasurerDecidedAt: Date | null;
+  treasurerComments: string | null;
+
+  statusHistory: BudgetRequestStatusHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }

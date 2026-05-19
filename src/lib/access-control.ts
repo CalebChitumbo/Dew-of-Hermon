@@ -155,11 +155,11 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
   {
-    key: "transport_approvals",
-    label: "Transport Approvals (Treasurer)",
+    key: "accounts_approvals",
+    label: "Accounts Approvals (Treasurer)",
     description:
-      "Treasurer queue: confirm funds availability for costed transport requests",
-    route: "/manage/finance/transport-approvals",
+      "Treasurer queue: confirm funds availability for transport and event budget requests",
+    route: "/manage/finance/approvals",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
 ];
@@ -306,7 +306,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     YOUTH_LEADER: "none",
     MEMBER: "none",
   },
-  transport_approvals: {
+  accounts_approvals: {
     SUPER_ADMIN: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
@@ -651,10 +651,10 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     supportsDepartmentRules: true,
   },
   {
-    key: "approve_transport_budget",
-    label: "Approve Transport Budget",
+    key: "approve_accounts",
+    label: "Approve Accounts",
     description:
-      "Confirm funds availability for transport requests submitted by the Transport Coordinator",
+      "Treasurer: confirm funds availability for transport requests and event budget requests",
     category: "Finance",
     supportsDepartmentRules: true,
   },
@@ -693,7 +693,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   view_transport_assignments: "ADMIN",
   manage_food_logistics: "ADMIN",
   view_food_logistics: "ADMIN",
-  approve_transport_budget: "ADMIN",
+  approve_accounts: "ADMIN",
 };
 
 /** Default department access rules (matches current hardcoded behavior) */
@@ -829,7 +829,7 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
   },
   {
-    featureKey: "approve_transport_budget",
+    featureKey: "approve_accounts",
     departmentName: "Finance",
     requiresLeadership: true,
     allowedRoles: ["DEPARTMENT_LEAD"],
