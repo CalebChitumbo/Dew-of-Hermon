@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus, Banknote, Mic, Target, Ticket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasMinRole } from "@/lib/permissions";
 
@@ -93,6 +93,17 @@ export default function NewEventPage() {
       assignedUserName: null,
     }))
   );
+  const [speaker, setSpeaker] = useState("");
+  const [objective, setObjective] = useState("");
+  const [isPaid, setIsPaid] = useState(false);
+  const [attendanceFee, setAttendanceFee] = useState("");
+  const [attendanceFeeCurrency, setAttendanceFeeCurrency] = useState("ZMW");
+  const [transportRequired, setTransportRequired] = useState(false);
+  const [transportNeeds, setTransportNeeds] = useState("");
+  const [budgetRequested, setBudgetRequested] = useState(false);
+  const [budgetAmount, setBudgetAmount] = useState("");
+  const [budgetCurrency, setBudgetCurrency] = useState("ZMW");
+  const [budgetPurpose, setBudgetPurpose] = useState("");
 
   // Access: DEPARTMENT_LEAD+
   const hasAccess = userData ? hasMinRole(userData.role, "DEPARTMENT_LEAD") : false;
@@ -173,6 +184,70 @@ export default function NewEventPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title || !date || !venue || !userData) return;
+    if (!objective.trim()) {
+      toast({
+        title: "Objective required",
+        description: "Describe what this event aims to achieve.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (isPaid) {
+      const fee = Number(attendanceFee);
+      if (!Number.isFinite(fee) || fee <= 0) {
+        toast({
+          title: "Attendance fee required",
+          description: "Enter a positive fee, or switch to free attendance.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!attendanceFeeCurrency.trim()) {
+        toast({
+          title: "Currency required",
+          description: "Enter the currency for the attendance fee.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    if (transportRequired && !transportNeeds.trim()) {
+      toast({
+        title: "Transport details required",
+        description:
+          "Please describe what transport is needed so the coordinator can plan and cost it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (budgetRequested) {
+      const amount = Number(budgetAmount);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        toast({
+          title: "Budget amount required",
+          description: "Enter a positive amount you are requesting from the treasury.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!budgetCurrency.trim()) {
+        toast({
+          title: "Currency required",
+          description: "Enter the currency for the requested funds (e.g. ZMW).",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!budgetPurpose.trim()) {
+        toast({
+          title: "Purpose required",
+          description: "Describe what the requested funds will be used for.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     setSubmitting(true);
     try {
@@ -192,6 +267,17 @@ export default function NewEventPage() {
           lifeGroupTarget: lifeGroupTarget || null,
           createdByDepartmentId: createdByDepartmentId || null,
           coreRoles: coreRoles.filter((r) => r.assignedUserName),
+          speaker: speaker.trim() || null,
+          objective: objective.trim(),
+          isPaid,
+          attendanceFee: isPaid ? Number(attendanceFee) : null,
+          attendanceFeeCurrency: isPaid ? attendanceFeeCurrency.trim() : null,
+          transportRequired,
+          transportNeeds: transportRequired ? transportNeeds.trim() : null,
+          budgetRequested,
+          budgetAmount: budgetRequested ? Number(budgetAmount) : null,
+          budgetCurrency: budgetRequested ? budgetCurrency.trim() : null,
+          budgetPurpose: budgetRequested ? budgetPurpose.trim() : null,
         }),
       });
 
@@ -419,15 +505,113 @@ export default function NewEventPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="objective" className="flex items-center gap-1.5">
+                <Target className="h-3.5 w-3.5 text-[#C8963E]" />
+                Objective *
+              </Label>
+              <Textarea
+                id="objective"
+                placeholder="What does this event aim to achieve?"
+                rows={2}
+                value={objective}
+                onChange={(e) => setObjective(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                placeholder="Brief description of the event"
+                placeholder="Any additional details or context (optional)"
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="speaker" className="flex items-center gap-1.5">
+                <Mic className="h-3.5 w-3.5 text-[#C8963E]" />
+                Speaker
+              </Label>
+              <Input
+                id="speaker"
+                placeholder="Name of the speaker (leave blank if none)"
+                value={speaker}
+                onChange={(e) => setSpeaker(e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Attendance Fee */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Ticket className="h-4 w-4 text-[#C8963E]" />
+              Attendance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-clay-500">
+              Is there a cost for attendees, or is the event free to attend?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPaid(false)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  !isPaid
+                    ? "border-green-500 bg-green-50 text-green-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Free to attend
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPaid(true)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  isPaid
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Payment required
+              </button>
+            </div>
+            {isPaid && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2 space-y-1.5">
+                  <Label htmlFor="attendance-fee" className="text-sm">
+                    Fee per attendee *
+                  </Label>
+                  <Input
+                    id="attendance-fee"
+                    type="number"
+                    min={1}
+                    step="0.01"
+                    placeholder="e.g. 50"
+                    value={attendanceFee}
+                    onChange={(e) => setAttendanceFee(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="attendance-fee-currency" className="text-sm">
+                    Currency *
+                  </Label>
+                  <Input
+                    id="attendance-fee-currency"
+                    placeholder="ZMW"
+                    value={attendanceFeeCurrency}
+                    onChange={(e) => setAttendanceFeeCurrency(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -575,6 +759,157 @@ export default function NewEventPage() {
           </CardContent>
         </Card>
 
+        {/* Transport */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Bus className="h-4 w-4 text-[#C8963E]" />
+              Transport
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-clay-500">
+              If transport is needed for this event, flag it here. The Events
+              Coordinator will route the request to the Transport Coordinator
+              for costing before the event is approved.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setTransportRequired(false)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  !transportRequired
+                    ? "border-clay-400 bg-clay-50 text-clay-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                No transport needed
+              </button>
+              <button
+                type="button"
+                onClick={() => setTransportRequired(true)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  transportRequired
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Transport required
+              </button>
+            </div>
+            {transportRequired && (
+              <div className="space-y-1.5">
+                <Label htmlFor="transport-needs" className="text-sm">
+                  Describe transport needs *
+                </Label>
+                <Textarea
+                  id="transport-needs"
+                  placeholder="e.g. Pickup from UNZA and TAU campuses, ~40 people, return after the event ends"
+                  rows={3}
+                  value={transportNeeds}
+                  onChange={(e) => setTransportNeeds(e.target.value)}
+                />
+                <p className="text-xs text-clay-400">
+                  The Transport Coordinator will use this to plan vehicles,
+                  schedule, and cost.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Budget Request */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Banknote className="h-4 w-4 text-[#C8963E]" />
+              Funds Request
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-clay-500">
+              If this event needs extra funds from the treasury (e.g. catering,
+              materials, honoraria), request it here. The treasurer will review
+              and confirm what can be funded before the event is approved.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setBudgetRequested(false)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  !budgetRequested
+                    ? "border-clay-400 bg-clay-50 text-clay-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                No funds needed
+              </button>
+              <button
+                type="button"
+                onClick={() => setBudgetRequested(true)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  budgetRequested
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Request funds
+              </button>
+            </div>
+            {budgetRequested && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label htmlFor="budget-amount" className="text-sm">
+                      Amount *
+                    </Label>
+                    <Input
+                      id="budget-amount"
+                      type="number"
+                      min={1}
+                      step="0.01"
+                      placeholder="e.g. 1500"
+                      value={budgetAmount}
+                      onChange={(e) => setBudgetAmount(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="budget-currency" className="text-sm">
+                      Currency *
+                    </Label>
+                    <Input
+                      id="budget-currency"
+                      placeholder="ZMW"
+                      value={budgetCurrency}
+                      onChange={(e) => setBudgetCurrency(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="budget-purpose" className="text-sm">
+                    What are the funds for? *
+                  </Label>
+                  <Textarea
+                    id="budget-purpose"
+                    placeholder="e.g. Refreshments for ~60 attendees and printed booklets"
+                    rows={3}
+                    value={budgetPurpose}
+                    onChange={(e) => setBudgetPurpose(e.target.value)}
+                  />
+                  <p className="text-xs text-clay-400">
+                    The treasurer may approve the full amount, reduce it, or
+                    reject the request with feedback.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Submit */}
         <div className="flex gap-3">
           <Link href="/calendar" className="flex-1">
@@ -584,7 +919,19 @@ export default function NewEventPage() {
           </Link>
           <Button
             type="submit"
-            disabled={submitting || !title || !date || !venue}
+            disabled={
+              submitting ||
+              !title ||
+              !date ||
+              !venue ||
+              !objective.trim() ||
+              (isPaid && (!attendanceFee.trim() || !attendanceFeeCurrency.trim())) ||
+              (transportRequired && !transportNeeds.trim()) ||
+              (budgetRequested &&
+                (!budgetAmount.trim() ||
+                  !budgetCurrency.trim() ||
+                  !budgetPurpose.trim()))
+            }
             className="flex-1 bg-[#C8963E] hover:bg-[#B8862E] text-white"
           >
             {submitting ? (

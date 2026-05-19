@@ -123,6 +123,24 @@ service cloud.firestore {
       allow delete: if isDeptLead();
     }
 
+    // ─── Transport Requests ───
+    // Reads are open to all signed-in users so request status can be surfaced
+    // next to the event in the approval queue. All writes flow through the
+    // API which enforces workflow transitions and role gating.
+    match /transportRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ─── Budget Requests ───
+    // Extra-funds requests submitted with an event for the treasurer to
+    // confirm. Same access pattern as transport requests — reads open,
+    // writes through the API only.
+    match /budgetRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     // ─── Reminder Logs ───
     match /reminderLogs/{logId} {
       allow read: if isAdmin();

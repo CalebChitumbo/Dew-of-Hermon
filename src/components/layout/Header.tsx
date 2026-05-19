@@ -11,17 +11,25 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getVisibleNavItems } from "@/components/layout/nav-config";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
+import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
+import { useTransportAccess } from "@/hooks/useTransportAccess";
 
 export function Header() {
   const { userData, signOut } = useAuth();
   const { pagePermissions } = useAccessControl();
   const { canManage: canManageCamp } = useCampLeadAccess();
+  const { canPlanBraai } = useFundraisingAccess();
+  const { canManageTransport, canApproveAccounts } = useTransportAccess();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   if (!userData) return null;
 
-  const extraKeys = canManageCamp ? ["rops_camp"] : [];
+  const extraKeys: string[] = [];
+  if (canManageCamp) extraKeys.push("rops_camp");
+  if (canPlanBraai) extraKeys.push("fundraising");
+  if (canManageTransport) extraKeys.push("transport_requests");
+  if (canApproveAccounts) extraKeys.push("accounts_approvals");
   const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {

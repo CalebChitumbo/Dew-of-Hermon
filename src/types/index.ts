@@ -12,6 +12,19 @@ export type LifeGroup = "BRIDGE" | "ANCHOR" | "CORNERSTONE";
 
 export type EventApprovalStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
 
+export type TransportRequestStatus =
+  | "PENDING_DETAILS"
+  | "PENDING_TREASURER"
+  | "APPROVED"
+  | "REJECTED_TREASURER"
+  | "CANCELLED";
+
+export type BudgetRequestStatus =
+  | "PENDING_TREASURER"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED";
+
 export type FollowUpStatus =
   | "PENDING_LEAD_APPROVAL"
   | "REJECTED"
@@ -87,6 +100,97 @@ export interface AppEvent {
   approvedAt: Date | null;
   createdByDepartmentId: string | null;
   coreRoles: EventCoreRole[];
+  speaker: string | null;
+  objective: string | null;
+  isPaid: boolean;
+  attendanceFee: number | null;
+  attendanceFeeCurrency: string | null;
+  transportRequired: boolean;
+  transportNeeds: string | null;
+  transportRequestId: string | null;
+  budgetRequested: boolean;
+  budgetAmount: number | null;
+  budgetCurrency: string | null;
+  budgetPurpose: string | null;
+  budgetRequestId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TransportRequestStatusHistoryEntry {
+  status: TransportRequestStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+export interface TransportRequest {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventStartDate: Date;
+  needsDescription: string;
+  status: TransportRequestStatus;
+
+  // Coordinator-supplied
+  vehicleType: string | null;
+  vehicleCount: number | null;
+  estimatedCost: number | null;
+  currency: string | null;
+  pickupLocation: string | null;
+  dropoffLocation: string | null;
+  pickupTime: Date | null;
+  returnTime: Date | null;
+  coordinatorNotes: string | null;
+
+  // Actor metadata
+  routedBy: string | null;
+  routedByName: string | null;
+  routedAt: Date | null;
+  filledBy: string | null;
+  filledByName: string | null;
+  filledAt: Date | null;
+  treasurerId: string | null;
+  treasurerName: string | null;
+  treasurerDecidedAt: Date | null;
+  treasurerComments: string | null;
+
+  statusHistory: TransportRequestStatusHistoryEntry[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BudgetRequestStatusHistoryEntry {
+  status: BudgetRequestStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+export interface BudgetRequest {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventStartDate: Date;
+
+  requestedAmount: number;
+  currency: string;
+  purpose: string;
+  requestedBy: string;
+  requestedByName: string;
+
+  status: BudgetRequestStatus;
+
+  // Treasurer decision
+  approvedAmount: number | null;
+  treasurerId: string | null;
+  treasurerName: string | null;
+  treasurerDecidedAt: Date | null;
+  treasurerComments: string | null;
+
+  statusHistory: BudgetRequestStatusHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }

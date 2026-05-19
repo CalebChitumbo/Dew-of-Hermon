@@ -7,6 +7,10 @@ import {
   notifyTargetedMembers,
   notifyDepartmentManagers,
 } from "@/lib/event-helpers";
+import {
+  createBudgetRequest,
+  notifyTreasurersOfBudgetRequest,
+} from "@/lib/budget-helpers";
 import { EventType, UserRole, LifeGroup } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -186,6 +190,19 @@ export async function GET(request: Request) {
         approvedAt: data.approvedAt?.toDate?.()?.toISOString() || null,
         createdByDepartmentId: data.createdByDepartmentId || null,
         coreRoles: data.coreRoles || [],
+        speaker: data.speaker || null,
+        objective: data.objective || null,
+        isPaid: data.isPaid || false,
+        attendanceFee: data.attendanceFee ?? null,
+        attendanceFeeCurrency: data.attendanceFeeCurrency || null,
+        transportRequired: data.transportRequired || false,
+        transportNeeds: data.transportNeeds || null,
+        transportRequestId: data.transportRequestId || null,
+        budgetRequested: data.budgetRequested || false,
+        budgetAmount: data.budgetAmount ?? null,
+        budgetCurrency: data.budgetCurrency || null,
+        budgetPurpose: data.budgetPurpose || null,
+        budgetRequestId: data.budgetRequestId || null,
         createdBy: data.createdBy || "",
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,
@@ -230,6 +247,17 @@ export async function POST(request: Request) {
       lifeGroupTarget,
       createdByDepartmentId,
       coreRoles,
+      speaker,
+      objective,
+      isPaid,
+      attendanceFee,
+      attendanceFeeCurrency,
+      transportRequired,
+      transportNeeds,
+      budgetRequested,
+      budgetAmount,
+      budgetCurrency,
+      budgetPurpose,
     } = body;
 
     if (!title || !type || !startDate || !venue) {
@@ -262,8 +290,95 @@ export async function POST(request: Request) {
       );
     }
 
-    // Determine approval status
-    const autoApproved = await canAutoApprove(caller.role, caller.leadsDepartmentIds);
+    const speakerValue =
+      typeof speaker === "string" && speaker.trim() ? speaker.trim() : null;
+    const objectiveValue =
+      typeof objective === "string" && objective.trim() ? objective.trim() : null;
+    if (!objectiveValue) {
+      return NextResponse.json(
+        { error: "objective is required" },
+        { status: 400 }
+      );
+    }
+
+    const paidAttendance = Boolean(isPaid);
+    const feeAmount = paidAttendance ? Number(attendanceFee) : null;
+    const feeCurrency =
+      paidAttendance &&
+      typeof attendanceFeeCurrency === "string" &&
+      attendanceFeeCurrency.trim()
+        ? attendanceFeeCurrency.trim()
+        : null;
+    if (paidAttendance) {
+      if (feeAmount === null || !Number.isFinite(feeAmount) || feeAmount <= 0) {
+        return NextResponse.json(
+          { error: "attendanceFee must be a positive number when isPaid is true" },
+          { status: 400 }
+        );
+      }
+      if (!feeCurrency) {
+        return NextResponse.json(
+          { error: "attendanceFeeCurrency is required when isPaid is true" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const needsTransport = Boolean(transportRequired);
+    const transportNeedsValue =
+      needsTransport && typeof transportNeeds === "string" && transportNeeds.trim().length > 0
+        ? transportNeeds.trim()
+        : null;
+    if (needsTransport && !transportNeedsValue) {
+      return NextResponse.json(
+        { error: "transportNeeds is required when transportRequired is true" },
+        { status: 400 }
+      );
+    }
+
+    const wantsBudget = Boolean(budgetRequested);
+    const budgetAmountValue = wantsBudget ? Number(budgetAmount) : null;
+    const budgetCurrencyValue =
+      wantsBudget && typeof budgetCurrency === "string" && budgetCurrency.trim()
+        ? budgetCurrency.trim()
+        : null;
+    const budgetPurposeValue =
+      wantsBudget && typeof budgetPurpose === "string" && budgetPurpose.trim()
+        ? budgetPurpose.trim()
+        : null;
+    if (wantsBudget) {
+      if (
+        budgetAmountValue === null ||
+        !Number.isFinite(budgetAmountValue) ||
+        budgetAmountValue <= 0
+      ) {
+        return NextResponse.json(
+          { error: "budgetAmount must be a positive number when budgetRequested is true" },
+          { status: 400 }
+        );
+      }
+      if (!budgetCurrencyValue) {
+        return NextResponse.json(
+          { error: "budgetCurrency is required when budgetRequested is true" },
+          { status: 400 }
+        );
+      }
+      if (!budgetPurposeValue) {
+        return NextResponse.json(
+          { error: "budgetPurpose is required when budgetRequested is true" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Determine approval status. Events with transport or budget needs always
+    // go through the approval queue so the financial/logistical side can be
+    // reviewed — even when the creator would normally auto-approve.
+    const eligibleForAutoApproval = await canAutoApprove(
+      caller.role,
+      caller.leadsDepartmentIds
+    );
+    const autoApproved = eligibleForAutoApproval && !needsTransport && !wantsBudget;
     const approvalStatus = autoApproved ? "APPROVED" : "PENDING_APPROVAL";
 
     const now = new Date();
@@ -286,12 +401,51 @@ export async function POST(request: Request) {
         assignedUserId: r.assignedUserId || null,
         assignedUserName: r.assignedUserName || null,
       })),
+      speaker: speakerValue,
+      objective: objectiveValue,
+      isPaid: paidAttendance,
+      attendanceFee: feeAmount,
+      attendanceFeeCurrency: feeCurrency,
+      transportRequired: needsTransport,
+      transportNeeds: transportNeedsValue,
+      transportRequestId: null,
+      budgetRequested: wantsBudget,
+      budgetAmount: budgetAmountValue,
+      budgetCurrency: budgetCurrencyValue,
+      budgetPurpose: budgetPurposeValue,
+      budgetRequestId: null,
       createdBy: caller.uid,
       createdAt: now,
       updatedAt: now,
     };
 
     const docRef = await adminDb.collection("events").add(eventData);
+
+    // If the event requests extra funds, auto-create the budget request and
+    // notify the treasurer(s). The events coordinator does not need to route
+    // this manually — there's no costing step like with transport.
+    if (wantsBudget && budgetAmountValue !== null && budgetCurrencyValue && budgetPurposeValue) {
+      try {
+        const budgetRequestId = await createBudgetRequest({
+          eventId: docRef.id,
+          eventTitle: title,
+          eventStartDate: new Date(startDate),
+          requestedAmount: budgetAmountValue,
+          currency: budgetCurrencyValue,
+          purpose: budgetPurposeValue,
+          requestedBy: caller.uid,
+          requestedByName: caller.name,
+        });
+        notifyTreasurersOfBudgetRequest(
+          budgetRequestId,
+          title,
+          budgetAmountValue,
+          budgetCurrencyValue
+        ).catch(console.error);
+      } catch (err) {
+        console.error("Failed to create budget request:", err);
+      }
+    }
 
     // Notify Events & Fellowship managers if event needs approval
     if (approvalStatus === "PENDING_APPROVAL") {
