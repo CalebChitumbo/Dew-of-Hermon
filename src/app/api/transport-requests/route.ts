@@ -68,7 +68,10 @@ export async function GET(request: Request) {
     if (statusParam) {
       q = q.where("status", "==", statusParam);
     }
-    const snap = await q.orderBy("createdAt", "desc").get();
+    // Avoid combining .where() + .orderBy() on different fields — that would
+    // require a composite index. Sort in JS after fetching instead; the
+    // pending queues are small enough that this is fine.
+    const snap = await q.get();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const requests = snap.docs.map((doc: any) => {
@@ -103,6 +106,11 @@ export async function GET(request: Request) {
         updatedAt: toIsoOrNull(data.updatedAt),
       };
     });
+
+    // Newest first
+    requests.sort((a: { createdAt: string | null }, b: { createdAt: string | null }) =>
+      (b.createdAt ?? "").localeCompare(a.createdAt ?? "")
+    );
 
     return NextResponse.json({ requests });
   } catch (error) {
