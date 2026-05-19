@@ -208,6 +208,24 @@ export default function EventApprovalsPage() {
     fetchPendingEvents();
   }, [fetchPendingEvents]);
 
+  // Refetch when the window/tab regains focus, so the events coordinator
+  // picks up status changes (e.g. treasurer just approved transport in
+  // another tab) without needing to manually reload.
+  useEffect(() => {
+    function onFocus() {
+      fetchPendingEvents();
+    }
+    function onVisibility() {
+      if (document.visibilityState === "visible") fetchPendingEvents();
+    }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [fetchPendingEvents]);
+
   async function handleNotifyTransport(eventId: string) {
     setNotifyingEventId(eventId);
     try {
