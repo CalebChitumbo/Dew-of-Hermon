@@ -63,6 +63,26 @@ export default function LoginPage() {
   return (
     <div className="space-y-4">
       <Link
+        href="/fundraising/order"
+        className="group flex items-center justify-between gap-3 rounded-xl border border-clay-200 bg-gradient-to-r from-[#16110D] to-[#2A211A] px-4 py-3 text-left text-cream shadow-sm transition-colors hover:border-[#B85A1E]"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <Flame
+            className="h-5 w-5 text-[#B85A1E] shrink-0"
+            fill="currentColor"
+          />
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#B85A1E]">
+              Potter&apos;s Shockers · Sunday Braai
+            </p>
+            <p className="text-sm font-medium text-cream truncate">
+              Pre-order food from this Sunday&apos;s fundraiser
+            </p>
+          </div>
+        </div>
+        <ArrowRight className="h-4 w-4 text-cream shrink-0 transition-transform group-hover:translate-x-1" />
+      </Link>
+      <Link
         href="/rops-camp"
         className="group flex items-center justify-between gap-3 rounded-xl border border-clay-200 bg-gradient-to-r from-[#16110D] to-[#2A211A] px-4 py-3 text-left text-cream shadow-sm transition-colors hover:border-[#D14A1F]"
       >

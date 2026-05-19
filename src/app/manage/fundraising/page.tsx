@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
+import { useFundraisingOrdersAccess } from "@/hooks/useFundraisingOrdersAccess";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -31,6 +32,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Users,
+  Receipt,
 } from "lucide-react";
 import { format, isPast, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
 import { BRAAI_TOTAL_RESPONSIBILITIES } from "@/lib/braai";
@@ -151,6 +153,8 @@ function BraaiCard({ event }: { event: BraaiEventRow }) {
 function FundraisingContent() {
   const { firebaseUser, userData } = useAuth();
   const { canPlanBraai, loading: accessLoading } = useFundraisingAccess();
+  const { canManageOrders, loading: ordersAccessLoading } =
+    useFundraisingOrdersAccess();
   const { toast } = useToast();
 
   const [events, setEvents] = useState<BraaiEventRow[]>([]);
@@ -185,13 +189,20 @@ function FundraisingContent() {
   }, [firebaseUser]);
 
   useEffect(() => {
-    if (!firebaseUser || accessLoading) return;
-    if (!canPlanBraai) {
+    if (!firebaseUser || accessLoading || ordersAccessLoading) return;
+    if (!canPlanBraai && !canManageOrders) {
       setLoading(false);
       return;
     }
     load();
-  }, [firebaseUser, accessLoading, canPlanBraai, load]);
+  }, [
+    firebaseUser,
+    accessLoading,
+    ordersAccessLoading,
+    canPlanBraai,
+    canManageOrders,
+    load,
+  ]);
 
   const handleCreate = async () => {
     if (!firebaseUser || !newDate) return;
@@ -235,9 +246,9 @@ function FundraisingContent() {
     }
   };
 
-  if (accessLoading) return <PageLoader />;
+  if (accessLoading || ordersAccessLoading) return <PageLoader />;
 
-  if (!canPlanBraai) {
+  if (!canPlanBraai && !canManageOrders) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
         <div className="text-center max-w-md">
@@ -284,10 +295,20 @@ function FundraisingContent() {
             member of the Fundraising team and follow up on confirmations.
           </p>
         </div>
-        <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New Braai
-        </Button>
+        {canPlanBraai && (
+          <div className="flex gap-2">
+            <Link href="/manage/fundraising/settings">
+              <Button variant="outline" className="gap-2">
+                <Receipt className="h-4 w-4" />
+                Menu & Settings
+              </Button>
+            </Link>
+            <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4" />
+              New Braai
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -487,9 +508,11 @@ export default function FundraisingPage() {
  * the page-level access control says "none" for their role.
  */
 function FundraisingFallbackWrapper() {
-  const { canPlanBraai, loading } = useFundraisingAccess();
-  if (loading) return <PageLoader />;
-  if (canPlanBraai) return <FundraisingContent />;
+  const { canPlanBraai, loading: planLoading } = useFundraisingAccess();
+  const { canManageOrders, loading: orderLoading } =
+    useFundraisingOrdersAccess();
+  if (planLoading || orderLoading) return <PageLoader />;
+  if (canPlanBraai || canManageOrders) return <FundraisingContent />;
   return (
     <div className="flex h-[60vh] items-center justify-center">
       <div className="text-center">

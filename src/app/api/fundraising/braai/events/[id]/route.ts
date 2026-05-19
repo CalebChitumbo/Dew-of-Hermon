@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { canPlanBraai, getCaller } from "../../_auth";
+import {
+  canManageFundraisingOrders,
+  canPlanBraai,
+  getCaller,
+} from "../../_auth";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +17,14 @@ export async function GET(
     if (!caller) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!(await canPlanBraai(caller))) {
+    // Event metadata is read by both planners (to manage the roster) and
+    // any Fundraising member who needs the header context for the orders
+    // tab. So allow either permission.
+    const [canPlan, canOrders] = await Promise.all([
+      canPlanBraai(caller),
+      canManageFundraisingOrders(caller),
+    ]);
+    if (!canPlan && !canOrders) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

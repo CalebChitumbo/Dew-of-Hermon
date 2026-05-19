@@ -578,3 +578,87 @@ export interface BraaiAssignment {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// ─── Fundraising / Orders (Potter's Shockers) ───
+
+export type FundraisingPaymentStatus = "UNPAID" | "PAID";
+
+export type FundraisingPaymentMethod = "momo" | "cash";
+
+export type FundraisingPreparationStatus =
+  | "PENDING"
+  | "IN_PREP"
+  | "READY"
+  | "COLLECTED";
+
+export type FundraisingPickupTimeOption =
+  | "after_1st"
+  | "after_2nd"
+  | "lunch_hour"
+  | "custom";
+
+export type FundraisingOrderSource = "buyer" | "member";
+
+export interface FundraisingMenuItemDef {
+  /** Stable key (also used as Firestore field key for itemPrices). */
+  key: string;
+  name: string;
+  description: string;
+  emoji: string;
+  defaultPrice: number;
+}
+
+export interface FundraisingMenuItem {
+  key: string;
+  name: string;
+  description: string;
+  emoji: string;
+  price: number;
+}
+
+export interface FundraisingMenuConfig {
+  items: FundraisingMenuItem[];
+  momoNumber: string;
+  currency: string;
+  campaignName: string;
+}
+
+export interface FundraisingOrderItem {
+  itemKey: string;
+  name: string;
+  unitPrice: number;
+  qty: number;
+  subtotal: number;
+}
+
+export interface FundraisingOrder {
+  id: string;
+  orderNumber: string;
+  braaiEventId: string;
+  braaiEventTitle: string;
+  braaiEventDate: Date | null;
+  customerName: string;
+  customerPhone: string;
+  pickupTime: FundraisingPickupTimeOption;
+  /** HH:mm string when pickupTime === "custom". */
+  customPickupTime: string | null;
+  notes: string | null;
+  items: FundraisingOrderItem[];
+  total: number;
+  currency: string;
+  paymentStatus: FundraisingPaymentStatus;
+  paymentMethod: FundraisingPaymentMethod | null;
+  paidAt: Date | null;
+  paidBy: string | null;
+  paidByName: string | null;
+  preparationStatus: FundraisingPreparationStatus;
+  preparationUpdatedAt: Date;
+  preparationUpdatedBy: string | null;
+  preparationUpdatedByName: string | null;
+  /** "buyer" = self-serve public form; "member" = entered by a signed-in member. */
+  submittedBy: FundraisingOrderSource;
+  submittedByUserId: string | null;
+  isArchived: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}

@@ -66,3 +66,21 @@ export async function canPlanBraai(caller: AuthedCaller): Promise<boolean> {
     caller.leadsDepartmentIds
   );
 }
+
+/**
+ * Returns true if the caller can view and update fundraising orders.
+ * SUPER_ADMIN/ADMIN pass via the min role; any member or lead of the
+ * Fundraising department also passes via the department rule.
+ */
+export async function canManageFundraisingOrders(
+  caller: AuthedCaller
+): Promise<boolean> {
+  return serverCheckFeatureAccess(
+    "manage_fundraising_orders",
+    caller.role,
+    caller.departmentIds,
+    caller.leadsDepartmentIds
+  );
+}
+
+export type { AuthedCaller };

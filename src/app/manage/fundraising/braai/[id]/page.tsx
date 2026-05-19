@@ -17,8 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
+import { BraaiOrdersList } from "@/components/fundraising/BraaiOrdersList";
+import { useFundraisingOrdersAccess } from "@/hooks/useFundraisingOrdersAccess";
 import {
   ArrowLeft,
   Flame,
@@ -84,7 +92,10 @@ function BraaiDetailContent() {
   const braaiId = params.id as string;
   const { firebaseUser } = useAuth();
   const { canPlanBraai, loading: accessLoading } = useFundraisingAccess();
+  const { canManageOrders, loading: ordersAccessLoading } =
+    useFundraisingOrdersAccess();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<"roster" | "orders">("roster");
 
   const [event, setEvent] = useState<BraaiEvent | null>(null);
   const [assignments, setAssignments] = useState<BraaiAssignment[]>([]);
@@ -106,38 +117,74 @@ function BraaiDetailContent() {
     try {
       const idToken = await firebaseUser.getIdToken();
       const headers = { Authorization: `Bearer ${idToken}` };
-      const [eventRes, assignmentsRes, membersRes] = await Promise.all([
-        fetch(`/api/fundraising/braai/events/${braaiId}`, { headers }),
-        fetch(`/api/fundraising/braai/events/${braaiId}/assignments`, { headers }),
-        fetch(`/api/fundraising/braai/department-members`, { headers }),
-      ]);
 
+      // Event metadata is shown to anyone who can manage either the roster
+      // or the orders. Roster/member data only loads for planners.
+      const eventRes = await fetch(
+        `/api/fundraising/braai/events/${braaiId}`,
+        { headers }
+      );
       const eventData = await eventRes.json();
-      const assignmentsData = await assignmentsRes.json();
-      const membersData = await membersRes.json();
-
-      if (!eventRes.ok) throw new Error(eventData?.error || `Event load HTTP ${eventRes.status}`);
-      if (!assignmentsRes.ok)
-        throw new Error(assignmentsData?.error || `Assignments load HTTP ${assignmentsRes.status}`);
-      if (!membersRes.ok)
-        throw new Error(membersData?.error || `Members load HTTP ${membersRes.status}`);
-
+      if (!eventRes.ok)
+        throw new Error(eventData?.error || `Event load HTTP ${eventRes.status}`);
       setEvent(eventData.event);
-      setAssignments(assignmentsData.assignments || []);
-      setMembers(membersData.members || []);
-      setDepartmentExists(Boolean(membersData.departmentId));
+
+      if (canPlanBraai) {
+        const [assignmentsRes, membersRes] = await Promise.all([
+          fetch(`/api/fundraising/braai/events/${braaiId}/assignments`, {
+            headers,
+          }),
+          fetch(`/api/fundraising/braai/department-members`, { headers }),
+        ]);
+
+        const assignmentsData = await assignmentsRes.json();
+        const membersData = await membersRes.json();
+
+        if (!assignmentsRes.ok)
+          throw new Error(
+            assignmentsData?.error || `Assignments load HTTP ${assignmentsRes.status}`
+          );
+        if (!membersRes.ok)
+          throw new Error(
+            membersData?.error || `Members load HTTP ${membersRes.status}`
+          );
+
+        setAssignments(assignmentsData.assignments || []);
+        setMembers(membersData.members || []);
+        setDepartmentExists(Boolean(membersData.departmentId));
+      }
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Failed to load braai");
     } finally {
       setLoading(false);
     }
-  }, [firebaseUser, braaiId]);
+  }, [firebaseUser, braaiId, canPlanBraai]);
 
   useEffect(() => {
-    if (!firebaseUser || accessLoading || !canPlanBraai) return;
+    if (
+      !firebaseUser ||
+      accessLoading ||
+      ordersAccessLoading ||
+      (!canPlanBraai && !canManageOrders)
+    )
+      return;
     load();
-  }, [firebaseUser, accessLoading, canPlanBraai, load]);
+  }, [
+    firebaseUser,
+    accessLoading,
+    ordersAccessLoading,
+    canPlanBraai,
+    canManageOrders,
+    load,
+  ]);
+
+  // If the user can manage orders but can't plan, default the tab to "orders".
+  useEffect(() => {
+    if (!accessLoading && !ordersAccessLoading) {
+      if (!canPlanBraai && canManageOrders) setActiveTab("orders");
+    }
+  }, [accessLoading, ordersAccessLoading, canPlanBraai, canManageOrders]);
 
   const assignmentByKey = useMemo(() => {
     const map: Record<string, BraaiAssignment> = {};
@@ -217,15 +264,18 @@ function BraaiDetailContent() {
     }
   };
 
-  if (accessLoading) return <PageLoader />;
+  if (accessLoading || ordersAccessLoading) return <PageLoader />;
 
-  if (!canPlanBraai) {
+  if (!canPlanBraai && !canManageOrders) {
     return (
       <div className="flex h-[60vh] items-center justify-center text-center">
         <div>
           <Flame className="h-12 w-12 text-clay-300 mx-auto mb-4" />
           <h2 className="text-2xl font-display text-clay-700">Fundraising</h2>
-          <p className="mt-2 text-clay-500">You don&apos;t have access to plan this braai.</p>
+          <p className="mt-2 text-clay-500">
+            You don&apos;t have access to this braai. Ask your chairperson to add
+            you to the Fundraising department.
+          </p>
         </div>
       </div>
     );
@@ -298,60 +348,122 @@ function BraaiDetailContent() {
         </div>
       </div>
 
-      {/* Stats */}
-      <Card>
-        <CardContent className="py-6">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center sm:text-left">
-            <div>
-              <p className="text-2xl font-display font-bold text-green-600">{confirmed}</p>
-              <p className="text-xs text-clay-500">Confirmed</p>
-            </div>
-            <div>
-              <p className="text-2xl font-display font-bold text-gold">{pending}</p>
-              <p className="text-xs text-clay-500">Pending</p>
-            </div>
-            <div>
-              <p className="text-2xl font-display font-bold text-red-500">{declined}</p>
-              <p className="text-xs text-clay-500">Declined</p>
-            </div>
-            <div>
-              <p className="text-2xl font-display font-bold text-clay-400">{open}</p>
-              <p className="text-xs text-clay-500">Unassigned</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "roster" | "orders")}
+      >
+        <TabsList>
+          {canPlanBraai && <TabsTrigger value="roster">Roster</TabsTrigger>}
+          {canManageOrders && <TabsTrigger value="orders">Orders</TabsTrigger>}
+        </TabsList>
 
-      {!departmentExists && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="p-4 flex items-start gap-3 text-amber-800">
-            <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-medium">No Fundraising department found</p>
-              <p className="text-sm text-amber-700/90 mt-1">
-                Ask your chairperson to create a department called &quot;Fundraising&quot; and
-                add team members to it so you can assign responsibilities here.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {canPlanBraai && (
+          <TabsContent value="roster" className="space-y-6 mt-4">
+            {/* Stats */}
+            <Card>
+              <CardContent className="py-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center sm:text-left">
+                  <div>
+                    <p className="text-2xl font-display font-bold text-green-600">{confirmed}</p>
+                    <p className="text-xs text-clay-500">Confirmed</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-display font-bold text-gold">{pending}</p>
+                    <p className="text-xs text-clay-500">Pending</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-display font-bold text-red-500">{declined}</p>
+                    <p className="text-xs text-clay-500">Declined</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-display font-bold text-clay-400">{open}</p>
+                    <p className="text-xs text-clay-500">Unassigned</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-      {departmentExists && members.length === 0 && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="p-4 flex items-start gap-3 text-amber-800">
-            <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
-            <div>
-              <p className="font-medium">No members in the Fundraising department yet</p>
-              <p className="text-sm text-amber-700/90 mt-1">
-                Add members to the Fundraising department before assigning responsibilities.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            {!departmentExists && (
+              <Card className="border-amber-200 bg-amber-50">
+                <CardContent className="p-4 flex items-start gap-3 text-amber-800">
+                  <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">No Fundraising department found</p>
+                    <p className="text-sm text-amber-700/90 mt-1">
+                      Ask your chairperson to create a department called &quot;Fundraising&quot; and
+                      add team members to it so you can assign responsibilities here.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-      {/* Responsibilities, grouped by phase */}
+            {departmentExists && members.length === 0 && (
+              <Card className="border-amber-200 bg-amber-50">
+                <CardContent className="p-4 flex items-start gap-3 text-amber-800">
+                  <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">No members in the Fundraising department yet</p>
+                    <p className="text-sm text-amber-700/90 mt-1">
+                      Add members to the Fundraising department before assigning responsibilities.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <RosterSections
+              assignmentByKey={assignmentByKey}
+              assignedUserIds={assignedUserIds}
+              members={members}
+              pendingSelection={pendingSelection}
+              setPendingSelection={setPendingSelection}
+              savingKey={savingKey}
+              removingId={removingId}
+              onAssign={handleAssign}
+              onRemove={handleRemove}
+            />
+          </TabsContent>
+        )}
+
+        {canManageOrders && (
+          <TabsContent value="orders" className="mt-4">
+            <BraaiOrdersList braaiId={braaiId} braaiTitle={event.title} />
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
+  );
+}
+
+// ─── Roster sub-component (kept as-is, just lifted into its own function) ───
+interface RosterSectionsProps {
+  assignmentByKey: Record<string, BraaiAssignment>;
+  assignedUserIds: Set<string>;
+  members: FundraisingMember[];
+  pendingSelection: Record<string, string>;
+  setPendingSelection: React.Dispatch<
+    React.SetStateAction<Record<string, string>>
+  >;
+  savingKey: string | null;
+  removingId: string | null;
+  onAssign: (responsibilityKey: string) => void;
+  onRemove: (assignmentId: string) => void;
+}
+
+function RosterSections({
+  assignmentByKey,
+  assignedUserIds,
+  members,
+  pendingSelection,
+  setPendingSelection,
+  savingKey,
+  removingId,
+  onAssign,
+  onRemove,
+}: RosterSectionsProps) {
+  return (
+    <>
       {PHASE_ORDER.map((phase) => {
         const phaseResponsibilities = BRAAI_RESPONSIBILITIES.filter(
           (r) => r.phase === phase
@@ -422,7 +534,7 @@ function BraaiDetailContent() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleRemove(a.id)}
+                              onClick={() => onRemove(a.id)}
                               disabled={removingId === a.id}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                             >
@@ -481,7 +593,7 @@ function BraaiDetailContent() {
                                   savingKey === resp.key ||
                                   members.length === 0
                                 }
-                                onClick={() => handleAssign(resp.key)}
+                                onClick={() => onAssign(resp.key)}
                               >
                                 {savingKey === resp.key ? (
                                   <LoadingSpinner size="sm" />
@@ -501,7 +613,7 @@ function BraaiDetailContent() {
           </section>
         );
       })}
-    </div>
+    </>
   );
 }
 
@@ -514,9 +626,11 @@ export default function BraaiDetailPage() {
 }
 
 function BraaiDetailFallback() {
-  const { canPlanBraai, loading } = useFundraisingAccess();
-  if (loading) return <PageLoader />;
-  if (canPlanBraai) return <BraaiDetailContent />;
+  const { canPlanBraai, loading: planLoading } = useFundraisingAccess();
+  const { canManageOrders, loading: orderLoading } =
+    useFundraisingOrdersAccess();
+  if (planLoading || orderLoading) return <PageLoader />;
+  if (canPlanBraai || canManageOrders) return <BraaiDetailContent />;
   return (
     <div className="flex h-[60vh] items-center justify-center">
       <div className="text-center">
