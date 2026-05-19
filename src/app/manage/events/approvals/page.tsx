@@ -101,6 +101,7 @@ export default function EventApprovalsPage() {
 
   const [pendingEvents, setPendingEvents] = useState<PendingEvent[]>([]);
   const [transportByEvent, setTransportByEvent] = useState<Record<string, TransportSummary>>({});
+  const [transportFetchError, setTransportFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [actionState, setActionState] = useState<ActionState>(null);
@@ -159,6 +160,7 @@ export default function EventApprovalsPage() {
         .map((e) => e.transportRequestId)
         .filter((id): id is string => Boolean(id));
       const summaries: Record<string, TransportSummary> = {};
+      let transportError: string | null = null;
       if (requestIds.length > 0) {
         try {
           // Firestore 'in' queries support up to 30 IDs
@@ -190,12 +192,17 @@ export default function EventApprovalsPage() {
         } catch (transportErr) {
           // Don't blow up the whole approvals view if the transport-requests
           // collection can't be read (e.g. firestore.rules not yet deployed).
-          // Events still render; the transport panel will just say "Loading…"
-          // and the Approve button stays disabled (safe default).
+          // Events still render; we surface the error in the transport panel
+          // so the events coordinator can diagnose and retry.
           console.error("Failed to fetch transport requests:", transportErr);
+          transportError =
+            transportErr instanceof Error
+              ? transportErr.message
+              : "Unknown error";
         }
       }
       setTransportByEvent(summaries);
+      setTransportFetchError(transportError);
     } catch (error) {
       console.error("Failed to fetch pending events:", error);
       setFetchError(true);
@@ -493,6 +500,25 @@ export default function EventApprovalsPage() {
                             );
                           }
                           if (!t) {
+                            if (transportFetchError) {
+                              return (
+                                <div className="space-y-1">
+                                  <p className="text-xs text-red-700">
+                                    Couldn&apos;t load transport status:{" "}
+                                    <code className="bg-red-50 px-1 rounded">
+                                      {transportFetchError}
+                                    </code>
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => fetchPendingEvents()}
+                                    className="text-xs text-amber-700 underline hover:text-amber-800"
+                                  >
+                                    Retry
+                                  </button>
+                                </div>
+                              );
+                            }
                             return (
                               <p className="text-xs text-clay-500">Loading transport request…</p>
                             );
