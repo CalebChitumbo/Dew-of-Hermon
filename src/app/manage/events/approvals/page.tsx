@@ -152,37 +152,47 @@ export default function EventApprovalsPage() {
       events.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setPendingEvents(events);
 
-      // Fetch transport requests for events that have one
+      // Fetch transport requests for events that have one. Wrap in its own
+      // try/catch so a transport-side failure (e.g. rules not yet deployed)
+      // never hides the pending events list itself.
       const requestIds = events
         .map((e) => e.transportRequestId)
         .filter((id): id is string => Boolean(id));
       const summaries: Record<string, TransportSummary> = {};
       if (requestIds.length > 0) {
-        // Firestore 'in' queries support up to 30 IDs
-        for (let i = 0; i < requestIds.length; i += 30) {
-          const chunk = requestIds.slice(i, i + 30);
-          const tSnap = await getDocs(
-            query(safeCollection("transportRequests"), where(documentId(), "in", chunk))
-          );
-          tSnap.docs.forEach((d) => {
-            const td = d.data();
-            const event = events.find((e) => e.transportRequestId === d.id);
-            if (!event) return;
-            summaries[event.id] = {
-              id: d.id,
-              status: td.status as TransportRequestStatus,
-              vehicleType: td.vehicleType ?? null,
-              vehicleCount: td.vehicleCount ?? null,
-              estimatedCost: td.estimatedCost ?? null,
-              currency: td.currency ?? null,
-              pickupLocation: td.pickupLocation ?? null,
-              dropoffLocation: td.dropoffLocation ?? null,
-              pickupTime: td.pickupTime ? parseFirestoreDate(td.pickupTime) : null,
-              returnTime: td.returnTime ? parseFirestoreDate(td.returnTime) : null,
-              coordinatorNotes: td.coordinatorNotes ?? null,
-              treasurerComments: td.treasurerComments ?? null,
-            };
-          });
+        try {
+          // Firestore 'in' queries support up to 30 IDs
+          for (let i = 0; i < requestIds.length; i += 30) {
+            const chunk = requestIds.slice(i, i + 30);
+            const tSnap = await getDocs(
+              query(safeCollection("transportRequests"), where(documentId(), "in", chunk))
+            );
+            tSnap.docs.forEach((d) => {
+              const td = d.data();
+              const event = events.find((e) => e.transportRequestId === d.id);
+              if (!event) return;
+              summaries[event.id] = {
+                id: d.id,
+                status: td.status as TransportRequestStatus,
+                vehicleType: td.vehicleType ?? null,
+                vehicleCount: td.vehicleCount ?? null,
+                estimatedCost: td.estimatedCost ?? null,
+                currency: td.currency ?? null,
+                pickupLocation: td.pickupLocation ?? null,
+                dropoffLocation: td.dropoffLocation ?? null,
+                pickupTime: td.pickupTime ? parseFirestoreDate(td.pickupTime) : null,
+                returnTime: td.returnTime ? parseFirestoreDate(td.returnTime) : null,
+                coordinatorNotes: td.coordinatorNotes ?? null,
+                treasurerComments: td.treasurerComments ?? null,
+              };
+            });
+          }
+        } catch (transportErr) {
+          // Don't blow up the whole approvals view if the transport-requests
+          // collection can't be read (e.g. firestore.rules not yet deployed).
+          // Events still render; the transport panel will just say "Loading…"
+          // and the Approve button stays disabled (safe default).
+          console.error("Failed to fetch transport requests:", transportErr);
         }
       }
       setTransportByEvent(summaries);
