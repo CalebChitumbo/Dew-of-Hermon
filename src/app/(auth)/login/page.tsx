@@ -158,46 +158,78 @@ export default function LoginPage() {
                 No sign-in needed
               </span>
             </div>
-            <div className="grid gap-2.5 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               <Link
                 href="/fundraising/order"
-                className="group flex items-center gap-3 rounded-xl border border-cream/10 bg-cream/[0.04] px-3.5 py-3 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-[#B85A1E]/60 hover:bg-cream/[0.08] hover:shadow-lg hover:shadow-black/30"
+                className="group relative flex h-32 items-stretch overflow-hidden rounded-2xl border border-cream/10 bg-cream/[0.04] backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-[#B85A1E]/60 hover:bg-cream/[0.08] hover:shadow-xl hover:shadow-black/40"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#B85A1E] to-[#7d3a14] shadow-md shadow-black/20 ring-1 ring-inset ring-white/15">
-                  <Flame
-                    className="h-4 w-4 text-cream"
-                    fill="currentColor"
+                <div className="relative h-full w-32 shrink-0 overflow-hidden bg-clay-900">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/login-features/potters-shockers.jpg"
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-y-0 right-0 w-16 bg-gradient-to-r from-transparent to-[#1a0d05]/70"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#B85A1E] to-[#E8AA73]"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[9px] font-semibold uppercase tracking-[0.18em] text-[#E8AA73]">
-                    Potter&apos;s Shockers
-                  </p>
-                  <p className="truncate text-[13px] font-medium text-cream/90">
-                    Sunday Braai pre-orders
-                  </p>
+                <div className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="inline-flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#E8AA73]">
+                      <Flame className="h-3 w-3" fill="currentColor" />
+                      Potter&apos;s Shockers
+                    </p>
+                    <p className="mt-1.5 text-sm font-semibold leading-tight text-cream">
+                      Sunday Braai pre-orders
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-cream/60">
+                      Order ahead for this Sunday&apos;s fundraiser
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-cream/45 transition-all group-hover:translate-x-0.5 group-hover:text-[#E8AA73]" />
                 </div>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-cream/45 transition-all group-hover:translate-x-0.5 group-hover:text-[#E8AA73]" />
               </Link>
               <Link
                 href="/rops-camp"
-                className="group flex items-center gap-3 rounded-xl border border-cream/10 bg-cream/[0.04] px-3.5 py-3 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-[#D14A1F]/60 hover:bg-cream/[0.08] hover:shadow-lg hover:shadow-black/30"
+                className="group relative flex h-32 items-stretch overflow-hidden rounded-2xl border border-cream/10 bg-cream/[0.04] backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-[#D14A1F]/60 hover:bg-cream/[0.08] hover:shadow-xl hover:shadow-black/40"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#D14A1F] to-[#8c2f12] shadow-md shadow-black/20 ring-1 ring-inset ring-white/15">
-                  <Flame
-                    className="h-4 w-4 text-cream"
-                    fill="currentColor"
+                <div className="relative h-full w-32 shrink-0 overflow-hidden bg-clay-900">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/login-features/rops-camp.jpg"
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-y-0 right-0 w-16 bg-gradient-to-r from-transparent to-[#1a0d05]/70"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#D14A1F] to-[#F1956C]"
                   />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[9px] font-semibold uppercase tracking-[0.18em] text-[#F1956C]">
-                    ROPs X · 2026
-                  </p>
-                  <p className="truncate text-[13px] font-medium text-cream/90">
-                    Register your child
-                  </p>
+                <div className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="inline-flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#F1956C]">
+                      <Flame className="h-3 w-3" fill="currentColor" />
+                      ROPs X · 2026
+                    </p>
+                    <p className="mt-1.5 text-sm font-semibold leading-tight text-cream">
+                      Register your child for camp
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-cream/60">
+                      Registration is now open
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-cream/45 transition-all group-hover:translate-x-0.5 group-hover:text-[#F1956C]" />
                 </div>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-cream/45 transition-all group-hover:translate-x-0.5 group-hover:text-[#F1956C]" />
               </Link>
             </div>
           </div>
