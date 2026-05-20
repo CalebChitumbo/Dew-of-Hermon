@@ -614,6 +614,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     supportsDepartmentRules: true,
   },
   {
+    key: "manage_fundraising_orders",
+    label: "Manage Fundraising Orders",
+    description:
+      "View incoming Potter's Shockers orders and update payment / preparation status",
+    category: "Fundraising",
+    supportsDepartmentRules: true,
+  },
+  {
     key: "view_fundraising_reports",
     label: "View Fundraising Reports",
     description: "View campaign totals, donor lists, and contribution summaries",
@@ -689,6 +697,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_fundraising: "ADMIN",
   view_fundraising_reports: "ADMIN",
   plan_fundraising_braai: "ADMIN",
+  manage_fundraising_orders: "ADMIN",
   manage_transport_logistics: "ADMIN",
   view_transport_assignments: "ADMIN",
   manage_food_logistics: "ADMIN",
@@ -803,6 +812,16 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     departmentName: "Fundraising",
     requiresLeadership: true,
     allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  // Any signed-in member of the Fundraising department can take part in the
+  // shared workflow of marking incoming orders paid / in-prep / ready /
+  // collected. Department leadership isn't required so the cashier, the
+  // braai team, and the counter person can all collaborate on the same view.
+  {
+    featureKey: "manage_fundraising_orders",
+    departmentName: "Fundraising",
+    requiresLeadership: false,
+    allowedRoles: [],
   },
   {
     featureKey: "manage_transport_logistics",

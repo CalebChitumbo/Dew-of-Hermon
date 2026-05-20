@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { canPlanBraai, getCaller } from "../_auth";
+import {
+  canManageFundraisingOrders,
+  canPlanBraai,
+  getCaller,
+} from "../_auth";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +30,13 @@ export async function GET(request: NextRequest) {
     if (!caller) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!(await canPlanBraai(caller))) {
+    // Planners need this for the roster; any Fundraising member can also
+    // browse here to drill into a braai's Orders tab.
+    const [canPlan, canOrders] = await Promise.all([
+      canPlanBraai(caller),
+      canManageFundraisingOrders(caller),
+    ]);
+    if (!canPlan && !canOrders) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

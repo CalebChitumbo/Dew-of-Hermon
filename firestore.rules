@@ -218,6 +218,25 @@ service cloud.firestore {
       allow delete: if isDeptLead();
     }
 
+    // ─── Fundraising Orders (Potter's Shockers public ordering) ───
+    // All writes go through the API (which validates the payload, recomputes
+    // the total, generates the order number, and gates updates on the
+    // manage_fundraising_orders feature). Reads are open to signed-in users so
+    // the shared workflow view inside Fundraising shows live order state.
+    match /fundraisingOrders/{orderId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Hardcoded menu items with editable prices and the MoMo number. The
+    // public order page reads this through the public API endpoint (server
+    // uses the Admin SDK and bypasses these rules); signed-in users may also
+    // read it directly. Writes flow through the admin-gated menu API.
+    match /fundraisingConfig/{docId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     // ─── Worship Song Suggestions (Latreou) ───
     // Any signed-in user can read & propose suggestions. Suggesters can delete
     // their own open submission. Worship leads (and admins) can update
