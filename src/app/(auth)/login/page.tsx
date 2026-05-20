@@ -7,14 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Flame, ArrowRight, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
@@ -61,76 +53,205 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Link
-        href="/fundraising/order"
-        className="group flex items-center justify-between gap-3 rounded-xl border border-clay-200 bg-gradient-to-r from-[#16110D] to-[#2A211A] px-4 py-3 text-left text-cream shadow-sm transition-colors hover:border-[#B85A1E]"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <Flame
-            className="h-5 w-5 text-[#B85A1E] shrink-0"
-            fill="currentColor"
-          />
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#B85A1E]">
-              Potter&apos;s Shockers · Sunday Braai
-            </p>
-            <p className="text-sm font-medium text-cream truncate">
-              Pre-order food from this Sunday&apos;s fundraiser
-            </p>
-          </div>
-        </div>
-        <ArrowRight className="h-4 w-4 text-cream shrink-0 transition-transform group-hover:translate-x-1" />
-      </Link>
-      <Link
-        href="/rops-camp"
-        className="group flex items-center justify-between gap-3 rounded-xl border border-clay-200 bg-gradient-to-r from-[#16110D] to-[#2A211A] px-4 py-3 text-left text-cream shadow-sm transition-colors hover:border-[#D14A1F]"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <Flame
-            className="h-5 w-5 text-[#D14A1F] shrink-0"
-            fill="currentColor"
-          />
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#D14A1F]">
-              ROPs X · 2026
-            </p>
-            <p className="text-sm font-medium text-cream truncate">
-              Registering your child for camp?
-            </p>
-          </div>
-        </div>
-        <ArrowRight className="h-4 w-4 text-cream shrink-0 transition-transform group-hover:translate-x-1" />
-      </Link>
-      <Card className="relative overflow-hidden rounded-2xl border-clay-200/60 bg-white/90 shadow-[0_25px_60px_-20px_rgba(91,58,41,0.35)] backdrop-blur-xl">
+    <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr] xl:grid-cols-[1.2fr_1fr]">
+      {/* Brand / hero panel */}
+      <aside className="relative isolate overflow-hidden bg-gradient-to-br from-[#1a0d05] via-clay-900 to-[#2A1810] text-cream">
+        {/* Ambient color washes */}
         <div
           aria-hidden
-          className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-gold-light via-gold to-gold-dark"
+          className="pointer-events-none absolute -top-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-gold/20 blur-3xl"
         />
-        <CardHeader className="pt-10 text-center">
-          <div className="relative mx-auto mb-5">
-            <div
-              aria-hidden
-              className="absolute inset-0 -m-6 rounded-full bg-gradient-to-br from-gold/20 to-clay-200/30 blur-2xl"
-            />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-40 -right-24 h-[32rem] w-[32rem] rounded-full bg-[#B85A1E]/20 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(200,150,62,0.12),transparent_55%),radial-gradient(circle_at_85%_85%,rgba(184,90,30,0.12),transparent_55%)]"
+        />
+        {/* Subtle grid texture */}
+        <svg
+          aria-hidden
+          className="pointer-events-none absolute inset-0 h-full w-full text-cream opacity-[0.035]"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern
+              id="brand-grid"
+              width="44"
+              height="44"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M 44 0 L 0 0 0 44"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#brand-grid)" />
+        </svg>
+        {/* Top accent line */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent"
+        />
+
+        <div className="relative flex min-h-[44vh] flex-col px-6 py-8 sm:px-10 sm:py-10 lg:min-h-screen lg:px-14 lg:py-12 xl:px-20">
+          {/* Brand mark */}
+          <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/images/church-logo.png"
-              alt="Tabernacle of David Assembly — City Mission Church"
-              width={240}
-              height={182}
-              className="relative mx-auto h-auto w-56 max-w-full"
+              alt="Tabernacle of David Assembly"
+              width={56}
+              height={56}
+              className="h-11 w-auto opacity-95"
             />
+            <div className="flex flex-col leading-tight">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cream/85">
+                Tabernacle of David
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-cream/55">
+                City Mission Church
+              </span>
+            </div>
           </div>
-          <CardTitle className="font-['Cinzel'] text-[2.25rem] font-semibold leading-tight tracking-[0.04em] text-clay-700">
-            Dew of Hermon
-          </CardTitle>
-          <CardDescription className="text-clay-500">
-            Sign in to continue
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-5 px-8 pb-2">
+
+          {/* Hero */}
+          <div className="flex flex-1 flex-col justify-center py-10 lg:py-14">
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-cream/15 bg-cream/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-gold-light backdrop-blur-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-gold-light shadow-[0_0_8px_rgba(224,184,114,0.8)]" />
+              A community in worship
+            </span>
+            <h1 className="mt-5 font-['Cinzel'] text-[2.75rem] font-semibold leading-[0.95] tracking-[0.015em] sm:text-[3.75rem] lg:text-[4.25rem] xl:text-[5rem]">
+              Dew of
+              <br />
+              <span className="bg-gradient-to-br from-gold-light via-gold to-gold-dark bg-clip-text text-transparent">
+                Hermon
+              </span>
+            </h1>
+            <p className="mt-6 max-w-md text-[15px] italic leading-relaxed text-cream/75 lg:text-base">
+              &ldquo;As the dew of Hermon, that descended upon the mountains of
+              Zion: for there the Lord commanded the blessing, even life
+              forevermore.&rdquo;
+            </p>
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-gold-light/80">
+              — Psalm 133:3
+            </p>
+          </div>
+
+          {/* Open Now strip */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2" aria-hidden>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-cream/80">
+                  Open Now
+                </p>
+              </div>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-cream/45">
+                No sign-in needed
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Link
+                href="/fundraising/order"
+                className="group relative flex h-32 items-stretch overflow-hidden rounded-2xl border border-cream/10 bg-cream/[0.04] backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-[#B85A1E]/60 hover:bg-cream/[0.08] hover:shadow-xl hover:shadow-black/40"
+              >
+                <div className="relative h-full w-32 shrink-0 overflow-hidden bg-clay-900">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/login-features/potters-shockers.jpg"
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-y-0 right-0 w-16 bg-gradient-to-r from-transparent to-[#1a0d05]/70"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#B85A1E] to-[#E8AA73]"
+                  />
+                </div>
+                <div className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="inline-flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#E8AA73]">
+                      <Flame className="h-3 w-3" fill="currentColor" />
+                      Potter&apos;s Shockers
+                    </p>
+                    <p className="mt-1.5 text-sm font-semibold leading-tight text-cream">
+                      Sunday Braai pre-orders
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-cream/60">
+                      Order ahead for this Sunday&apos;s fundraiser
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-cream/45 transition-all group-hover:translate-x-0.5 group-hover:text-[#E8AA73]" />
+                </div>
+              </Link>
+              <Link
+                href="/rops-camp"
+                className="group relative flex h-32 items-stretch overflow-hidden rounded-2xl border border-cream/10 bg-cream/[0.04] backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-[#D14A1F]/60 hover:bg-cream/[0.08] hover:shadow-xl hover:shadow-black/40"
+              >
+                <div className="relative h-full w-32 shrink-0 overflow-hidden bg-clay-900">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/login-features/rops-camp.jpg"
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-y-0 right-0 w-16 bg-gradient-to-r from-transparent to-[#1a0d05]/70"
+                  />
+                  <div
+                    aria-hidden
+                    className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#D14A1F] to-[#F1956C]"
+                  />
+                </div>
+                <div className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="inline-flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#F1956C]">
+                      <Flame className="h-3 w-3" fill="currentColor" />
+                      ROPs X · 2026
+                    </p>
+                    <p className="mt-1.5 text-sm font-semibold leading-tight text-cream">
+                      Register your child for camp
+                    </p>
+                    <p className="mt-1 text-[11px] leading-snug text-cream/60">
+                      Registration is now open
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-cream/45 transition-all group-hover:translate-x-0.5 group-hover:text-[#F1956C]" />
+                </div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Login panel */}
+      <main className="relative flex items-center justify-center px-6 py-10 sm:px-10 lg:px-12">
+        <div className="w-full max-w-sm">
+          <div className="text-center lg:text-left">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-gold-dark">
+              Welcome back
+            </p>
+            <h2 className="mt-2 font-['Cinzel'] text-[2rem] font-semibold leading-tight tracking-[0.02em] text-clay-800">
+              Sign in to continue
+            </h2>
+            <p className="mt-2 text-sm text-clay-500">
+              Pick up where you left off and join the gathering.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             {error && (
               <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-600">
                 {error}
@@ -181,7 +302,9 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={
+                    showPassword ? "Hide password" : "Show password"
+                  }
                   className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-clay-400 transition-colors hover:text-clay-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-clay-700"
                 >
                   {showPassword ? (
@@ -211,13 +334,13 @@ export default function LoginPage() {
                 <span className="w-full border-t border-clay-200" />
               </div>
               <div className="relative flex justify-center text-[11px] uppercase tracking-[0.18em]">
-                <span className="bg-white px-3 text-clay-400">or</span>
+                <span className="bg-cream px-3 text-clay-400">or</span>
               </div>
             </div>
             <Button
               type="button"
               variant="outline"
-              className="h-11 w-full rounded-lg border-clay-200 transition-colors hover:bg-clay-50"
+              className="h-11 w-full rounded-lg border-clay-200 bg-white transition-colors hover:bg-clay-50"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
             >
@@ -241,20 +364,19 @@ export default function LoginPage() {
               </svg>
               Continue with Google
             </Button>
-          </CardContent>
-        </form>
-        <CardFooter className="justify-center px-8 pb-8 pt-4">
-          <p className="text-sm text-clay-500">
+          </form>
+
+          <p className="mt-8 text-center text-sm text-clay-500 lg:text-left">
             New here?{" "}
             <Link
               href="/register"
-              className="font-semibold text-clay-700 transition-colors hover:text-gold-dark"
+              className="font-semibold text-clay-800 transition-colors hover:text-gold-dark"
             >
               Create an account
             </Link>
           </p>
-        </CardFooter>
-      </Card>
+        </div>
+      </main>
     </div>
   );
 }
