@@ -4,6 +4,7 @@ import { generateOrderNumber } from "@/lib/fundraising-menu";
 import {
   FUNDRAISING_ORDERS_COLLECTION,
   OrderValidationError,
+  filterToEnabled,
   generateUniqueOrderNumber,
   loadMenuConfig,
   serializeOrder,
@@ -93,7 +94,7 @@ export async function POST(
         ? { ...(rawBody as Record<string, unknown>), braaiEventId: id }
         : { braaiEventId: id };
 
-    const menu = await loadMenuConfig(adminDb);
+    const menu = filterToEnabled(await loadMenuConfig(adminDb));
     const validated = validateOrderPayload(body, menu);
 
     const braaiRef = adminDb.collection("braaiEvents").doc(id);

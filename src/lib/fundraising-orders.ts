@@ -20,6 +20,12 @@ const ORDERS_COLLECTION = "fundraisingOrders";
 
 interface StoredMenuConfig {
   itemPrices?: Record<string, number>;
+  /**
+   * Item keys the Fundraising lead has hidden from the public order form.
+   * Anything not in this list is considered enabled, so new menu items
+   * added to FUNDRAISING_MENU_ITEMS show up automatically.
+   */
+  disabledItemKeys?: string[];
   momoNumber?: string;
   currency?: string;
 }
@@ -27,7 +33,8 @@ interface StoredMenuConfig {
 /**
  * Load the menu config from Firestore. Missing fields fall back to the
  * hardcoded defaults so the order form always renders even if the config
- * doc has never been written.
+ * doc has never been written. Includes ALL items (enabled + disabled);
+ * the public API filters to enabled-only before serving buyers.
  */
 export async function loadMenuConfig(
   db: Firestore
@@ -35,6 +42,7 @@ export async function loadMenuConfig(
   const snap = await db.doc(MENU_DOC_PATH).get();
   const stored = (snap.exists ? snap.data() : {}) as StoredMenuConfig;
   const prices = { ...DEFAULT_ITEM_PRICES, ...(stored.itemPrices || {}) };
+  const disabled = new Set(stored.disabledItemKeys || []);
 
   const items: FundraisingMenuItem[] = FUNDRAISING_MENU_ITEMS.map((def) => ({
     key: def.key,
@@ -43,6 +51,7 @@ export async function loadMenuConfig(
     emoji: def.emoji,
     imagePath: def.imagePath,
     price: prices[def.key] ?? def.defaultPrice,
+    enabled: !disabled.has(def.key),
   }));
 
   return {
@@ -50,6 +59,19 @@ export async function loadMenuConfig(
     momoNumber: stored.momoNumber || DEFAULT_MOMO_NUMBER,
     currency: stored.currency || CURRENCY,
     campaignName: CAMPAIGN_NAME,
+  };
+}
+
+/**
+ * Variant of the menu config that hides disabled items entirely. Used by
+ * the public order page so buyers never see something they can't buy.
+ */
+export function filterToEnabled(
+  config: FundraisingMenuConfig
+): FundraisingMenuConfig {
+  return {
+    ...config,
+    items: config.items.filter((i) => i.enabled),
   };
 }
 
@@ -163,6 +185,8 @@ export function validateOrderPayload(
     );
   }
 
+  // Only enabled items are in `menu.items` when callers pass the filtered
+  // config; disabled items are simply treated as unavailable.
   const priceMap = new Map(menu.items.map((i) => [i.key, i]));
   const seen = new Set<string>();
   const items: FundraisingOrderItem[] = [];
@@ -184,6 +208,14 @@ export function validateOrderPayload(
     }
     seen.add(itemKey);
 
+    const menuItem = priceMap.get(itemKey);
+    if (!menuItem) {
+      throw new OrderValidationError(
+        "items",
+        `${itemKey} isn't available right now.`
+      );
+    }
+
     const qty = Number(item.qty);
     if (!Number.isInteger(qty) || qty < 1 || qty > 99) {
       throw new OrderValidationError(
@@ -192,7 +224,6 @@ export function validateOrderPayload(
       );
     }
 
-    const menuItem = priceMap.get(itemKey)!;
     const subtotal = menuItem.price * qty;
     items.push({
       itemKey,

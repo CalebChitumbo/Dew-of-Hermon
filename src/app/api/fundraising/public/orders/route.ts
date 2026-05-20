@@ -4,6 +4,7 @@ import { generateOrderNumber } from "@/lib/fundraising-menu";
 import {
   FUNDRAISING_ORDERS_COLLECTION,
   OrderValidationError,
+  filterToEnabled,
   generateUniqueOrderNumber,
   loadMenuConfig,
   validateOrderPayload,
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
-    const menu = await loadMenuConfig(adminDb);
+    const menu = filterToEnabled(await loadMenuConfig(adminDb));
 
     const validated = validateOrderPayload(body, menu);
 

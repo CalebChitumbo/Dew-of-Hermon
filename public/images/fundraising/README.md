@@ -14,10 +14,20 @@ Each filename must match the menu item's stable key exactly:
 | `sausage.jpg`          | Sausage            | K30   |
 | `chicken_chips.jpg`    | Chicken & Chips    | K60   |
 | `sausage_chips.jpg`    | Sausage & Chips    | K60   |
+| `chips_only.jpg`       | Chips Only         | K35   |
+| `cold_drink.jpg`       | Cold Drink         | K15   |
+| `bottled_water.jpg`    | Bottled Water      | K10   |
 
-Every meal comes with complimentary coleslaw on the side, so you don't
-need a separate photo for the salad — the public page mentions it
-right under the menu heading.
+The chicken / sausage meals come with complimentary coleslaw — that's
+mentioned right under the menu heading on the public page, so no
+separate photo is needed for the salad.
+
+## Hiding items without deleting photos
+
+The Fundraising lead can toggle any item's availability from
+`/manage/fundraising/settings`. Hidden items disappear from the public
+order page but the photos stay in this folder so they're ready to use
+again when the item is re-enabled.
 
 ## Sizing tips
 
@@ -32,5 +42,5 @@ update the `imagePath` field for that item in
 ## Missing photos
 
 If a file is missing the order page automatically falls back to the
-item's emoji (🍗 🌭), so partial coverage is fine — add photos as you
-have them.
+item's emoji (🍗 🌭 🍟 🥤 💧), so partial coverage is fine — add photos
+as you have them.

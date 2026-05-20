@@ -621,6 +621,12 @@ export interface FundraisingMenuItem {
   emoji: string;
   imagePath: string;
   price: number;
+  /**
+   * Whether the item is currently available for sale. The public order
+   * page only shows enabled items; the manage settings page shows them
+   * all so the Fundraising lead can toggle availability.
+   */
+  enabled: boolean;
 }
 
 export interface FundraisingMenuConfig {

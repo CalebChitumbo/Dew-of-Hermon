@@ -53,6 +53,30 @@ export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
     imagePath: `${IMAGE_BASE}/sausage_chips.jpg`,
     defaultPrice: 60,
   },
+  {
+    key: "chips_only",
+    name: "Chips Only",
+    description: "Hot, salted chips on their own.",
+    emoji: "🍟",
+    imagePath: `${IMAGE_BASE}/chips_only.jpg`,
+    defaultPrice: 35,
+  },
+  {
+    key: "cold_drink",
+    name: "Cold Drink",
+    description: "Chilled Coca-Cola, Fanta, or Sprite.",
+    emoji: "🥤",
+    imagePath: `${IMAGE_BASE}/cold_drink.jpg`,
+    defaultPrice: 15,
+  },
+  {
+    key: "bottled_water",
+    name: "Bottled Water",
+    description: "Half-litre of still water.",
+    emoji: "💧",
+    imagePath: `${IMAGE_BASE}/bottled_water.jpg`,
+    defaultPrice: 10,
+  },
 ];
 
 export const FUNDRAISING_MENU_ITEM_KEYS = new Set(

@@ -30,11 +30,18 @@ export async function GET(request: NextRequest) {
 interface PatchBody {
   itemPrices?: Record<string, number | string>;
   momoNumber?: string;
+  /**
+   * Full replacement list of item keys to hide from the public order page.
+   * Keys not in this list are treated as enabled. Sending an empty array
+   * re-enables everything.
+   */
+  disabledItemKeys?: string[];
 }
 
 /**
- * Update menu prices and/or the MoMo number. Items themselves are
- * hardcoded, so only known keys are accepted in `itemPrices`.
+ * Update menu prices, the MoMo number, and/or which items are currently
+ * available for sale. Items themselves are hardcoded, so only known keys
+ * are accepted in `itemPrices` and `disabledItemKeys`.
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -75,6 +82,32 @@ export async function PATCH(request: NextRequest) {
       const existing = await adminDb.doc(FUNDRAISING_MENU_DOC_PATH).get();
       const prior = (existing.exists ? existing.data()?.itemPrices : null) || {};
       updates.itemPrices = { ...prior, ...cleaned };
+    }
+
+    if (body.disabledItemKeys !== undefined) {
+      if (!Array.isArray(body.disabledItemKeys)) {
+        return NextResponse.json(
+          { error: "disabledItemKeys must be an array of item keys" },
+          { status: 400 }
+        );
+      }
+      const cleaned: string[] = [];
+      for (const key of body.disabledItemKeys) {
+        if (typeof key !== "string") {
+          return NextResponse.json(
+            { error: "disabledItemKeys must contain only strings" },
+            { status: 400 }
+          );
+        }
+        if (!FUNDRAISING_MENU_ITEM_KEYS.has(key)) {
+          return NextResponse.json(
+            { error: `Unknown menu item: ${key}` },
+            { status: 400 }
+          );
+        }
+        if (!cleaned.includes(key)) cleaned.push(key);
+      }
+      updates.disabledItemKeys = cleaned;
     }
 
     if (body.momoNumber !== undefined) {
