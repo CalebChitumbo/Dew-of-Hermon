@@ -605,6 +605,12 @@ export interface FundraisingMenuItemDef {
   name: string;
   description: string;
   emoji: string;
+  /**
+   * Optional URL of a photo to show instead of the emoji. Defaults to a
+   * convention path under /images/fundraising/{key}.jpg — the file just
+   * needs to exist; if not, the UI falls back to the emoji at runtime.
+   */
+  imagePath: string;
   defaultPrice: number;
 }
 
@@ -613,6 +619,7 @@ export interface FundraisingMenuItem {
   name: string;
   description: string;
   emoji: string;
+  imagePath: string;
   price: number;
 }
 

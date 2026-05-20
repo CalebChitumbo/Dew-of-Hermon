@@ -11,6 +11,13 @@ import type {
  * editable via the Fundraising settings page (stored under
  * `fundraisingConfig/menu`).
  */
+/**
+ * Convention for menu photos: drop a JPG at this path with a filename
+ * matching the item key. If the file is missing, the UI shows the emoji
+ * instead via an onError fallback — no code change required.
+ */
+const IMAGE_BASE = "/images/fundraising";
+
 export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
   {
     key: "sausage_chips",
@@ -18,6 +25,7 @@ export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
     description:
       "Two grilled pork sausages with a generous portion of golden chips.",
     emoji: "🌭",
+    imagePath: `${IMAGE_BASE}/sausage_chips.jpg`,
     defaultPrice: 60,
   },
   {
@@ -26,6 +34,7 @@ export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
     description:
       "Tender grilled chicken pieces with crisp chips and a side of salad.",
     emoji: "🍗",
+    imagePath: `${IMAGE_BASE}/chicken_chips.jpg`,
     defaultPrice: 60,
   },
   {
@@ -33,6 +42,7 @@ export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
     name: "Chips Only",
     description: "Hot, salted chips. Simple and good.",
     emoji: "🍟",
+    imagePath: `${IMAGE_BASE}/chips_only.jpg`,
     defaultPrice: 35,
   },
   {
@@ -40,6 +50,7 @@ export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
     name: "Cold Drink",
     description: "Chilled Coca-Cola, Fanta, or Sprite.",
     emoji: "🥤",
+    imagePath: `${IMAGE_BASE}/cold_drink.jpg`,
     defaultPrice: 15,
   },
   {
@@ -47,6 +58,7 @@ export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
     name: "Bottled Water",
     description: "Half-litre of still water.",
     emoji: "💧",
+    imagePath: `${IMAGE_BASE}/bottled_water.jpg`,
     defaultPrice: 10,
   },
 ];

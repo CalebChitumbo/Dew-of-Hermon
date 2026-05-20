@@ -493,6 +493,27 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
   );
 }
 
+function MenuItemThumb({ item }: { item: FundraisingMenuItem }) {
+  const [failed, setFailed] = useState(false);
+  if (item.imagePath && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={item.imagePath}
+        alt={item.name}
+        className="h-10 w-10 rounded-md object-cover bg-clay-100"
+        onError={() => setFailed(true)}
+        loading="lazy"
+      />
+    );
+  }
+  return (
+    <div className="h-10 w-10 rounded-md bg-cream border border-clay-200 flex items-center justify-center text-xl" aria-hidden>
+      {item.emoji}
+    </div>
+  );
+}
+
 function PaymentBadge({ status }: { status: FundraisingPaymentStatus }) {
   return (
     <span
@@ -964,11 +985,12 @@ function AddOrderDialog({
                   return (
                     <div
                       key={item.key}
-                      className="flex items-center justify-between rounded-lg border border-clay-200 px-3 py-2"
+                      className="flex items-center gap-3 justify-between rounded-lg border border-clay-200 px-3 py-2"
                     >
-                      <div className="min-w-0">
+                      <MenuItemThumb item={item} />
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm text-clay-700 truncate">
-                          {item.emoji} {item.name}
+                          {item.name}
                         </p>
                         <p className="text-xs text-clay-400">
                           {CURRENCY_SYMBOL}

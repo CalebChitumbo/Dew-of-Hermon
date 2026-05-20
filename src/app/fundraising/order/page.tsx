@@ -506,13 +506,26 @@ function MenuCard({
   onInc: () => void;
   onDec: () => void;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = item.imagePath && !imageFailed;
   return (
     <article className="po-item">
-      <div className="po-item-visual">
+      <div className={`po-item-visual ${showImage ? "po-item-visual-image" : ""}`}>
         <span className="po-item-number">{ROMAN[index] || String(index + 1)}</span>
-        <span className="po-item-emoji" aria-hidden>
-          {item.emoji}
-        </span>
+        {showImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.imagePath}
+            alt={item.name}
+            className="po-item-photo"
+            onError={() => setImageFailed(true)}
+            loading="lazy"
+          />
+        ) : (
+          <span className="po-item-emoji" aria-hidden>
+            {item.emoji}
+          </span>
+        )}
       </div>
       <div className="po-item-content">
         <h3 className="po-item-name">{item.name}</h3>
@@ -548,6 +561,27 @@ function MenuCard({
   );
 }
 
+function CartLineThumb({ item }: { item: FundraisingMenuItem }) {
+  const [failed, setFailed] = useState(false);
+  if (item.imagePath && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={item.imagePath}
+        alt={item.name}
+        className="po-cart-line-photo"
+        onError={() => setFailed(true)}
+        loading="lazy"
+      />
+    );
+  }
+  return (
+    <div className="po-cart-line-visual" aria-hidden>
+      {item.emoji}
+    </div>
+  );
+}
+
 function CartView({
   cartLines,
   onInc,
@@ -578,9 +612,7 @@ function CartView({
         ) : (
           cartLines.map((l) => (
             <div key={l.item.key} className="po-cart-line">
-              <div className="po-cart-line-visual" aria-hidden>
-                {l.item.emoji}
-              </div>
+              <CartLineThumb item={l.item} />
               <div className="po-cart-line-info">
                 <div className="po-cart-line-name">{l.item.name}</div>
                 <div className="po-cart-line-unit">

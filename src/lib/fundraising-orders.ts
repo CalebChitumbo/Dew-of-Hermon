@@ -41,6 +41,7 @@ export async function loadMenuConfig(
     name: def.name,
     description: def.description,
     emoji: def.emoji,
+    imagePath: def.imagePath,
     price: prices[def.key] ?? def.defaultPrice,
   }));
 
