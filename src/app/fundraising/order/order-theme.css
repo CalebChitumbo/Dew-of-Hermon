@@ -231,6 +231,19 @@
   font-style: italic;
   color: var(--ember);
 }
+.po-menu-note {
+  margin-top: 12px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--brown);
+}
+.po-menu-note em {
+  font-family: var(--font-fraunces), serif;
+  font-style: italic;
+  color: var(--ember);
+  letter-spacing: 0;
+  font-size: 15px;
+}
 
 /* Menu */
 .po-menu-section {

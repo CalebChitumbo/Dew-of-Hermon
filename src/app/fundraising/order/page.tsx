@@ -253,6 +253,14 @@ export default function PottersShockersOrderPage() {
     [braais, selectedBraaiId]
   );
 
+  const priceRange = useMemo(() => {
+    if (itemsArray.length === 0) return null;
+    const prices = itemsArray.map((i) => i.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return min === max ? `${min}` : `${min}–${max}`;
+  }, [itemsArray]);
+
   return (
     <>
       {/* Top bar */}
@@ -282,12 +290,13 @@ export default function PottersShockersOrderPage() {
 
         <div className="po-hero-stats">
           <div>
-            <div className="po-stat-num">{menu?.items.length ?? 5}</div>
+            <div className="po-stat-num">{itemsArray.length || "—"}</div>
             <div className="po-stat-label">Menu Items</div>
           </div>
           <div>
             <div className="po-stat-num">
-              <span className="po-currency">{CURRENCY_SYMBOL}</span>10–60
+              <span className="po-currency">{CURRENCY_SYMBOL}</span>
+              {priceRange ?? "—"}
             </div>
             <div className="po-stat-label">Price Range</div>
           </div>
@@ -347,6 +356,9 @@ export default function PottersShockersOrderPage() {
           <h2>
             Choose what&apos;s on your <em>table</em>
           </h2>
+          <p className="po-menu-note">
+            Every meal comes with complimentary <em>coleslaw</em> on the side.
+          </p>
         </div>
 
         {initialError && (

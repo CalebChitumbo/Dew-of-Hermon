@@ -20,46 +20,38 @@ const IMAGE_BASE = "/images/fundraising";
 
 export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
   {
-    key: "sausage_chips",
-    name: "Sausage & Chips",
-    description:
-      "Two grilled pork sausages with a generous portion of golden chips.",
+    key: "chicken_piece",
+    name: "1 Piece Chicken",
+    description: "A grilled chicken piece, served with complimentary coleslaw.",
+    emoji: "🍗",
+    imagePath: `${IMAGE_BASE}/chicken_piece.jpg`,
+    defaultPrice: 30,
+  },
+  {
+    key: "sausage",
+    name: "Sausage",
+    description: "A grilled pork sausage, served with complimentary coleslaw.",
     emoji: "🌭",
-    imagePath: `${IMAGE_BASE}/sausage_chips.jpg`,
-    defaultPrice: 60,
+    imagePath: `${IMAGE_BASE}/sausage.jpg`,
+    defaultPrice: 30,
   },
   {
     key: "chicken_chips",
     name: "Chicken & Chips",
     description:
-      "Tender grilled chicken pieces with crisp chips and a side of salad.",
+      "Grilled chicken with golden chips and complimentary coleslaw.",
     emoji: "🍗",
     imagePath: `${IMAGE_BASE}/chicken_chips.jpg`,
     defaultPrice: 60,
   },
   {
-    key: "chips_only",
-    name: "Chips Only",
-    description: "Hot, salted chips. Simple and good.",
-    emoji: "🍟",
-    imagePath: `${IMAGE_BASE}/chips_only.jpg`,
-    defaultPrice: 35,
-  },
-  {
-    key: "cold_drink",
-    name: "Cold Drink",
-    description: "Chilled Coca-Cola, Fanta, or Sprite.",
-    emoji: "🥤",
-    imagePath: `${IMAGE_BASE}/cold_drink.jpg`,
-    defaultPrice: 15,
-  },
-  {
-    key: "bottled_water",
-    name: "Bottled Water",
-    description: "Half-litre of still water.",
-    emoji: "💧",
-    imagePath: `${IMAGE_BASE}/bottled_water.jpg`,
-    defaultPrice: 10,
+    key: "sausage_chips",
+    name: "Sausage & Chips",
+    description:
+      "A grilled pork sausage with golden chips and complimentary coleslaw.",
+    emoji: "🌭",
+    imagePath: `${IMAGE_BASE}/sausage_chips.jpg`,
+    defaultPrice: 60,
   },
 ];
 

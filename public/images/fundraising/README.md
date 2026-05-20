@@ -8,13 +8,16 @@ automatically by `src/app/fundraising/order/page.tsx`.
 
 Each filename must match the menu item's stable key exactly:
 
-| Filename               | Menu item        |
-| ---------------------- | ---------------- |
-| `sausage_chips.jpg`    | Sausage & Chips  |
-| `chicken_chips.jpg`    | Chicken & Chips  |
-| `chips_only.jpg`       | Chips Only       |
-| `cold_drink.jpg`       | Cold Drink       |
-| `bottled_water.jpg`    | Bottled Water    |
+| Filename               | Menu item          | Price |
+| ---------------------- | ------------------ | ----- |
+| `chicken_piece.jpg`    | 1 Piece Chicken    | K30   |
+| `sausage.jpg`          | Sausage            | K30   |
+| `chicken_chips.jpg`    | Chicken & Chips    | K60   |
+| `sausage_chips.jpg`    | Sausage & Chips    | K60   |
+
+Every meal comes with complimentary coleslaw on the side, so you don't
+need a separate photo for the salad — the public page mentions it
+right under the menu heading.
 
 ## Sizing tips
 
@@ -29,5 +32,5 @@ update the `imagePath` field for that item in
 ## Missing photos
 
 If a file is missing the order page automatically falls back to the
-item's emoji (🌭 🍗 🍟 🥤 💧), so partial coverage is fine — add photos
-as you have them.
+item's emoji (🍗 🌭), so partial coverage is fine — add photos as you
+have them.
