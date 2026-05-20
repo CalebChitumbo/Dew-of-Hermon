@@ -61,47 +61,62 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Link
-        href="/fundraising/order"
-        className="group flex items-center justify-between gap-3 rounded-xl border border-clay-200 bg-gradient-to-r from-[#16110D] to-[#2A211A] px-4 py-3 text-left text-cream shadow-sm transition-colors hover:border-[#B85A1E]"
+    <div className="space-y-5">
+      <section
+        aria-label="Open now"
+        className="overflow-hidden rounded-2xl border border-clay-200/70 bg-white/75 shadow-[0_15px_40px_-25px_rgba(91,58,41,0.4)] backdrop-blur-xl"
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <Flame
-            className="h-5 w-5 text-[#B85A1E] shrink-0"
-            fill="currentColor"
-          />
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#B85A1E]">
-              Potter&apos;s Shockers · Sunday Braai
-            </p>
-            <p className="text-sm font-medium text-cream truncate">
-              Pre-order food from this Sunday&apos;s fundraiser
+        <div className="flex items-center justify-between border-b border-clay-100 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2" aria-hidden>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-clay-600">
+              Open Now
             </p>
           </div>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-clay-400">
+            No sign-in needed
+          </span>
         </div>
-        <ArrowRight className="h-4 w-4 text-cream shrink-0 transition-transform group-hover:translate-x-1" />
-      </Link>
-      <Link
-        href="/rops-camp"
-        className="group flex items-center justify-between gap-3 rounded-xl border border-clay-200 bg-gradient-to-r from-[#16110D] to-[#2A211A] px-4 py-3 text-left text-cream shadow-sm transition-colors hover:border-[#D14A1F]"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <Flame
-            className="h-5 w-5 text-[#D14A1F] shrink-0"
-            fill="currentColor"
-          />
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-[#D14A1F]">
-              ROPs X · 2026
-            </p>
-            <p className="text-sm font-medium text-cream truncate">
-              Registering your child for camp?
-            </p>
-          </div>
+        <div className="divide-y divide-clay-100">
+          <Link
+            href="/fundraising/order"
+            className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-clay-50/70 focus-visible:bg-clay-50 focus-visible:outline-none"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#B85A1E] to-[#7d3a14] shadow-sm ring-1 ring-inset ring-white/10">
+              <Flame className="h-4 w-4 text-cream" fill="currentColor" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-[#B85A1E]">
+                Potter&apos;s Shockers · Sunday Braai
+              </p>
+              <p className="truncate text-sm font-medium text-clay-800">
+                Pre-order food from this Sunday&apos;s fundraiser
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-clay-400 transition-all group-hover:translate-x-0.5 group-hover:text-[#B85A1E]" />
+          </Link>
+          <Link
+            href="/rops-camp"
+            className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-clay-50/70 focus-visible:bg-clay-50 focus-visible:outline-none"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#D14A1F] to-[#8c2f12] shadow-sm ring-1 ring-inset ring-white/10">
+              <Flame className="h-4 w-4 text-cream" fill="currentColor" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-[#D14A1F]">
+                ROPs X · 2026
+              </p>
+              <p className="truncate text-sm font-medium text-clay-800">
+                Registering your child for camp?
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-clay-400 transition-all group-hover:translate-x-0.5 group-hover:text-[#D14A1F]" />
+          </Link>
         </div>
-        <ArrowRight className="h-4 w-4 text-cream shrink-0 transition-transform group-hover:translate-x-1" />
-      </Link>
+      </section>
       <Card className="relative overflow-hidden rounded-2xl border-clay-200/60 bg-white/90 shadow-[0_25px_60px_-20px_rgba(91,58,41,0.35)] backdrop-blur-xl">
         <div
           aria-hidden
