@@ -7,12 +7,14 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  DollarSign,
   Eye,
   Phone,
   Plus,
   Receipt,
   Search,
   User as UserIcon,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -195,13 +197,19 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
   const counts = useMemo(() => {
     const c = {
       total: orders.length,
+      paid: 0,
       unpaid: 0,
       pending: 0,
       inPrep: 0,
       ready: 0,
       collected: 0,
+      revenue: 0,
     };
     orders.forEach((o) => {
+      if (o.paymentStatus === "PAID") {
+        c.paid += 1;
+        c.revenue += o.total;
+      }
       if (o.paymentStatus === "UNPAID") c.unpaid += 1;
       if (o.preparationStatus === "PENDING") c.pending += 1;
       if (o.preparationStatus === "IN_PREP") c.inPrep += 1;
@@ -319,6 +327,34 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard
+          icon={Users}
+          label="Orders"
+          value={counts.total}
+          accent="bg-teal/10 text-teal"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Paid"
+          value={counts.paid}
+          accent="bg-green-100 text-green-700"
+        />
+        <StatCard
+          icon={Clock}
+          label="Unpaid"
+          value={counts.unpaid}
+          accent="bg-amber-100 text-amber-700"
+        />
+        <StatCard
+          icon={DollarSign}
+          label="Revenue"
+          value={`${CURRENCY_SYMBOL}${counts.revenue.toLocaleString()}`}
+          accent="bg-clay-100 text-clay-700"
+        />
+      </div>
+
       {/* Header: counters + add */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-sm text-clay-500">
@@ -490,6 +526,34 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
         }}
       />
     </div>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string | number;
+  accent: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-clay-500">{label}</div>
+            <div className="font-display text-2xl text-clay-800 mt-1">{value}</div>
+          </div>
+          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${accent}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
