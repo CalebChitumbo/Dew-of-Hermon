@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CAMPS, DEFAULT_CAMP_ID } from "@/lib/camps";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 import { PageLoader } from "@/components/shared/LoadingSpinner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -426,6 +427,8 @@ function RegistrationDialog({
   onSaved: () => void;
 }) {
   const { toast } = useToast();
+  const { userData } = useAuth();
+  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
   const [status, setStatus] = useState<CampPaymentStatus>(row.paymentStatus);
   const [amount, setAmount] = useState<string>(
     row.paymentAmount?.toString() ?? camp.fee.toString()
@@ -645,15 +648,17 @@ function RegistrationDialog({
             </>
           ) : (
             <>
-              <Button
-                variant="ghost"
-                className="mr-auto text-red-600 hover:text-red-700"
-                onClick={() => setConfirmDelete(true)}
-                disabled={saving}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Delete
-              </Button>
+              {isSuperAdmin && (
+                <Button
+                  variant="ghost"
+                  className="mr-auto text-red-600 hover:text-red-700"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={saving}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              )}
               <Button variant="outline" onClick={onClose} disabled={saving}>
                 Close
               </Button>

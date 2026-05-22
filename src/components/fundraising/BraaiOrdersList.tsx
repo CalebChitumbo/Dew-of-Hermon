@@ -13,6 +13,7 @@ import {
   Plus,
   Receipt,
   Search,
+  Trash2,
   User as UserIcon,
   Users,
 } from "lucide-react";
@@ -96,7 +97,8 @@ interface Props {
 }
 
 export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
-  const { firebaseUser } = useAuth();
+  const { firebaseUser, userData } = useAuth();
+  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
   const { toast } = useToast();
 
   const [orders, setOrders] = useState<SerializedOrder[]>([]);
@@ -107,6 +109,8 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
 
   const [detailOrder, setDetailOrder] = useState<SerializedOrder | null>(null);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+  const [deleteOrder, setDeleteOrder] = useState<SerializedOrder | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState(false);
 
   const [addOpen, setAddOpen] = useState(false);
   const [menu, setMenu] = useState<FundraisingMenuConfig | null>(null);
@@ -302,6 +306,40 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
     patchOrder(order.id, { isArchived: !order.isArchived }, "Updated");
   };
 
+  const handleConfirmDelete = async () => {
+    if (!firebaseUser || !deleteOrder) return;
+    setDeletingOrder(true);
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const res = await fetch(
+        `/api/fundraising/braai/events/${braaiId}/orders/${deleteOrder.id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${idToken}` },
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      setOrders((prev) => prev.filter((o) => o.id !== deleteOrder.id));
+      if (detailOrder?.id === deleteOrder.id) setDetailOrder(null);
+      toast({
+        title: "Order deleted",
+        description: `${deleteOrder.orderNumber} has been removed.`,
+      });
+      setDeleteOrder(null);
+    } catch (err) {
+      toast({
+        title: "Couldn't delete order",
+        description: err instanceof Error ? err.message : "Try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingOrder(false);
+    }
+  };
+
   // ─── Render ─────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -455,13 +493,56 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
             <OrderDetail
               order={detailOrder}
               saving={savingOrderId === detailOrder.id}
+              canDelete={isSuperAdmin}
               onAdvancePrep={() => handleAdvancePrep(detailOrder)}
               onReversePrep={() => handleReversePrep(detailOrder)}
               onTogglePayment={() => handleTogglePayment(detailOrder)}
               onArchive={() => handleArchive(detailOrder)}
+              onDelete={() => setDeleteOrder(detailOrder)}
               onClose={() => setDetailOrder(null)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <Dialog
+        open={Boolean(deleteOrder)}
+        onOpenChange={(open) => !open && !deletingOrder && setDeleteOrder(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete this order?</DialogTitle>
+            <DialogDescription>
+              {deleteOrder ? (
+                <>
+                  Permanently remove order <strong>{deleteOrder.orderNumber}</strong>{" "}
+                  for {deleteOrder.customerName}. This cannot be undone.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteOrder(null)}
+              disabled={deletingOrder}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deletingOrder}
+            >
+              {deletingOrder ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete order
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -745,18 +826,22 @@ function OrderRow({
 function OrderDetail({
   order,
   saving,
+  canDelete,
   onAdvancePrep,
   onReversePrep,
   onTogglePayment,
   onArchive,
+  onDelete,
   onClose,
 }: {
   order: SerializedOrder;
   saving: boolean;
+  canDelete: boolean;
   onAdvancePrep: () => void;
   onReversePrep: () => void;
   onTogglePayment: () => void;
   onArchive: () => void;
+  onDelete: () => void;
   onClose: () => void;
 }) {
   const nextPrep = getNextPrepStatus(order.preparationStatus);
@@ -886,14 +971,27 @@ function OrderDetail({
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs text-clay-400"
-          onClick={onArchive}
-        >
-          {order.isArchived ? "Restore order" : "Archive order"}
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-clay-400"
+            onClick={onArchive}
+          >
+            {order.isArchived ? "Restore order" : "Archive order"}
+          </Button>
+          {canDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+              onClick={onDelete}
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              Delete order
+            </Button>
+          )}
+        </div>
       </div>
 
       <DialogFooter>

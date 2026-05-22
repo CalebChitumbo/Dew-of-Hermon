@@ -208,9 +208,9 @@ export async function DELETE(
       );
     }
 
-    if (!(await serverHasFeatureMinRole("delete_members", caller.role))) {
+    if (caller.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Insufficient permissions" },
+        { error: "Only the Chairperson (Super Admin) can delete members" },
         { status: 403 }
       );
     }

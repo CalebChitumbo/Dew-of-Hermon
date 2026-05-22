@@ -12,6 +12,7 @@ import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Affirmation } from "@/types";
 import { RoleProtected } from "@/components/shared/RoleProtected";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,8 @@ import { format } from "date-fns";
 
 export default function ManageAffirmationsPage() {
   const { userData } = useAuth();
+  const { toast } = useToast();
+  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
   const [affirmations, setAffirmations] = useState<Affirmation[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -65,11 +68,26 @@ export default function ManageAffirmationsPage() {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    if (!isSuperAdmin) {
+      toast({
+        title: "Permission denied",
+        description: "Only the Chairperson (Super Admin) can delete affirmations.",
+        variant: "destructive",
+      });
+      setDeleteId(null);
+      return;
+    }
     setDeleting(true);
     try {
       await deleteDoc(safeDoc("affirmations", deleteId));
     } catch (error) {
       console.error("Error deleting affirmation:", error);
+      toast({
+        title: "Couldn't delete affirmation",
+        description:
+          error instanceof Error ? error.message : "Try again in a moment.",
+        variant: "destructive",
+      });
     }
     setDeleteId(null);
     setDeleting(false);
@@ -157,14 +175,16 @@ export default function ManageAffirmationsPage() {
                         Edit
                       </Button>
                     </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => setDeleteId(affirmation.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {isSuperAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => setDeleteId(affirmation.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

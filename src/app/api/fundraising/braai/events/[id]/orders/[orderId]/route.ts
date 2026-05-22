@@ -11,7 +11,6 @@ import type {
 } from "@/types";
 import {
   canManageFundraisingOrders,
-  canPlanBraai,
   getCaller,
 } from "../../../../_auth";
 
@@ -163,7 +162,7 @@ export async function PATCH(
   }
 }
 
-/** Hard-delete an order. Reserved for the Fundraising lead / admin. */
+/** Hard-delete an order. Reserved for the Chairperson (SUPER_ADMIN). */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; orderId: string }> }
@@ -173,9 +172,9 @@ export async function DELETE(
     if (!caller) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!(await canPlanBraai(caller))) {
+    if (caller.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Only the Fundraising lead can delete an order" },
+        { error: "Only the Chairperson (Super Admin) can delete braai orders" },
         { status: 403 }
       );
     }

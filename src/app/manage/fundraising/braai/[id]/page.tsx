@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
@@ -23,6 +23,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
 import { BraaiOrdersList } from "@/components/fundraising/BraaiOrdersList";
@@ -89,8 +97,10 @@ const PHASE_ORDER: BraaiPhase[] = ["PREPARATION", "EVENT_DAY"];
 
 function BraaiDetailContent() {
   const params = useParams();
+  const router = useRouter();
   const braaiId = params.id as string;
-  const { firebaseUser } = useAuth();
+  const { firebaseUser, userData } = useAuth();
+  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
   const { canPlanBraai, loading: accessLoading } = useFundraisingAccess();
   const { canManageOrders, loading: ordersAccessLoading } =
     useFundraisingOrdersAccess();
@@ -109,6 +119,8 @@ function BraaiDetailContent() {
   >({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [deleteEventOpen, setDeleteEventOpen] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
 
   const load = useCallback(async () => {
     if (!firebaseUser) return;
@@ -264,6 +276,32 @@ function BraaiDetailContent() {
     }
   };
 
+  const handleDeleteEvent = async () => {
+    if (!firebaseUser) return;
+    setDeletingEvent(true);
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const res = await fetch(`/api/fundraising/braai/events/${braaiId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      toast({
+        title: "Braai deleted",
+        description: "The braai event and its assignments have been removed.",
+      });
+      router.push("/manage/fundraising");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to delete braai";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+      setDeletingEvent(false);
+      setDeleteEventOpen(false);
+    }
+  };
+
   if (accessLoading || ordersAccessLoading) return <PageLoader />;
 
   if (!canPlanBraai && !canManageOrders) {
@@ -346,6 +384,17 @@ function BraaiDetailContent() {
             <p className="mt-2 text-sm text-clay-600 max-w-prose">{event.notes}</p>
           )}
         </div>
+        {isSuperAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDeleteEventOpen(true)}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 gap-1 shrink-0"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete braai
+          </Button>
+        )}
       </div>
 
       <Tabs
@@ -422,6 +471,7 @@ function BraaiDetailContent() {
               removingId={removingId}
               onAssign={handleAssign}
               onRemove={handleRemove}
+              canDelete={isSuperAdmin}
             />
           </TabsContent>
         )}
@@ -432,6 +482,42 @@ function BraaiDetailContent() {
           </TabsContent>
         )}
       </Tabs>
+
+      <Dialog
+        open={deleteEventOpen}
+        onOpenChange={(o) => !o && !deletingEvent && setDeleteEventOpen(false)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this braai?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove &ldquo;{event.title}&rdquo; and all
+              of its assignments. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteEventOpen(false)}
+              disabled={deletingEvent}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteEvent}
+              disabled={deletingEvent}
+            >
+              {deletingEvent ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete braai
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -449,6 +535,7 @@ interface RosterSectionsProps {
   removingId: string | null;
   onAssign: (responsibilityKey: string) => void;
   onRemove: (assignmentId: string) => void;
+  canDelete: boolean;
 }
 
 function RosterSections({
@@ -461,6 +548,7 @@ function RosterSections({
   removingId,
   onAssign,
   onRemove,
+  canDelete,
 }: RosterSectionsProps) {
   return (
     <>
@@ -531,20 +619,22 @@ function RosterSections({
 
                         <div className="flex items-center gap-2 shrink-0">
                           {isFilled ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onRemove(a.id)}
-                              disabled={removingId === a.id}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                            >
-                              {removingId === a.id ? (
-                                <LoadingSpinner size="sm" />
-                              ) : (
-                                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                              )}
-                              Remove
-                            </Button>
+                            canDelete ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onRemove(a.id)}
+                                disabled={removingId === a.id}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                              >
+                                {removingId === a.id ? (
+                                  <LoadingSpinner size="sm" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                )}
+                                Remove
+                              </Button>
+                            ) : null
                           ) : (
                             <div className="flex items-center gap-2">
                               <Select

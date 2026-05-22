@@ -523,12 +523,14 @@ export default function MySchedulePage() {
                           ({a.reason})
                         </span>
                       )}
-                      <button
-                        onClick={() => handleRemoveUnavailable(a.date)}
-                        className="ml-1 hover:text-red-500 transition-colors"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                      {userData?.role === "SUPER_ADMIN" && (
+                        <button
+                          onClick={() => handleRemoveUnavailable(a.date)}
+                          className="ml-1 hover:text-red-500 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
                     </Badge>
                   ))}
               </div>

@@ -55,6 +55,7 @@ function formatCreated(d: Date | null): string {
 
 export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
   const { userData } = useAuth();
+  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
   const { toast } = useToast();
 
   const [open, setOpen] = useState<SongSuggestion[]>([]);
@@ -209,8 +210,7 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
             Restore
           </Button>
         ) : null}
-        {isLead ||
-        (!archivedRow && userData && s.suggestedBy === userData.id) ? (
+        {isSuperAdmin ? (
           <Button
             type="button"
             variant="ghost"

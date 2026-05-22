@@ -178,9 +178,9 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const callerRole = searchParams.get("callerRole") as UserRole | null;
 
-    if (!callerRole || !(await serverHasFeatureMinRole("create_service", callerRole as UserRole))) {
+    if (callerRole !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Insufficient permissions" },
+        { error: "Only the Chairperson (Super Admin) can delete services" },
         { status: 403 }
       );
     }

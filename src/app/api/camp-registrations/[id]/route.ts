@@ -81,8 +81,11 @@ export async function DELETE(
     if (!caller) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
-    if (!(await callerCanManageCampRegistrations(caller))) {
-      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+    if (caller.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Only the Chairperson (Super Admin) can delete camp registrations" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;

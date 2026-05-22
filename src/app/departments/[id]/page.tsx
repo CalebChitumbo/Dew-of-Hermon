@@ -111,6 +111,7 @@ export default function DepartmentDetailPage() {
   const isAdmin = userData ? hasMinRole(userData.role, "ADMIN") : false;
   const isDeptLead =
     isAdmin || (userData?.leadsDepartmentIds || []).includes(deptId);
+  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
 
   // Listen to this department
   useEffect(() => {
@@ -465,6 +466,7 @@ export default function DepartmentDetailPage() {
                   onUpdateStatus={handleUpdateTaskStatus}
                   onDelete={handleDeleteTask}
                   members={members}
+                  canDelete={isSuperAdmin}
                 />
               )}
 
@@ -476,6 +478,7 @@ export default function DepartmentDetailPage() {
                   onUpdateStatus={handleUpdateTaskStatus}
                   onDelete={handleDeleteTask}
                   members={members}
+                  canDelete={isSuperAdmin}
                 />
               )}
 
@@ -487,6 +490,7 @@ export default function DepartmentDetailPage() {
                   onUpdateStatus={handleUpdateTaskStatus}
                   onDelete={handleDeleteTask}
                   members={members}
+                  canDelete={isSuperAdmin}
                 />
               )}
             </>
@@ -762,12 +766,14 @@ function TaskSection({
   onUpdateStatus,
   onDelete,
   members,
+  canDelete,
 }: {
   title: string;
   tasks: DepartmentTask[];
   onUpdateStatus: (taskId: string, status: TaskStatus) => void;
   onDelete: (taskId: string) => void;
   members: User[];
+  canDelete: boolean;
 }) {
   return (
     <div>
@@ -824,14 +830,16 @@ function TaskSection({
                         >
                           {task.priority}
                         </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(task.id)}
-                          className="text-clay-400 hover:text-red-500 h-7 w-7 p-0"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDelete(task.id)}
+                            className="text-clay-400 hover:text-red-500 h-7 w-7 p-0"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                     {task.description && (

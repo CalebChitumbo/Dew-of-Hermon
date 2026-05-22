@@ -203,6 +203,13 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
+    if (caller.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Only the Chairperson (Super Admin) can delete department tasks" },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const taskId = searchParams.get("taskId");
 
@@ -213,11 +220,6 @@ export async function DELETE(request: Request) {
     const taskDoc = await adminDb.collection("departmentTasks").doc(taskId).get();
     if (!taskDoc.exists) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
-
-    const taskData = taskDoc.data()!;
-    if (!canAccessDepartment(caller, taskData.departmentId)) {
-      return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
     await adminDb.collection("departmentTasks").doc(taskId).delete();

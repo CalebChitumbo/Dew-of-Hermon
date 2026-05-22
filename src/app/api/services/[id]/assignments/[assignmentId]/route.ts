@@ -126,9 +126,9 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const callerRole = searchParams.get("callerRole") as UserRole | null;
 
-    if (!callerRole || (!canAssignAnyRole(callerRole) && !canAssignOwnDeptRole(callerRole))) {
+    if (callerRole !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Insufficient permissions" },
+        { error: "Only the Chairperson (Super Admin) can delete assignments" },
         { status: 403 }
       );
     }
