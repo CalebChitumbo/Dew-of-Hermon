@@ -304,9 +304,10 @@ interface RoleCardProps {
   onAssign: (roleId: string) => void;
   onRemove: (assignmentId: string) => void;
   isRemoving: string | null;
+  canDelete: boolean;
 }
 
-function RoleCard({ role, onAssign, onRemove, isRemoving }: RoleCardProps) {
+function RoleCard({ role, onAssign, onRemove, isRemoving, canDelete }: RoleCardProps) {
   const assignment = role.assignment;
   const status: AssignmentStatus | "UNASSIGNED" = assignment
     ? assignment.status
@@ -352,20 +353,22 @@ function RoleCard({ role, onAssign, onRemove, isRemoving }: RoleCardProps) {
         </div>
         <div className="flex flex-col gap-1.5 shrink-0">
           {assignment ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onRemove(assignment.id)}
-              disabled={isRemoving === assignment.id}
-              className="gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              {isRemoving === assignment.id ? (
-                <LoadingSpinner size="sm" />
-              ) : (
-                <UserMinus className="h-3 w-3" />
-              )}
-              Remove
-            </Button>
+            canDelete ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRemove(assignment.id)}
+                disabled={isRemoving === assignment.id}
+                className="gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+              >
+                {isRemoving === assignment.id ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <UserMinus className="h-3 w-3" />
+                )}
+                Remove
+              </Button>
+            ) : null
           ) : (
             <Button
               variant="teal"
@@ -389,6 +392,7 @@ function AssignmentBoardContent() {
   const params = useParams();
   const serviceId = params.id as string;
   const { userData } = useAuth();
+  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
   const { toast } = useToast();
 
   // State
@@ -1016,6 +1020,7 @@ function AssignmentBoardContent() {
                     onAssign={handleOpenAssignDialog}
                     onRemove={handleRemoveAssignment}
                     isRemoving={removingId}
+                    canDelete={isSuperAdmin}
                   />
                 ))}
               </div>

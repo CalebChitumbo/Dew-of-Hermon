@@ -113,9 +113,9 @@ export async function DELETE(
     if (!caller) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!(await canPlanBraai(caller))) {
+    if (caller.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Insufficient permissions" },
+        { error: "Only the Chairperson (Super Admin) can delete braai assignments" },
         { status: 403 }
       );
     }

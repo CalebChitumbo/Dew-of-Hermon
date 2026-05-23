@@ -817,14 +817,16 @@ export default function CampusMinistryPage() {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDeleteDevotional(dev.id)}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
+                          {userData?.role === "SUPER_ADMIN" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => handleDeleteDevotional(dev.id)}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>

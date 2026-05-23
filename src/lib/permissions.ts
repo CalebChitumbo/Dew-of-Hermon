@@ -54,7 +54,17 @@ export function canManageSettings(userRole: UserRole): boolean {
 }
 
 export function canDeleteMembers(userRole: UserRole): boolean {
-  return hasMinRole(userRole, "ADMIN");
+  return userRole === "SUPER_ADMIN";
+}
+
+/**
+ * Catch-all gate for destructive deletions (Braai events, ROPs registrations,
+ * Braai orders, devotionals, services, follow-up cards, etc.). Restricted to
+ * the Chairperson (SUPER_ADMIN) so other roles can manage records but cannot
+ * permanently remove them.
+ */
+export function canDelete(userRole: UserRole): boolean {
+  return userRole === "SUPER_ADMIN";
 }
 
 export function canChangeUserRoles(userRole: UserRole): boolean {

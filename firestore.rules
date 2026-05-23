@@ -37,7 +37,8 @@ service cloud.firestore {
 
       match /availabilities/{dateId} {
         allow read: if isSignedIn();
-        allow write: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId) || isAdmin();
+        allow delete: if isSuperAdmin();
       }
     }
 
@@ -50,7 +51,8 @@ service cloud.firestore {
     // ─── Service Roles (templates) ───
     match /serviceRoles/{roleId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Events ───
@@ -69,13 +71,14 @@ service cloud.firestore {
       match /assignments/{assignmentId} {
         allow read: if isSignedIn();
         allow create, update: if isDeptLead();
-        allow delete: if isAdmin();
+        allow delete: if isSuperAdmin();
       }
 
       match /checklist/{itemId} {
         allow read: if isSignedIn();
-        allow create, delete: if isAdmin();
+        allow create: if isAdmin();
         allow update: if isSignedIn();
+        allow delete: if isSuperAdmin();
       }
     }
 
@@ -85,13 +88,14 @@ service cloud.firestore {
       allow create: if isDeptLead();
       // Allow dept leads to update any assignment, and users to confirm/decline their own
       allow update: if isDeptLead() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if isDeptLead();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Affirmations ───
     match /affirmations/{affId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Campus Devotionals ───
@@ -99,7 +103,8 @@ service cloud.firestore {
     // the manage_devotionals feature permission for the Campus Ministry lead.
     match /devotionals/{devId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Notifications ───
@@ -120,7 +125,7 @@ service cloud.firestore {
     match /departmentTasks/{taskId} {
       allow read: if isSignedIn();
       allow create, update: if isDeptLead();
-      allow delete: if isDeptLead();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Transport Requests ───
@@ -151,7 +156,7 @@ service cloud.firestore {
     match /eventDepartmentRoles/{roleId} {
       allow read: if isSignedIn();
       allow create, update: if isDeptLead();
-      allow delete: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Event Reports (Post-Event Reporting) ───
@@ -174,28 +179,32 @@ service cloud.firestore {
       // (status/notes) so Youth Leaders can advance contacts assigned to them.
       allow update: if isDeptLead()
         || (isSignedIn() && resource.data.assigneeId == request.auth.uid);
-      allow delete: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Institutions ───
     match /institutions/{instId} {
       allow read: if true; // Public — needed for registration form (unauthenticated users)
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Settings (Life Groups, etc.) ───
     match /settings/{settingId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── ROPs Camp Registrations ───
     // Anyone can submit a registration (public form). Reads and updates
     // (e.g. marking paid/unpaid) are admin-only and go through the API.
+    // Hard-deletion of registrations is reserved for the Chairperson.
     match /campRegistrations/{regId} {
       allow read: if isAdmin();
       allow create: if request.resource.data.paymentStatus == "UNPAID";
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Fundraising Braai ───
@@ -205,7 +214,8 @@ service cloud.firestore {
     // and the live dashboard tally on the chairperson's screen.
     match /braaiEvents/{eventId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /braaiAssignments/{assignmentId} {
@@ -215,7 +225,7 @@ service cloud.firestore {
       // confirm/decline their own braai duty without needing planner rights.
       allow update: if isDeptLead()
         || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow delete: if isDeptLead();
+      allow delete: if isSuperAdmin();
     }
 
     // ─── Fundraising Orders (Potter's Shockers public ordering) ───
@@ -238,17 +248,17 @@ service cloud.firestore {
     }
 
     // ─── Worship Song Suggestions (Latreou) ───
-    // Any signed-in user can read & propose suggestions. Suggesters can delete
-    // their own open submission. Worship leads (and admins) can update
-    // (archive / restore) and delete any suggestion.
+    // Any signed-in user can read & propose suggestions. Worship leads (and
+    // admins) can update (archive / restore). Hard-deletion of suggestions is
+    // reserved for the Chairperson (SUPER_ADMIN) so members and leads can't
+    // remove records from the audit log.
     match /worshipSongSuggestions/{suggestionId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.resource.data.suggestedBy == request.auth.uid
         && request.resource.data.status == "open";
       allow update: if isDeptLead();
-      allow delete: if isDeptLead()
-        || (isSignedIn() && resource.data.suggestedBy == request.auth.uid);
+      allow delete: if isSuperAdmin();
     }
   }
 }

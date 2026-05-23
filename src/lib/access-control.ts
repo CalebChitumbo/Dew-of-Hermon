@@ -507,6 +507,7 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     label: "Delete Members",
     description: "Remove members from the system",
     category: "Members",
+    lockedMinRole: "SUPER_ADMIN",
     supportsDepartmentRules: false,
   },
   {
@@ -681,7 +682,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_life_group_devotionals: "ADMIN",
   submit_life_group_lead: "ADMIN",
   manage_members: "ADMIN",
-  delete_members: "ADMIN",
+  delete_members: "SUPER_ADMIN",
   change_user_roles: "ADMIN",
   create_service: "ADMIN",
   create_events: "DEPARTMENT_LEAD",

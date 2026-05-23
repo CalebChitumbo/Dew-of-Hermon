@@ -107,6 +107,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (caller.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Only the Chairperson (Super Admin) can delete devotionals" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const docRef = adminDb.collection("devotionals").doc(id);
     const doc = await docRef.get();
@@ -115,13 +122,6 @@ export async function DELETE(
         { error: "Devotional not found" },
         { status: 404 }
       );
-    }
-
-    const docScope: DevotionalScope =
-      (doc.data()?.scope as DevotionalScope) || "CAMPUS_MINISTRY";
-
-    if (!(await callerCanManageDoc(caller, docScope))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     await docRef.delete();
