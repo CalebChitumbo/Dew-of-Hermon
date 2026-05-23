@@ -28,6 +28,14 @@ export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
     defaultPrice: 30,
   },
   {
+    key: "chicken_legs",
+    name: "Chicken Legs (Fimbombo)",
+    description: "Two grilled chicken legs, served with complimentary coleslaw.",
+    emoji: "🍗",
+    imagePath: `${IMAGE_BASE}/chicken_legs.jpg`,
+    defaultPrice: 20,
+  },
+  {
     key: "sausage",
     name: "Sausage",
     description: "A grilled pork sausage, served with complimentary coleslaw.",
