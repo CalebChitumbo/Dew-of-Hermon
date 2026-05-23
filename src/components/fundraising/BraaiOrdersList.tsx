@@ -208,8 +208,10 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
       ready: 0,
       collected: 0,
       revenue: 0,
+      expected: 0,
     };
     orders.forEach((o) => {
+      c.expected += o.total;
       if (o.paymentStatus === "PAID") {
         c.paid += 1;
         c.revenue += o.total;
@@ -366,7 +368,7 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
   return (
     <div className="space-y-4">
       {/* Stats grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard
           icon={Users}
           label="Orders"
@@ -390,6 +392,12 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
           label="Revenue"
           value={`${CURRENCY_SYMBOL}${counts.revenue.toLocaleString()}`}
           accent="bg-clay-100 text-clay-700"
+        />
+        <StatCard
+          icon={Receipt}
+          label="Expected"
+          value={`${CURRENCY_SYMBOL}${counts.expected.toLocaleString()}`}
+          accent="bg-blue-100 text-blue-700"
         />
       </div>
 
