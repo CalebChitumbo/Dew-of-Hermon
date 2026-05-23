@@ -29,8 +29,8 @@ export const FUNDRAISING_MENU_ITEMS: ReadonlyArray<FundraisingMenuItemDef> = [
   },
   {
     key: "chicken_legs",
-    name: "Chicken Legs (Fimbombo)",
-    description: "Two grilled chicken legs, served with complimentary coleslaw.",
+    name: "Chicken Feet (Fimbombo)",
+    description: "Two grilled chicken feet, served with complimentary coleslaw.",
     emoji: "🍗",
     imagePath: `${IMAGE_BASE}/chicken_legs.jpg`,
     defaultPrice: 20,
