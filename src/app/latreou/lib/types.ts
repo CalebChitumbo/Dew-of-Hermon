@@ -13,8 +13,8 @@ export type SpecialItem = {
 
 export type SundayPlan = {
   date: string;
-  session1: Song[];
-  session2: Song[];
+  praise: Song[];
+  worship: Song[];
   specialItem: SpecialItem;
 };
 

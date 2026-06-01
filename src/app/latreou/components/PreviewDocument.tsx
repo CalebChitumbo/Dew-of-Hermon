@@ -90,13 +90,13 @@ export function PreviewDocument({ cycle }: PreviewDocumentProps) {
         <p className="mb-4 text-sm italic text-clay-500">
           {formatLong(cycle.firstSunday.date)}
         </p>
-        <h3 className="text-base font-semibold text-clay-700">Session 1</h3>
+        <h3 className="text-base font-semibold text-clay-700">Praise</h3>
         <div className="mt-2">
-          <SongList songs={cycle.firstSunday.session1} />
+          <SongList songs={cycle.firstSunday.praise} />
         </div>
-        <h3 className="mt-4 text-base font-semibold text-clay-700">Session 2</h3>
+        <h3 className="mt-4 text-base font-semibold text-clay-700">Worship</h3>
         <div className="mt-2">
-          <SongList songs={cycle.firstSunday.session2} />
+          <SongList songs={cycle.firstSunday.worship} />
         </div>
         <h3 className="mt-4 text-base font-semibold text-clay-700">
           Special Song
@@ -133,13 +133,13 @@ export function PreviewDocument({ cycle }: PreviewDocumentProps) {
         <p className="mb-4 text-sm italic text-clay-500">
           {formatLong(cycle.secondSunday.date)}
         </p>
-        <h3 className="text-base font-semibold text-clay-700">Session 1</h3>
+        <h3 className="text-base font-semibold text-clay-700">Praise</h3>
         <div className="mt-2">
-          <SongList songs={cycle.secondSunday.session1} />
+          <SongList songs={cycle.secondSunday.praise} />
         </div>
-        <h3 className="mt-4 text-base font-semibold text-clay-700">Session 2</h3>
+        <h3 className="mt-4 text-base font-semibold text-clay-700">Worship</h3>
         <div className="mt-2">
-          <SongList songs={cycle.secondSunday.session2} />
+          <SongList songs={cycle.secondSunday.worship} />
         </div>
         <h3 className="mt-4 text-base font-semibold text-clay-700">
           Special Song

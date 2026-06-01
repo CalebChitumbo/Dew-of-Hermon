@@ -150,8 +150,8 @@ function drawSundaySection(
   cur: Cursor,
   title: string,
   date: string,
-  session1: Song[],
-  session2: Song[],
+  praise: Song[],
+  worship: Song[],
   specialItem: { title: string; responsible: string; link: string }
 ): void {
   drawSectionHeading(doc, cur, title);
@@ -161,8 +161,8 @@ function drawSundaySection(
   });
   cur.y += 6;
 
-  drawSongTable(doc, cur, "Session 1", session1);
-  drawSongTable(doc, cur, "Session 2", session2);
+  drawSongTable(doc, cur, "Praise", praise);
+  drawSongTable(doc, cur, "Worship", worship);
 
   drawSubHeading(doc, cur, "Special Song");
   if (!specialItem.title && !specialItem.responsible) {
@@ -281,8 +281,8 @@ export function buildLatreouPdf(cycle: LatreouCycle): void {
     cur,
     "First Sunday",
     cycle.firstSunday.date,
-    cycle.firstSunday.session1,
-    cycle.firstSunday.session2,
+    cycle.firstSunday.praise,
+    cycle.firstSunday.worship,
     cycle.firstSunday.specialItem
   );
 
@@ -291,8 +291,8 @@ export function buildLatreouPdf(cycle: LatreouCycle): void {
     cur,
     "Second Sunday",
     cycle.secondSunday.date,
-    cycle.secondSunday.session1,
-    cycle.secondSunday.session2,
+    cycle.secondSunday.praise,
+    cycle.secondSunday.worship,
     cycle.secondSunday.specialItem
   );
 

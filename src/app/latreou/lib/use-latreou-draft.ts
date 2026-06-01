@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { LatreouCycle } from "./types";
+import type { LatreouCycle, Song, SundayPlan } from "./types";
 import { createEmptyCycle } from "./empty-cycle";
 
 const STORAGE_KEY = "latreou:draft:v1";
@@ -12,6 +12,22 @@ type DraftEnvelope = {
   cycle: LatreouCycle;
 };
 
+// Drafts saved before the praise/worship rename used `session1`/`session2`.
+// Carry those over so an in-progress draft doesn't lose its songs.
+type LegacySundayPlan = Partial<SundayPlan> & {
+  session1?: Song[];
+  session2?: Song[];
+};
+
+function migrateSundayPlan(raw: LegacySundayPlan | undefined): SundayPlan {
+  return {
+    date: raw?.date ?? "",
+    praise: raw?.praise ?? raw?.session1 ?? [],
+    worship: raw?.worship ?? raw?.session2 ?? [],
+    specialItem: raw?.specialItem ?? { title: "", responsible: "", link: "" },
+  };
+}
+
 function readStoredDraft(): DraftEnvelope | null {
   if (typeof window === "undefined") return null;
   try {
@@ -19,7 +35,14 @@ function readStoredDraft(): DraftEnvelope | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as DraftEnvelope;
     if (!parsed?.cycle || parsed.cycle.version !== 1) return null;
-    return parsed;
+    return {
+      savedAt: parsed.savedAt,
+      cycle: {
+        ...parsed.cycle,
+        firstSunday: migrateSundayPlan(parsed.cycle.firstSunday),
+        secondSunday: migrateSundayPlan(parsed.cycle.secondSunday),
+      },
+    };
   } catch {
     return null;
   }
