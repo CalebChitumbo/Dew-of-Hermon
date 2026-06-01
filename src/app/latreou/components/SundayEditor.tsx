@@ -33,22 +33,22 @@ export function SundayEditor({
   sundayKey,
 }: SundayEditorProps) {
   const [pickerSession, setPickerSession] = useState<
-    "session1" | "session2" | null
+    "praise" | "worship" | null
   >(null);
 
   const updateSession = (
-    key: "session1" | "session2",
+    key: "praise" | "worship",
     next: Song[]
   ) => {
     onChange({ ...value, [key]: next });
   };
 
-  const addSong = (key: "session1" | "session2") => {
+  const addSong = (key: "praise" | "worship") => {
     updateSession(key, [...value[key], emptySong()]);
   };
 
   const renderSession = (
-    key: "session1" | "session2",
+    key: "praise" | "worship",
     label: string,
     helper: string
   ) => (
@@ -132,14 +132,14 @@ export function SundayEditor({
         </div>
 
         {renderSession(
-          "session1",
-          "Session 1",
-          "Typically the praise / opening set"
+          "praise",
+          "Praise",
+          "The praise / opening set"
         )}
         {renderSession(
-          "session2",
-          "Session 2",
-          "Typically the worship / response set"
+          "worship",
+          "Worship",
+          "The worship / response set"
         )}
 
         <div className="space-y-3 rounded-md border border-clay-100 bg-clay-50 p-4">
@@ -212,7 +212,7 @@ export function SundayEditor({
           onOpenChange={(open) => !open && setPickerSession(null)}
           cycleName={cycleName}
           targetLabel={`${title} · ${
-            pickerSession === "session1" ? "Session 1" : "Session 2"
+            pickerSession === "praise" ? "Praise" : "Worship"
           }`}
           onPicked={(songs) => {
             if (pickerSession) {

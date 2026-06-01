@@ -14,8 +14,8 @@ export function emptySong(): Song {
 function emptySunday(): SundayPlan {
   return {
     date: "",
-    session1: [],
-    session2: [],
+    praise: [],
+    worship: [],
     specialItem: { title: "", responsible: "", link: "" },
   };
 }
