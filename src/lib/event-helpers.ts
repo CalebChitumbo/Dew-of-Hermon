@@ -5,8 +5,8 @@ import { createNotificationWithEmail } from "@/lib/notifications";
 
 const DEPT_ROLE_TEMPLATES: { deptName: string; roles: string[] }[] = [
   {
-    deptName: "Media & Technical",
-    roles: ["Camera", "Sound", "Visuals/Slides", "Social Media/Live"],
+    deptName: "Media",
+    roles: ["Sound", "Publicity", "Coverage"],
   },
   {
     deptName: "Hospitality",

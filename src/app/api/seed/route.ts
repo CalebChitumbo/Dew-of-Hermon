@@ -11,7 +11,7 @@ const serviceDepartments = [
   { name: "Intercession", icon: "🙏", order: 2, description: "Leads prayer and intercession during services" },
   { name: "Teaching & Word", icon: "📖", order: 3, description: "Bible study coordination and preaching ministry" },
   { name: "Worship & Music", icon: "🎵", order: 4, description: "Choir direction, music, and worship leading" },
-  { name: "Media & Technical", icon: "🎛️", order: 5, description: "Sound engineering, visuals, and technical setup" },
+  { name: "Media", icon: "🎛️", order: 5, description: "Sound engineering, visuals, technical setup, publicity, and media coverage" },
   { name: "Ushering & Protocol", icon: "🚪", order: 6, description: "Ushering, protocol, and guest management" },
   { name: "Hospitality", icon: "☕", order: 7, description: "Hospitality, refreshments, and seating arrangements" },
   { name: "Visitor Engagement", icon: "🤗", order: 8, description: "First-time visitor welcome and follow-up" },
@@ -111,7 +111,7 @@ const roles = [
   },
   {
     name: "Sound Engineer",
-    department: "Media & Technical",
+    department: "Media",
     reminderSchedule: ["THURSDAY", "SATURDAY"],
     arrivalTime: "9:30 AM",
     timeSlot: null,
@@ -121,7 +121,7 @@ const roles = [
   },
   {
     name: "Visual Officer",
-    department: "Media & Technical",
+    department: "Media",
     reminderSchedule: ["THURSDAY", "SATURDAY"],
     arrivalTime: "9:30 AM",
     timeSlot: null,

@@ -52,7 +52,7 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
 
 // Fixed display order for department sections
 const DEPT_ORDER = [
-  "Media & Technical",
+  "Media",
   "Hospitality",
   "Transport & Logistics",
   "Youth Ablaze",

@@ -657,10 +657,10 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
   // leaders. Pages can opt into these checks as they're built out.
   {
     key: "manage_communications",
-    label: "Manage Communications & Media",
+    label: "Manage Communications",
     description:
       "Post announcements, manage publicity, and run the social media calendar",
-    category: "Communications & Media",
+    category: "Media",
     supportsDepartmentRules: true,
   },
   {
@@ -668,7 +668,7 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     label: "View Communications Reports",
     description:
       "See engagement metrics, scheduled posts, and communications summaries",
-    category: "Communications & Media",
+    category: "Media",
     supportsDepartmentRules: true,
   },
   {
