@@ -2,15 +2,6 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import {
-  createDepartmentRoleSkeletons,
-  notifyTargetedMembers,
-  notifyDepartmentManagers,
-} from "@/lib/event-helpers";
-import {
-  createBudgetRequest,
-  notifyTreasurersOfBudgetRequest,
-} from "@/lib/budget-helpers";
 import { EventType, UserRole, LifeGroup } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -68,18 +59,6 @@ async function getEventsFellowshipDeptId(): Promise<string | null> {
     .limit(1)
     .get();
   return snap.empty ? null : snap.docs[0].id;
-}
-
-// ─── Helper: Check if a user can auto-approve events ───
-
-async function canAutoApprove(
-  role: string,
-  leadsDepartmentIds: string[]
-): Promise<boolean> {
-  if (hasMinRole(role, "ADMIN")) return true;
-  const efDeptId = await getEventsFellowshipDeptId();
-  if (!efDeptId) return false;
-  return role === "DEPARTMENT_LEAD" && leadsDepartmentIds.includes(efDeptId);
 }
 
 // ─── Helper: Notify Events & Fellowship managers about a pending event ───
@@ -269,6 +248,10 @@ export async function POST(request: Request) {
       budgetAmount,
       budgetCurrency,
       budgetPurpose,
+      mediaRequired,
+      mediaNeeds,
+      foodRequired,
+      foodNeeds,
     } = body;
 
     if (!title || !type || !startDate || !venue) {
@@ -382,15 +365,34 @@ export async function POST(request: Request) {
       }
     }
 
-    // Determine approval status. Events with transport or budget needs always
-    // go through the approval queue so the financial/logistical side can be
-    // reviewed — even when the creator would normally auto-approve.
-    const eligibleForAutoApproval = await canAutoApprove(
-      caller.role,
-      caller.leadsDepartmentIds
-    );
-    const autoApproved = eligibleForAutoApproval && !needsTransport && !wantsBudget;
-    const approvalStatus = autoApproved ? "APPROVED" : "PENDING_APPROVAL";
+    const needsMedia = Boolean(mediaRequired);
+    const mediaNeedsValue =
+      needsMedia && typeof mediaNeeds === "string" && mediaNeeds.trim().length > 0
+        ? mediaNeeds.trim()
+        : null;
+    if (needsMedia && !mediaNeedsValue) {
+      return NextResponse.json(
+        { error: "mediaNeeds is required when mediaRequired is true" },
+        { status: 400 }
+      );
+    }
+
+    const needsFood = Boolean(foodRequired);
+    const foodNeedsValue =
+      needsFood && typeof foodNeeds === "string" && foodNeeds.trim().length > 0
+        ? foodNeeds.trim()
+        : null;
+    if (needsFood && !foodNeedsValue) {
+      return NextResponse.json(
+        { error: "foodNeeds is required when foodRequired is true" },
+        { status: 400 }
+      );
+    }
+
+    // Every event runs the full chain: initiator → Events Lead (dispatch +
+    // gather stakeholder confirmations) → Vice Chair → Chairperson. New events
+    // start awaiting the Events Lead's dispatch.
+    const approvalStatus = "PENDING_DISPATCH";
 
     const now = new Date();
     const eventData = {
@@ -404,8 +406,8 @@ export async function POST(request: Request) {
       lifeGroupTarget: lifeGroupTarget || null,
       approvalStatus,
       approvalComments: null,
-      approvedBy: autoApproved ? caller.uid : null,
-      approvedAt: autoApproved ? now : null,
+      approvedBy: null,
+      approvedAt: null,
       createdByDepartmentId: createdByDepartmentId || null,
       coreRoles: (coreRoles || []).map((r: { role: string; assignedUserId?: string; assignedUserName?: string }) => ({
         role: r.role,
@@ -425,6 +427,17 @@ export async function POST(request: Request) {
       budgetCurrency: budgetCurrencyValue,
       budgetPurpose: budgetPurposeValue,
       budgetRequestId: null,
+      mediaRequired: needsMedia,
+      mediaNeeds: mediaNeedsValue,
+      mediaRequestId: null,
+      foodRequired: needsFood,
+      foodNeeds: foodNeedsValue,
+      foodRequestId: null,
+      dispatchedAt: null,
+      viceChairApprovedBy: null,
+      viceChairApprovedAt: null,
+      chairApprovedBy: null,
+      chairApprovedAt: null,
       createdBy: caller.uid,
       createdAt: now,
       updatedAt: now,
@@ -432,49 +445,9 @@ export async function POST(request: Request) {
 
     const docRef = await adminDb.collection("events").add(eventData);
 
-    // If the event requests extra funds, auto-create the budget request and
-    // notify the treasurer(s). The events coordinator does not need to route
-    // this manually — there's no costing step like with transport.
-    if (wantsBudget && budgetAmountValue !== null && budgetCurrencyValue && budgetPurposeValue) {
-      try {
-        const budgetRequestId = await createBudgetRequest({
-          eventId: docRef.id,
-          eventTitle: title,
-          eventStartDate: new Date(startDate),
-          requestedAmount: budgetAmountValue,
-          currency: budgetCurrencyValue,
-          purpose: budgetPurposeValue,
-          requestedBy: caller.uid,
-          requestedByName: caller.name,
-        });
-        notifyTreasurersOfBudgetRequest(
-          budgetRequestId,
-          title,
-          budgetAmountValue,
-          budgetCurrencyValue
-        ).catch(console.error);
-      } catch (err) {
-        console.error("Failed to create budget request:", err);
-      }
-    }
-
-    // Notify Events & Fellowship managers if event needs approval
-    if (approvalStatus === "PENDING_APPROVAL") {
-      notifyEventsFellowshipManagers(docRef.id, title).catch(console.error);
-    }
-
-    // Auto-approved events: notify targeted life group members (or all members),
-    // create department role skeletons, and notify department managers
-    if (autoApproved) {
-      notifyTargetedMembers(
-        docRef.id,
-        title,
-        lifeGroupTarget || null
-      ).catch(console.error);
-
-      createDepartmentRoleSkeletons(docRef.id).catch(console.error);
-      notifyDepartmentManagers(docRef.id, title).catch(console.error);
-    }
+    // Every new event awaits the Events Lead's dispatch. Notify the Events &
+    // Fellowship managers so they can dispatch the flagged stakeholder requests.
+    notifyEventsFellowshipManagers(docRef.id, title).catch(console.error);
 
     return NextResponse.json(
       {
@@ -482,7 +455,7 @@ export async function POST(request: Request) {
         ...eventData,
         startDate: eventData.startDate.toISOString(),
         endDate: eventData.endDate?.toISOString() || null,
-        approvedAt: eventData.approvedAt?.toISOString() || null,
+        approvedAt: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       },

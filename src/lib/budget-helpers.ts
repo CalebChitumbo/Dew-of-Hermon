@@ -51,11 +51,18 @@ interface CreateBudgetRequestInput {
   purpose: string;
   requestedBy: string;
   requestedByName: string;
+  /**
+   * Whether to write `budgetRequestId` back onto the parent event. True for the
+   * initiator's direct funds request; false for a food-originated request (so it
+   * doesn't clobber the event's primary budget FK — the food request tracks its
+   * own id instead).
+   */
+  writeEventFk?: boolean;
 }
 
 /**
- * Creates a new budgetRequests doc in PENDING_TREASURER, writes the FK back
- * to the parent event, and returns the new request id.
+ * Creates a new budgetRequests doc in PENDING_TREASURER and returns the new
+ * request id. By default also writes the FK back to the parent event.
  */
 export async function createBudgetRequest({
   eventId,
@@ -66,6 +73,7 @@ export async function createBudgetRequest({
   purpose,
   requestedBy,
   requestedByName,
+  writeEventFk = true,
 }: CreateBudgetRequestInput): Promise<string> {
   const now = new Date();
   const initialHistory: BudgetRequestStatusHistoryEntry = {
@@ -98,10 +106,12 @@ export async function createBudgetRequest({
     updatedAt: now,
   });
 
-  await adminDb.collection("events").doc(eventId).update({
-    budgetRequestId: requestRef.id,
-    updatedAt: now,
-  });
+  if (writeEventFk) {
+    await adminDb.collection("events").doc(eventId).update({
+      budgetRequestId: requestRef.id,
+      updatedAt: now,
+    });
+  }
 
   return requestRef.id;
 }
