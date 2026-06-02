@@ -21,6 +21,8 @@ import {
   Flame,
   Bus,
   Banknote,
+  Clapperboard,
+  UtensilsCrossed,
 } from "lucide-react";
 import { canAccessPage } from "@/lib/access-control";
 import type { PagePermissions, UserRole } from "@/types";
@@ -54,6 +56,8 @@ export const allNavItems: NavItem[] = [
   { label: "ROPs Camp", href: "/manage/rops-camp", icon: Tent, pageKey: "rops_camp" },
   { label: "Fundraising", href: "/manage/fundraising", icon: Flame, pageKey: "fundraising" },
   { label: "Transport Requests", href: "/manage/transport/requests", icon: Bus, pageKey: "transport_requests" },
+  { label: "Media Requests", href: "/manage/media/requests", icon: Clapperboard, pageKey: "media_requests" },
+  { label: "Food Requests", href: "/manage/food/requests", icon: UtensilsCrossed, pageKey: "food_requests" },
   { label: "Accounts Approvals", href: "/manage/finance/approvals", icon: Banknote, pageKey: "accounts_approvals" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
   { label: "Templates", href: "/manage/templates", icon: Mail, pageKey: "templates" },

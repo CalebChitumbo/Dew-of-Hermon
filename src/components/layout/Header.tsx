@@ -13,6 +13,8 @@ import { getVisibleNavItems } from "@/components/layout/nav-config";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 import { useTransportAccess } from "@/hooks/useTransportAccess";
+import { useMediaAccess } from "@/hooks/useMediaAccess";
+import { useFoodAccess } from "@/hooks/useFoodAccess";
 
 export function Header() {
   const { userData, signOut } = useAuth();
@@ -20,6 +22,8 @@ export function Header() {
   const { canManage: canManageCamp } = useCampLeadAccess();
   const { canPlanBraai } = useFundraisingAccess();
   const { canManageTransport, canApproveAccounts } = useTransportAccess();
+  const { canManageMedia } = useMediaAccess();
+  const { canConfirmFood } = useFoodAccess();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -30,6 +34,8 @@ export function Header() {
   if (canPlanBraai) extraKeys.push("fundraising");
   if (canManageTransport) extraKeys.push("transport_requests");
   if (canApproveAccounts) extraKeys.push("accounts_approvals");
+  if (canManageMedia) extraKeys.push("media_requests");
+  if (canConfirmFood) extraKeys.push("food_requests");
   const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {
