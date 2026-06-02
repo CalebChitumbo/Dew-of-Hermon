@@ -47,7 +47,8 @@ async function getCaller(): Promise<{
 }
 
 const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 5,
+  SUPER_ADMIN: 6,
+  VICE_CHAIRPERSON: 5,
   ADMIN: 4,
   DEPARTMENT_LEAD: 3,
   YOUTH_LEADER: 2,
@@ -203,6 +204,16 @@ export async function GET(request: Request) {
         budgetCurrency: data.budgetCurrency || null,
         budgetPurpose: data.budgetPurpose || null,
         budgetRequestId: data.budgetRequestId || null,
+        mediaRequired: data.mediaRequired || false,
+        mediaNeeds: data.mediaNeeds || null,
+        mediaRequestId: data.mediaRequestId || null,
+        foodRequired: data.foodRequired || false,
+        foodNeeds: data.foodNeeds || null,
+        foodRequestId: data.foodRequestId || null,
+        viceChairApprovedBy: data.viceChairApprovedBy || null,
+        viceChairApprovedAt: data.viceChairApprovedAt?.toDate?.()?.toISOString() || null,
+        chairApprovedBy: data.chairApprovedBy || null,
+        chairApprovedAt: data.chairApprovedAt?.toDate?.()?.toISOString() || null,
         createdBy: data.createdBy || "",
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,

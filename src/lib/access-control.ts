@@ -162,12 +162,29 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     route: "/manage/finance/approvals",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
+  {
+    key: "media_requests",
+    label: "Media Requests",
+    description:
+      "Media coordinator queue: confirm event media and assign Sound, Publicity, and Coverage",
+    route: "/manage/media/requests",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
+  {
+    key: "food_requests",
+    label: "Food Requests",
+    description:
+      "Food Logistics queue: plan catering and confirm food provision for events",
+    route: "/manage/food/requests",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
 ];
 
 /** The default permissions that match the current hardcoded behavior */
 export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   dashboard: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
@@ -175,6 +192,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   departments: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "none",
@@ -182,6 +200,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   members: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "none",
@@ -189,6 +208,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   services: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
@@ -196,6 +216,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   calendar: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
@@ -203,6 +224,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   events_create: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "edit",
     YOUTH_LEADER: "none",
@@ -210,6 +232,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   events_approvals: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "none",
@@ -217,6 +240,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   event_reports_submit: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "edit",
     YOUTH_LEADER: "none",
@@ -224,6 +248,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   event_reports_review: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "view",
     ADMIN: "view",
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
@@ -231,6 +256,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   campus_ministry: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
@@ -238,6 +264,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   life_groups: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
@@ -245,6 +272,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   discipleship: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
@@ -252,6 +280,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   affirmations: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
@@ -259,6 +288,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   manage_affirmations: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
@@ -266,6 +296,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   templates: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
@@ -273,6 +304,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   reports: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
@@ -280,6 +312,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   latreou: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "view",
@@ -287,6 +320,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   rops_camp: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
@@ -294,6 +328,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   fundraising: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
@@ -301,6 +336,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   transport_requests: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
@@ -308,6 +344,23 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
   },
   accounts_approvals: {
     SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  media_requests: {
+    SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  food_requests: {
+    SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
@@ -317,6 +370,7 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
 
 const ALL_ROLES: UserRole[] = [
   "SUPER_ADMIN",
+  "VICE_CHAIRPERSON",
   "ADMIN",
   "DEPARTMENT_LEAD",
   "YOUTH_LEADER",
@@ -420,10 +474,29 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
   },
   {
     key: "approve_events",
-    label: "Approve Events",
-    description: "Approve or reject event requests",
+    label: "Approve Events (Events Lead)",
+    description:
+      "Events Lead: dispatch stakeholder requests and pass events to the Vice Chairperson once all confirmations are in",
     category: "Events",
     supportsDepartmentRules: true,
+  },
+  {
+    key: "vice_chair_approve_events",
+    label: "Vice Chair Event Approval",
+    description:
+      "Second-tier approval of events that have passed Events Lead review",
+    category: "Events",
+    lockedMinRole: "VICE_CHAIRPERSON",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "chair_approve_events",
+    label: "Chair Event Approval (Final)",
+    description:
+      "Final approval that publishes the event to the calendar and notifies members",
+    category: "Events",
+    lockedMinRole: "SUPER_ADMIN",
+    supportsDepartmentRules: false,
   },
   {
     key: "submit_event_report",
@@ -667,11 +740,36 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     category: "Finance",
     supportsDepartmentRules: true,
   },
+  {
+    key: "manage_media",
+    label: "Manage Event Media",
+    description:
+      "Media coordinator: confirm event media requests and assign Sound, Publicity, and Coverage roles",
+    category: "Media",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "view_media_reports",
+    label: "View Media Assignments",
+    description: "See media role assignments and coverage schedules for events",
+    category: "Media",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "confirm_food",
+    label: "Confirm Event Food",
+    description:
+      "Food Logistics: plan catering, request catering funds, and confirm food provision for events",
+    category: "Food Logistics",
+    supportsDepartmentRules: true,
+  },
 ];
 
 /** Default minimum role for each feature (matches current hardcoded behavior) */
 export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   approve_events: "ADMIN",
+  vice_chair_approve_events: "VICE_CHAIRPERSON",
+  chair_approve_events: "SUPER_ADMIN",
   submit_event_report: "DEPARTMENT_LEAD",
   review_event_reports: "SUPER_ADMIN",
   submit_follow_up: "ADMIN",
@@ -704,6 +802,9 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_food_logistics: "ADMIN",
   view_food_logistics: "ADMIN",
   approve_accounts: "ADMIN",
+  manage_media: "ADMIN",
+  view_media_reports: "ADMIN",
+  confirm_food: "ADMIN",
 };
 
 /** Default department access rules (matches current hardcoded behavior) */
@@ -786,13 +887,13 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
   // any of these from the Department Manager Permissions section.
   {
     featureKey: "manage_communications",
-    departmentName: "Communications & Media",
+    departmentName: "Media",
     requiresLeadership: true,
     allowedRoles: ["DEPARTMENT_LEAD"],
   },
   {
     featureKey: "view_communications_reports",
-    departmentName: "Communications & Media",
+    departmentName: "Media",
     requiresLeadership: false,
     allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
   },
@@ -854,6 +955,24 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     requiresLeadership: true,
     allowedRoles: ["DEPARTMENT_LEAD"],
   },
+  {
+    featureKey: "manage_media",
+    departmentName: "Media",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  {
+    featureKey: "view_media_reports",
+    departmentName: "Media",
+    requiresLeadership: false,
+    allowedRoles: ["DEPARTMENT_LEAD", "YOUTH_LEADER"],
+  },
+  {
+    featureKey: "confirm_food",
+    departmentName: "Food Logistics",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
 ];
 
 /**
@@ -872,7 +991,7 @@ export const DEPARTMENTAL_MANAGERS: ReadonlyArray<{
 }> = [
   { departmentName: "Discipleship & Follow-Up", displayName: "Discipleship" },
   { departmentName: "Events & Fellowship" },
-  { departmentName: "Communications & Media" },
+  { departmentName: "Media" },
   { departmentName: "Fundraising" },
   { departmentName: "Transport & Logistics" },
   { departmentName: "Life Groups" },
@@ -882,7 +1001,8 @@ export const DEPARTMENTAL_MANAGERS: ReadonlyArray<{
 ];
 
 const ROLE_HIERARCHY: Record<UserRole, number> = {
-  SUPER_ADMIN: 5,
+  SUPER_ADMIN: 6,
+  VICE_CHAIRPERSON: 5,
   ADMIN: 4,
   DEPARTMENT_LEAD: 3,
   YOUTH_LEADER: 2,
