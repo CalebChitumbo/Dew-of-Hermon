@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { getDocs, query, where, Timestamp, documentId } from "firebase/firestore";
+import { getDocs, query, where, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -173,13 +173,38 @@ export default function EventApprovalsPage() {
         };
       });
 
-      // Resolve linked request statuses for display + the approve gate.
-      await Promise.all([
-        hydrateStatuses(list, "transportRequests", "transportRequestId", "transportStatus"),
-        hydrateStatuses(list, "budgetRequests", "budgetRequestId", "budgetStatus"),
-        hydrateStatuses(list, "mediaRequests", "mediaRequestId", "mediaStatus"),
-        hydrateStatuses(list, "foodRequests", "foodRequestId", "foodStatus"),
-      ]);
+      // Resolve linked request statuses server-side (Admin SDK) so this page
+      // never depends on client-side read rules for the request collections.
+      try {
+        const res = await fetch("/api/events/stakeholder-statuses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventIds: list.map((e) => e.id) }),
+        });
+        if (res.ok) {
+          const { statuses } = (await res.json()) as {
+            statuses: Record<
+              string,
+              {
+                transport?: string | null;
+                budget?: string | null;
+                media?: string | null;
+                food?: string | null;
+              }
+            >;
+          };
+          for (const evt of list) {
+            const s = statuses[evt.id];
+            if (!s) continue;
+            evt.transportStatus = s.transport ?? undefined;
+            evt.budgetStatus = s.budget ?? undefined;
+            evt.mediaStatus = s.media ?? undefined;
+            evt.foodStatus = s.food ?? undefined;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to resolve stakeholder statuses:", err);
+      }
 
       list.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       setEvents(list);
@@ -594,33 +619,4 @@ export default function EventApprovalsPage() {
       )}
     </div>
   );
-}
-
-// Batch-fetch a request collection by FK ids on the events and write the status
-// back onto each event under `field`.
-async function hydrateStatuses(
-  events: PendingEvent[],
-  collection: string,
-  fkField: "transportRequestId" | "budgetRequestId" | "mediaRequestId" | "foodRequestId",
-  field: "transportStatus" | "budgetStatus" | "mediaStatus" | "foodStatus"
-): Promise<void> {
-  const ids = events
-    .map((e) => e[fkField])
-    .filter((id): id is string => Boolean(id));
-  if (ids.length === 0) return;
-  try {
-    for (let i = 0; i < ids.length; i += 30) {
-      const chunk = ids.slice(i, i + 30);
-      const snap = await getDocs(
-        query(safeCollection(collection), where(documentId(), "in", chunk))
-      );
-      snap.docs.forEach((d) => {
-        const status = d.data().status as string;
-        const evt = events.find((e) => e[fkField] === d.id);
-        if (evt) evt[field] = status;
-      });
-    }
-  } catch (err) {
-    console.error(`Failed to hydrate ${collection}:`, err);
-  }
 }
