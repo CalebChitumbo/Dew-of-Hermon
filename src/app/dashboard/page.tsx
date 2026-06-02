@@ -735,12 +735,18 @@ export default function DashboardPage() {
     return unsub;
   }, [userData]);
 
-  // Pending event approvals (admins only)
+  // Pending event approvals (admins only) — counts events anywhere in the
+  // approval chain (awaiting dispatch, stakeholders, Vice Chair, or Chair).
   useEffect(() => {
     if (!userData || !hasMinRole(userData.role, "ADMIN")) return;
     const q = query(
       safeCollection("events"),
-      where("approvalStatus", "==", "PENDING_APPROVAL")
+      where("approvalStatus", "in", [
+        "PENDING_DISPATCH",
+        "PENDING_STAKEHOLDERS",
+        "PENDING_VICE_CHAIR",
+        "PENDING_CHAIR",
+      ])
     );
     const unsub = onSnapshot(
       q,
