@@ -5,8 +5,8 @@ import { createNotificationWithEmail } from "@/lib/notifications";
 
 const DEPT_ROLE_TEMPLATES: { deptName: string; roles: string[] }[] = [
   {
-    deptName: "Media & Technical",
-    roles: ["Camera", "Sound", "Visuals/Slides", "Social Media/Live"],
+    deptName: "Media",
+    roles: ["Sound", "Publicity", "Coverage"],
   },
   {
     deptName: "Hospitality",
@@ -163,6 +163,44 @@ export async function notifyChairpersonsOfReportSubmission(
     }
   } catch (err) {
     console.error("Failed to notify chairpersons of report submission:", err);
+  }
+}
+
+/**
+ * Notify the next executive approval tier that an event is waiting for them.
+ * tier "VICE_CHAIR" notifies active Vice Chairpersons; "CHAIR" notifies active
+ * Chairpersons (SUPER_ADMIN).
+ */
+export async function notifyApproversOfPendingEvent(
+  eventTitle: string,
+  tier: "VICE_CHAIR" | "CHAIR"
+): Promise<void> {
+  try {
+    const role = tier === "VICE_CHAIR" ? "VICE_CHAIRPERSON" : "SUPER_ADMIN";
+    const label = tier === "VICE_CHAIR" ? "Vice Chairperson" : "Chairperson";
+    const snap = await adminDb
+      .collection("users")
+      .where("role", "==", role)
+      .where("isActive", "==", true)
+      .get();
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      await createNotificationWithEmail({
+        userId: doc.id,
+        title: `Event Awaiting Your Approval (${label})`,
+        message: `"${eventTitle}" has passed the previous review stage and is awaiting your approval.`,
+        type: "event",
+        link: `/manage/events/approvals`,
+        recipientEmail: data.email,
+        email: {
+          subject: `Event Awaiting ${label} Approval: ${eventTitle}`,
+          text: `"${eventTitle}" is awaiting your approval. Please review it in the Event Approvals queue.`,
+        },
+      }).catch(console.error);
+    }
+  } catch (err) {
+    console.error(`Failed to notify ${tier} approvers:`, err);
   }
 }
 

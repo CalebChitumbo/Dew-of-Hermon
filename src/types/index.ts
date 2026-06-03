@@ -1,6 +1,6 @@
 // ─── Enums ───
 
-export type UserRole = "SUPER_ADMIN" | "ADMIN" | "DEPARTMENT_LEAD" | "YOUTH_LEADER" | "MEMBER";
+export type UserRole = "SUPER_ADMIN" | "VICE_CHAIRPERSON" | "ADMIN" | "DEPARTMENT_LEAD" | "YOUTH_LEADER" | "MEMBER";
 
 export type AssignmentStatus = "PENDING" | "CONFIRMED" | "DECLINED" | "NO_RESPONSE";
 
@@ -10,7 +10,15 @@ export type ReminderDay = "MONDAY" | "THURSDAY" | "SATURDAY";
 
 export type LifeGroup = "BRIDGE" | "ANCHOR" | "CORNERSTONE";
 
-export type EventApprovalStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CHANGES_REQUESTED";
+export type EventApprovalStatus =
+  | "DRAFT"
+  | "PENDING_DISPATCH"
+  | "PENDING_STAKEHOLDERS"
+  | "PENDING_VICE_CHAIR"
+  | "PENDING_CHAIR"
+  | "APPROVED"
+  | "REJECTED"
+  | "CHANGES_REQUESTED";
 
 export type TransportRequestStatus =
   | "PENDING_DETAILS"
@@ -23,6 +31,18 @@ export type BudgetRequestStatus =
   | "PENDING_TREASURER"
   | "APPROVED"
   | "REJECTED"
+  | "CANCELLED";
+
+export type MediaRequestStatus =
+  | "PENDING_MEDIA"
+  | "CONFIRMED"
+  | "DECLINED"
+  | "CANCELLED";
+
+export type FoodRequestStatus =
+  | "PENDING_FOOD"
+  | "CONFIRMED"
+  | "DECLINED"
   | "CANCELLED";
 
 export type FollowUpStatus =
@@ -113,6 +133,17 @@ export interface AppEvent {
   budgetCurrency: string | null;
   budgetPurpose: string | null;
   budgetRequestId: string | null;
+  mediaRequired: boolean;
+  mediaNeeds: string | null;
+  mediaRequestId: string | null;
+  foodRequired: boolean;
+  foodNeeds: string | null;
+  foodRequestId: string | null;
+  // Executive sign-off audit trail (Events Lead → Vice Chair → Chairperson)
+  viceChairApprovedBy: string | null;
+  viceChairApprovedAt: Date | null;
+  chairApprovedBy: string | null;
+  chairApprovedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -191,6 +222,81 @@ export interface BudgetRequest {
   treasurerComments: string | null;
 
   statusHistory: BudgetRequestStatusHistoryEntry[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MediaRequestStatusHistoryEntry {
+  status: MediaRequestStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+export interface MediaRequest {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventStartDate: Date;
+  needsDescription: string;
+  status: MediaRequestStatus;
+
+  // The three media roles, assigned by the Media coordinator at confirmation.
+  soundUserId: string | null;
+  soundUserName: string | null;
+  publicityUserId: string | null;
+  publicityUserName: string | null;
+  coverageUserId: string | null;
+  coverageUserName: string | null;
+  coordinatorNotes: string | null;
+
+  // Actor metadata
+  routedBy: string | null;
+  routedByName: string | null;
+  routedAt: Date | null;
+  confirmedBy: string | null;
+  confirmedByName: string | null;
+  confirmedAt: Date | null;
+
+  statusHistory: MediaRequestStatusHistoryEntry[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FoodRequestStatusHistoryEntry {
+  status: FoodRequestStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+export interface FoodRequest {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventStartDate: Date;
+  needsDescription: string;
+  status: FoodRequestStatus;
+
+  // Food Logistics planning, supplied at confirmation.
+  headcount: number | null;
+  menuPlan: string | null;
+  coordinatorNotes: string | null;
+
+  // FK to a food-originated budget request (reuses the budgetRequests collection).
+  budgetRequestId: string | null;
+
+  // Actor metadata
+  routedBy: string | null;
+  routedByName: string | null;
+  routedAt: Date | null;
+  confirmedBy: string | null;
+  confirmedByName: string | null;
+  confirmedAt: Date | null;
+
+  statusHistory: FoodRequestStatusHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }

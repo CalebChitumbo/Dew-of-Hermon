@@ -13,15 +13,19 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return getUserRole() in ["SUPER_ADMIN", "ADMIN"];
+      return getUserRole() in ["SUPER_ADMIN", "VICE_CHAIRPERSON", "ADMIN"];
     }
 
     function isSuperAdmin() {
       return getUserRole() == "SUPER_ADMIN";
     }
 
+    function isViceChair() {
+      return getUserRole() in ["SUPER_ADMIN", "VICE_CHAIRPERSON"];
+    }
+
     function isDeptLead() {
-      return getUserRole() in ["SUPER_ADMIN", "ADMIN", "DEPARTMENT_LEAD"];
+      return getUserRole() in ["SUPER_ADMIN", "VICE_CHAIRPERSON", "ADMIN", "DEPARTMENT_LEAD"];
     }
 
     function isOwner(userId) {
@@ -142,6 +146,22 @@ service cloud.firestore {
     // confirm. Same access pattern as transport requests — reads open,
     // writes through the API only.
     match /budgetRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ─── Media Requests ───
+    // Event media requests for the Media coordinator to assign Sound,
+    // Publicity, and Coverage. Reads open; writes through the API only.
+    match /mediaRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // ─── Food Requests ───
+    // Event catering requests for the Food Logistics lead to plan and confirm.
+    // Reads open; writes through the API only.
+    match /foodRequests/{requestId} {
       allow read: if isSignedIn();
       allow write: if false;
     }

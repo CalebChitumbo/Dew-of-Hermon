@@ -397,6 +397,16 @@ export default function DashboardPage() {
           budgetCurrency: data.budgetCurrency ?? null,
           budgetPurpose: data.budgetPurpose ?? null,
           budgetRequestId: data.budgetRequestId ?? null,
+          mediaRequired: data.mediaRequired ?? false,
+          mediaNeeds: data.mediaNeeds ?? null,
+          mediaRequestId: data.mediaRequestId ?? null,
+          foodRequired: data.foodRequired ?? false,
+          foodNeeds: data.foodNeeds ?? null,
+          foodRequestId: data.foodRequestId ?? null,
+          viceChairApprovedBy: data.viceChairApprovedBy ?? null,
+          viceChairApprovedAt: data.viceChairApprovedAt ? toDate(data.viceChairApprovedAt) : null,
+          chairApprovedBy: data.chairApprovedBy ?? null,
+          chairApprovedAt: data.chairApprovedAt ? toDate(data.chairApprovedAt) : null,
           createdAt: toDate(data.createdAt),
           updatedAt: toDate(data.updatedAt),
         });
@@ -667,6 +677,16 @@ export default function DashboardPage() {
               budgetCurrency: data.budgetCurrency ?? null,
               budgetPurpose: data.budgetPurpose ?? null,
               budgetRequestId: data.budgetRequestId ?? null,
+              mediaRequired: data.mediaRequired ?? false,
+              mediaNeeds: data.mediaNeeds ?? null,
+              mediaRequestId: data.mediaRequestId ?? null,
+              foodRequired: data.foodRequired ?? false,
+              foodNeeds: data.foodNeeds ?? null,
+              foodRequestId: data.foodRequestId ?? null,
+              viceChairApprovedBy: data.viceChairApprovedBy ?? null,
+              viceChairApprovedAt: data.viceChairApprovedAt ? toDate(data.viceChairApprovedAt) : null,
+              chairApprovedBy: data.chairApprovedBy ?? null,
+              chairApprovedAt: data.chairApprovedAt ? toDate(data.chairApprovedAt) : null,
               createdAt: toDate(data.createdAt),
               updatedAt: toDate(data.updatedAt),
             };
@@ -715,12 +735,18 @@ export default function DashboardPage() {
     return unsub;
   }, [userData]);
 
-  // Pending event approvals (admins only)
+  // Pending event approvals (admins only) — counts events anywhere in the
+  // approval chain (awaiting dispatch, stakeholders, Vice Chair, or Chair).
   useEffect(() => {
     if (!userData || !hasMinRole(userData.role, "ADMIN")) return;
     const q = query(
       safeCollection("events"),
-      where("approvalStatus", "==", "PENDING_APPROVAL")
+      where("approvalStatus", "in", [
+        "PENDING_DISPATCH",
+        "PENDING_STAKEHOLDERS",
+        "PENDING_VICE_CHAIR",
+        "PENDING_CHAIR",
+      ])
     );
     const unsub = onSnapshot(
       q,

@@ -52,7 +52,7 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
 
 // Fixed display order for department sections
 const DEPT_ORDER = [
-  "Media & Technical",
+  "Media",
   "Hospitality",
   "Transport & Logistics",
   "Youth Ablaze",
@@ -188,6 +188,16 @@ export default function EventRoleBoardPage() {
         budgetCurrency: d.budgetCurrency || null,
         budgetPurpose: d.budgetPurpose || null,
         budgetRequestId: d.budgetRequestId || null,
+        mediaRequired: d.mediaRequired || false,
+        mediaNeeds: d.mediaNeeds || null,
+        mediaRequestId: d.mediaRequestId || null,
+        foodRequired: d.foodRequired || false,
+        foodNeeds: d.foodNeeds || null,
+        foodRequestId: d.foodRequestId || null,
+        viceChairApprovedBy: d.viceChairApprovedBy || null,
+        viceChairApprovedAt: d.viceChairApprovedAt ? parseFirestoreDate(d.viceChairApprovedAt) : null,
+        chairApprovedBy: d.chairApprovedBy || null,
+        chairApprovedAt: d.chairApprovedAt ? parseFirestoreDate(d.chairApprovedAt) : null,
         createdAt: parseFirestoreDate(d.createdAt),
         updatedAt: parseFirestoreDate(d.updatedAt),
       });

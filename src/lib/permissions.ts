@@ -1,7 +1,8 @@
 import { UserRole } from "@/types";
 
 const roleHierarchy: Record<UserRole, number> = {
-  SUPER_ADMIN: 5,
+  SUPER_ADMIN: 6,
+  VICE_CHAIRPERSON: 5,
   ADMIN: 4,
   DEPARTMENT_LEAD: 3,
   YOUTH_LEADER: 2,
@@ -10,6 +11,7 @@ const roleHierarchy: Record<UserRole, number> = {
 
 const ALL_ROLES: UserRole[] = [
   "SUPER_ADMIN",
+  "VICE_CHAIRPERSON",
   "ADMIN",
   "DEPARTMENT_LEAD",
   "YOUTH_LEADER",
@@ -167,6 +169,7 @@ export function canManageInstitutions(userRole: UserRole): boolean {
 
 export const roleLabels: Record<UserRole, string> = {
   SUPER_ADMIN: "Chairperson",
+  VICE_CHAIRPERSON: "Vice Chairperson",
   ADMIN: "Secretary / Admin",
   DEPARTMENT_LEAD: "Department Lead",
   YOUTH_LEADER: "Youth Leader",

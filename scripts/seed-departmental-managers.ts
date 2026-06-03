@@ -26,13 +26,6 @@ const db = getFirestore(app);
 
 const departmentalManagerDepartments = [
   {
-    name: "Communications & Media",
-    icon: "📣",
-    order: 15,
-    description:
-      "Announcements, social media, publicity, and external communications",
-  },
-  {
     name: "Fundraising",
     icon: "💰",
     order: 16,

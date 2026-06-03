@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus, Banknote, Mic, Target, Ticket } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus, Banknote, Mic, Target, Ticket, Clapperboard, UtensilsCrossed } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasMinRole } from "@/lib/permissions";
 
@@ -104,6 +104,10 @@ export default function NewEventPage() {
   const [budgetAmount, setBudgetAmount] = useState("");
   const [budgetCurrency, setBudgetCurrency] = useState("ZMW");
   const [budgetPurpose, setBudgetPurpose] = useState("");
+  const [mediaRequired, setMediaRequired] = useState(false);
+  const [mediaNeeds, setMediaNeeds] = useState("");
+  const [foodRequired, setFoodRequired] = useState(false);
+  const [foodNeeds, setFoodNeeds] = useState("");
 
   // Access: DEPARTMENT_LEAD+
   const hasAccess = userData ? hasMinRole(userData.role, "DEPARTMENT_LEAD") : false;
@@ -249,6 +253,26 @@ export default function NewEventPage() {
       }
     }
 
+    if (mediaRequired && !mediaNeeds.trim()) {
+      toast({
+        title: "Media details required",
+        description:
+          "Describe what media is needed (sound, publicity, coverage) so the Media team can plan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (foodRequired && !foodNeeds.trim()) {
+      toast({
+        title: "Food details required",
+        description:
+          "Describe the catering needs so the Food Logistics team can plan and cost it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const startDate = new Date(`${date}T${time || "09:00"}`);
@@ -278,6 +302,10 @@ export default function NewEventPage() {
           budgetAmount: budgetRequested ? Number(budgetAmount) : null,
           budgetCurrency: budgetRequested ? budgetCurrency.trim() : null,
           budgetPurpose: budgetRequested ? budgetPurpose.trim() : null,
+          mediaRequired,
+          mediaNeeds: mediaRequired ? mediaNeeds.trim() : null,
+          foodRequired,
+          foodNeeds: foodRequired ? foodNeeds.trim() : null,
         }),
       });
 
@@ -910,6 +938,127 @@ export default function NewEventPage() {
           </CardContent>
         </Card>
 
+        {/* Media Request */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clapperboard className="h-4 w-4 text-[#C8963E]" />
+              Media
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-clay-500">
+              If this event needs media, flag it here. The Media coordinator will
+              assign Sound, Publicity, and Coverage before the event is approved.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMediaRequired(false)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  !mediaRequired
+                    ? "border-clay-400 bg-clay-50 text-clay-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                No media needed
+              </button>
+              <button
+                type="button"
+                onClick={() => setMediaRequired(true)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  mediaRequired
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Media required
+              </button>
+            </div>
+            {mediaRequired && (
+              <div className="space-y-1.5">
+                <Label htmlFor="media-needs" className="text-sm">
+                  Describe media needs *
+                </Label>
+                <Textarea
+                  id="media-needs"
+                  placeholder="e.g. Sound system for ~80 people, publicity poster a week before, photo coverage on the day"
+                  rows={3}
+                  value={mediaNeeds}
+                  onChange={(e) => setMediaNeeds(e.target.value)}
+                />
+                <p className="text-xs text-clay-400">
+                  The Media coordinator will use this to assign Sound, Publicity,
+                  and Coverage.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Food Request */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <UtensilsCrossed className="h-4 w-4 text-[#C8963E]" />
+              Food &amp; Catering
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-clay-500">
+              If this event needs catering, flag it here. The Food Logistics team
+              will plan it and request any funds from Finance before the event is
+              approved.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFoodRequired(false)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  !foodRequired
+                    ? "border-clay-400 bg-clay-50 text-clay-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                No food needed
+              </button>
+              <button
+                type="button"
+                onClick={() => setFoodRequired(true)}
+                className={cn(
+                  "rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-center",
+                  foodRequired
+                    ? "border-amber-500 bg-amber-50 text-amber-700"
+                    : "border-clay-200 text-clay-500 hover:border-clay-300 hover:bg-clay-50"
+                )}
+              >
+                Food required
+              </button>
+            </div>
+            {foodRequired && (
+              <div className="space-y-1.5">
+                <Label htmlFor="food-needs" className="text-sm">
+                  Describe food needs *
+                </Label>
+                <Textarea
+                  id="food-needs"
+                  placeholder="e.g. Lunch for ~60 people, vegetarian options, served after the morning session"
+                  rows={3}
+                  value={foodNeeds}
+                  onChange={(e) => setFoodNeeds(e.target.value)}
+                />
+                <p className="text-xs text-clay-400">
+                  The Food Logistics lead will use this to plan catering and
+                  request funds if needed.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Submit */}
         <div className="flex gap-3">
           <Link href="/calendar" className="flex-1">
@@ -930,7 +1079,9 @@ export default function NewEventPage() {
               (budgetRequested &&
                 (!budgetAmount.trim() ||
                   !budgetCurrency.trim() ||
-                  !budgetPurpose.trim()))
+                  !budgetPurpose.trim())) ||
+              (mediaRequired && !mediaNeeds.trim()) ||
+              (foodRequired && !foodNeeds.trim())
             }
             className="flex-1 bg-[#C8963E] hover:bg-[#B8862E] text-white"
           >

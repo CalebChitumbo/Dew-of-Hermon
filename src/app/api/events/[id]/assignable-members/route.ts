@@ -26,7 +26,8 @@ async function getCaller(): Promise<{
 }
 
 const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 5,
+  SUPER_ADMIN: 6,
+  VICE_CHAIRPERSON: 5,
   ADMIN: 4,
   DEPARTMENT_LEAD: 3,
   YOUTH_LEADER: 2,

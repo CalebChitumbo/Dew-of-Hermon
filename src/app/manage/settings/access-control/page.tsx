@@ -60,6 +60,7 @@ import { getDocs } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 
 const CONFIGURABLE_ROLES: UserRole[] = [
+  "VICE_CHAIRPERSON",
   "ADMIN",
   "DEPARTMENT_LEAD",
   "YOUTH_LEADER",
@@ -68,6 +69,7 @@ const CONFIGURABLE_ROLES: UserRole[] = [
 
 const ALL_ROLES: UserRole[] = [
   "SUPER_ADMIN",
+  "VICE_CHAIRPERSON",
   "ADMIN",
   "DEPARTMENT_LEAD",
   "YOUTH_LEADER",
