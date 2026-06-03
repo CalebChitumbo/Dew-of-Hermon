@@ -20,6 +20,7 @@ import {
   Calendar,
   MapPin,
   Clock,
+  Check,
   CheckCircle2,
   XCircle,
   MessageSquare,
@@ -74,6 +75,85 @@ function stageOf(status: EventApprovalStatus): Stage {
   if (status === "PENDING_VICE_CHAIR") return "VICE_CHAIR";
   if (status === "PENDING_CHAIR") return "CHAIR";
   return "EVENTS_LEAD";
+}
+
+// ─── Approval-chain pipeline ───
+
+const PIPELINE_STEPS = [
+  "Initiated",
+  "Events Lead",
+  "Vice Chair",
+  "Chairperson",
+  "Live",
+] as const;
+
+// Index of the step the event is currently sitting at.
+function pipelineIndex(status: EventApprovalStatus): number {
+  switch (status) {
+    case "PENDING_DISPATCH":
+    case "PENDING_STAKEHOLDERS":
+      return 1; // Events Lead
+    case "PENDING_VICE_CHAIR":
+      return 2;
+    case "PENDING_CHAIR":
+      return 3;
+    case "APPROVED":
+      return 4;
+    default:
+      return 1;
+  }
+}
+
+function ApprovalPipeline({ status }: { status: EventApprovalStatus }) {
+  const current = pipelineIndex(status);
+  return (
+    <div className="flex items-start">
+      {PIPELINE_STEPS.map((label, i) => {
+        const completed = i < current;
+        const isCurrent = i === current;
+        return (
+          <div
+            key={label}
+            className="relative flex flex-1 flex-col items-center"
+          >
+            {/* connector from the previous node to this one */}
+            {i > 0 && (
+              <div
+                className={cn(
+                  "absolute top-3.5 left-[-50%] right-1/2 h-0.5",
+                  i <= current ? "bg-green-400" : "bg-clay-200"
+                )}
+              />
+            )}
+            <div
+              className={cn(
+                "relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 text-xs font-semibold",
+                completed
+                  ? "border-green-500 bg-green-500 text-white"
+                  : isCurrent
+                    ? "border-amber-500 bg-amber-500 text-white ring-4 ring-amber-100"
+                    : "border-clay-200 bg-white text-clay-400"
+              )}
+            >
+              {completed ? <Check className="h-4 w-4" /> : i + 1}
+            </div>
+            <span
+              className={cn(
+                "mt-1.5 text-center text-[10px] sm:text-xs leading-tight",
+                isCurrent
+                  ? "font-semibold text-amber-700"
+                  : completed
+                    ? "text-green-700"
+                    : "text-clay-400"
+              )}
+            >
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 interface PendingEvent extends AppEvent {
@@ -434,6 +514,11 @@ export default function EventApprovalsPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
+                  {/* Approval-chain pipeline */}
+                  <div className="rounded-lg bg-clay-50/60 px-3 py-3">
+                    <ApprovalPipeline status={event.approvalStatus} />
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-clay-600">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-clay-400" />
