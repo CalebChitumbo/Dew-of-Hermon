@@ -93,16 +93,19 @@ export async function PATCH(
     const now = new Date();
     const status = eventData.approvalStatus;
 
-    if (action === "APPROVE") {
-      if (status !== "PENDING_DISPATCH" && status !== "PENDING_STAKEHOLDERS") {
-        return NextResponse.json(
-          {
-            error: `Only events awaiting Events Lead review can be approved here (current status: ${status}).`,
-          },
-          { status: 409 }
-        );
-      }
+    // The Events Lead route only governs the Events-Lead stage. Once an event
+    // has advanced to the Vice Chair or Chair tier, only that tier may act on
+    // it (through /tier-approve) — including reject and request-changes.
+    if (status !== "PENDING_DISPATCH" && status !== "PENDING_STAKEHOLDERS") {
+      return NextResponse.json(
+        {
+          error: `This event has moved past the Events Lead stage (current status: ${status}). Only the current approver can act on it.`,
+        },
+        { status: 409 }
+      );
+    }
 
+    if (action === "APPROVE") {
       // Every flagged stakeholder must be confirmed/approved first.
       const blockers = await getStakeholderBlockers(eventId);
       if (blockers.length > 0) {
