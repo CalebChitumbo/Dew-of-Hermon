@@ -1,42 +1,29 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useAccessControl } from "@/contexts/AccessControlContext";
 import { NotificationBell } from "@/components/shared/NotificationBell";
 import { Button } from "@/components/ui/button";
-import { Menu, LogOut, UserCircle, Bell, X } from "lucide-react";
+import { Menu, LogOut, UserCircle, Bell, X, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { getVisibleNavItems } from "@/components/layout/nav-config";
-import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
-import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
-import { useTransportAccess } from "@/hooks/useTransportAccess";
-import { useMediaAccess } from "@/hooks/useMediaAccess";
-import { useFoodAccess } from "@/hooks/useFoodAccess";
+import { roleLabels } from "@/lib/permissions";
+import { useNavItems } from "@/components/layout/useNavItems";
+import { useCommandPalette } from "@/components/layout/CommandPalette";
+
+function isActivePath(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 export function Header() {
   const { userData, signOut } = useAuth();
-  const { pagePermissions } = useAccessControl();
-  const { canManage: canManageCamp } = useCampLeadAccess();
-  const { canPlanBraai } = useFundraisingAccess();
-  const { canManageTransport, canApproveAccounts } = useTransportAccess();
-  const { canManageMedia } = useMediaAccess();
-  const { canConfirmFood } = useFoodAccess();
+  const { sections } = useNavItems();
+  const { open: openPalette } = useCommandPalette();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   if (!userData) return null;
-
-  const extraKeys: string[] = [];
-  if (canManageCamp) extraKeys.push("rops_camp");
-  if (canPlanBraai) extraKeys.push("fundraising");
-  if (canManageTransport) extraKeys.push("transport_requests");
-  if (canApproveAccounts) extraKeys.push("accounts_approvals");
-  if (canManageMedia) extraKeys.push("media_requests");
-  if (canConfirmFood) extraKeys.push("food_requests");
-  const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
@@ -47,13 +34,14 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white border-b border-clay-200 lg:hidden">
-        <div className="flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-clay-100 lg:hidden">
+        <div className="flex h-14 items-center justify-between px-3">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -69,7 +57,15 @@ export function Header() {
               Dew of Hermon
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={openPalette}
+              aria-label="Search"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
             <NotificationBell />
           </div>
         </div>
@@ -79,11 +75,11 @@ export function Header() {
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-[60] lg:hidden">
           <div
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 bg-clay-900/40 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="fixed left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
-            <div className="flex h-14 items-center justify-between px-4 border-b border-clay-200 flex-shrink-0">
+          <div className="fixed left-0 top-0 bottom-0 flex w-[18rem] flex-col bg-white shadow-xl">
+            <div className="flex h-14 flex-shrink-0 items-center justify-between border-b border-clay-100 px-4">
               <div className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -91,57 +87,92 @@ export function Header() {
                   alt="Tabernacle of David Assembly"
                   width={45}
                   height={34}
-                  className="h-[34px] w-auto"
+                  className="h-[30px] w-auto"
                 />
-                <span className="font-display text-clay-700">
-                  Dew of Hermon
-                </span>
+                <span className="font-display text-clay-700">Dew of Hermon</span>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-              {visibleItems.map((item) => (
-                <MobileMenuItem
-                  key={item.href}
-                  href={item.href}
-                  icon={item.icon}
-                  label={item.label}
-                  pathname={pathname}
-                  onClick={closeMenu}
-                />
+
+            {/* Search trigger */}
+            <div className="px-3 pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu();
+                  openPalette();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg border border-clay-200 bg-cream/50 px-3 py-2 text-sm text-clay-400"
+              >
+                <Search className="h-4 w-4" />
+                <span className="flex-1 text-left">Search pages…</span>
+              </button>
+            </div>
+
+            <nav className="flex-1 space-y-3 overflow-y-auto p-3">
+              {sections.map((section) => (
+                <div key={section.key}>
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-clay-400">
+                    {section.label}
+                  </p>
+                  <div className="space-y-0.5">
+                    {section.items.map((item) => (
+                      <MobileMenuItem
+                        key={item.href}
+                        href={item.href}
+                        icon={item.icon}
+                        label={item.label}
+                        pathname={pathname}
+                        onClick={closeMenu}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
-              {/* Mobile-only shortcuts — same for every account type */}
-              <MobileMenuItem
-                href="/notifications"
-                icon={Bell}
-                label="Notifications"
-                pathname={pathname}
-                onClick={closeMenu}
-              />
-              <MobileMenuItem
-                href="/profile"
-                icon={UserCircle}
-                label="Profile"
-                pathname={pathname}
-                onClick={closeMenu}
-              />
+
+              {/* Universal shortcuts */}
+              <div>
+                <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-clay-400">
+                  Account
+                </p>
+                <div className="space-y-0.5">
+                  <MobileMenuItem
+                    href="/notifications"
+                    icon={Bell}
+                    label="Notifications"
+                    pathname={pathname}
+                    onClick={closeMenu}
+                  />
+                  <MobileMenuItem
+                    href="/profile"
+                    icon={UserCircle}
+                    label="Profile"
+                    pathname={pathname}
+                    onClick={closeMenu}
+                  />
+                </div>
+              </div>
             </nav>
-            <div className="flex-shrink-0 p-4 pb-6 border-t border-clay-200 bg-white">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/20 text-gold-dark text-sm font-bold">
+
+            <div className="flex-shrink-0 border-t border-clay-100 bg-white p-4 pb-6">
+              <div className="mb-3 flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/20 text-sm font-bold text-gold-dark">
                   {userData.name.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-clay-700 truncate">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-clay-700">
                     {userData.name}
                   </p>
-                  <p className="text-xs text-clay-400">{userData.role.replace("_", " ")}</p>
+                  <p className="truncate text-xs text-clay-400">
+                    {roleLabels[userData.role]}
+                  </p>
                 </div>
               </div>
               <Button
@@ -174,19 +205,27 @@ function MobileMenuItem({
   pathname: string;
   onClick: () => void;
 }) {
-  const isActive = pathname === href || pathname.startsWith(href + "/");
+  const active = isActivePath(pathname, href);
   return (
     <Link
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
-        isActive
-          ? "bg-clay-100 text-clay-700"
-          : "text-clay-500 hover:bg-clay-50 hover:text-clay-700"
+        "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+        active
+          ? "bg-gold/10 font-semibold text-clay-800"
+          : "font-medium text-clay-500 hover:bg-clay-50 hover:text-clay-700"
       )}
     >
-      <Icon className="h-5 w-5" />
+      {active && (
+        <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-gold" />
+      )}
+      <Icon
+        className={cn(
+          "h-[18px] w-[18px] shrink-0",
+          active ? "text-gold-dark" : "text-clay-400"
+        )}
+      />
       {label}
     </Link>
   );

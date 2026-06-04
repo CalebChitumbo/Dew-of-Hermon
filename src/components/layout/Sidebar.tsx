@@ -3,39 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAccessControl } from "@/contexts/AccessControlContext";
 import { cn } from "@/lib/utils";
-import { UserCircle, LogOut } from "lucide-react";
+import { Search, UserCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-import { getVisibleNavItems } from "@/components/layout/nav-config";
-import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
-import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
-import { useTransportAccess } from "@/hooks/useTransportAccess";
-import { useMediaAccess } from "@/hooks/useMediaAccess";
-import { useFoodAccess } from "@/hooks/useFoodAccess";
+import { roleLabels } from "@/lib/permissions";
+import { useNavItems } from "@/components/layout/useNavItems";
+import { useCommandPalette } from "@/components/layout/CommandPalette";
+
+function isActivePath(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const { userData, signOut } = useAuth();
-  const { pagePermissions } = useAccessControl();
-  const { canManage: canManageCamp } = useCampLeadAccess();
-  const { canPlanBraai } = useFundraisingAccess();
-  const { canManageTransport, canApproveAccounts } = useTransportAccess();
-  const { canManageMedia } = useMediaAccess();
-  const { canConfirmFood } = useFoodAccess();
+  const { sections } = useNavItems();
+  const { open: openPalette } = useCommandPalette();
 
   if (!userData) return null;
-
-  const extraKeys: string[] = [];
-  if (canManageCamp) extraKeys.push("rops_camp");
-  if (canPlanBraai) extraKeys.push("fundraising");
-  if (canManageTransport) extraKeys.push("transport_requests");
-  if (canApproveAccounts) extraKeys.push("accounts_approvals");
-  if (canManageMedia) extraKeys.push("media_requests");
-  if (canConfirmFood) extraKeys.push("food_requests");
-  const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
@@ -45,66 +31,110 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-clay-200">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6 border-b border-clay-200">
+      <div className="flex h-16 items-center gap-3 px-5 border-b border-clay-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/images/church-logo.png"
           alt="Tabernacle of David Assembly — City Mission Church"
           width={52}
           height={40}
-          className="h-10 w-auto"
+          className="h-9 w-auto"
         />
-        <h1 className="font-display text-lg text-clay-700">Dew of Hermon</h1>
+        <div className="min-w-0 leading-tight">
+          <p className="font-display text-base text-clay-700 truncate">
+            Dew of Hermon
+          </p>
+          <p className="text-[10px] uppercase tracking-[0.14em] text-clay-400">
+            Youth Ministry
+          </p>
+        </div>
+      </div>
+
+      {/* Quick search trigger */}
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={openPalette}
+          className="group flex w-full items-center gap-2 rounded-lg border border-clay-200 bg-cream/50 px-3 py-2 text-sm text-clay-400 transition-colors hover:border-gold/40 hover:bg-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+        >
+          <Search className="h-4 w-4 text-clay-400 transition-colors group-hover:text-gold-dark" />
+          <span className="flex-1 text-left">Search…</span>
+          <kbd className="rounded border border-clay-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-clay-400">
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-        {visibleItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-clay-100 text-clay-700"
-                  : "text-clay-500 hover:bg-clay-50 hover:text-clay-700"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-3 px-3 py-4 overflow-y-auto">
+        {sections.map((section) => (
+          <div key={section.key}>
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-clay-400">
+              {section.label}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = isActivePath(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                      active
+                        ? "bg-gold/10 font-semibold text-clay-800"
+                        : "font-medium text-clay-500 hover:bg-clay-50 hover:text-clay-700"
+                    )}
+                  >
+                    {active && (
+                      <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-gold" />
+                    )}
+                    <item.icon
+                      className={cn(
+                        "h-[18px] w-[18px] shrink-0 transition-colors",
+                        active
+                          ? "text-gold-dark"
+                          : "text-clay-400 group-hover:text-clay-600"
+                      )}
+                    />
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      <Separator />
-
       {/* User section */}
-      <div className="p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/20 text-gold-dark text-sm font-bold">
+      <div className="border-t border-clay-100 p-3">
+        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold/20 text-sm font-bold text-gold-dark">
             {userData.name.charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-clay-700 truncate">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-clay-700">
               {userData.name}
             </p>
-            <p className="text-xs text-clay-400 truncate">
-              {userData.role.replace("_", " ")}
+            <p className="truncate text-xs text-clay-400">
+              {roleLabels[userData.role]}
             </p>
           </div>
           <NotificationBell />
         </div>
-        <div className="flex gap-2">
+        <div className="mt-1 flex gap-2">
           <Link href="/profile" className="flex-1">
             <Button variant="ghost" size="sm" className="w-full justify-start">
               <UserCircle className="mr-2 h-4 w-4" />
               Profile
             </Button>
           </Link>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            aria-label="Sign out"
+          >
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
