@@ -26,6 +26,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PageLoader } from "@/components/shared/LoadingSpinner";
 import {
   CalendarDays,
+  Calendar,
   MapPin,
   Clock,
   Users,
@@ -51,6 +52,7 @@ import {
 } from "lucide-react";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 import { BRAAI_TOTAL_RESPONSIBILITIES } from "@/lib/braai";
+import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import type {
   AppEvent,
@@ -121,16 +123,10 @@ function ReadinessRing({
 
   return (
     <div className="relative inline-flex items-center justify-center">
-      {/* Soft halo behind the ring */}
-      <span
-        aria-hidden
-        className="absolute inset-0 rounded-full blur-2xl opacity-30"
-        style={{ backgroundColor: color }}
-      />
       <svg
         width={size}
         height={size}
-        className="-rotate-90 relative drop-shadow-[0_4px_10px_rgba(91,58,41,0.10)]"
+        className="-rotate-90 relative"
         aria-label={`${filled} of ${total} roles filled`}
       >
         <defs>
@@ -203,33 +199,24 @@ function PulseTile({
   return (
     <Link href={href} className="block group focus:outline-none">
       <Card
-        className={`relative h-full overflow-hidden border-clay-200/70 bg-gradient-to-br from-white to-cream/70 transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-gold/60 group-hover:shadow-[0_10px_30px_-12px_rgba(200,150,62,0.35)] group-focus-visible:ring-2 group-focus-visible:ring-gold/50 ${
-          highlight ? "border-red-200/80 bg-gradient-to-br from-red-50/40 to-cream/40" : ""
-        }`}
+        className={cn(
+          "relative h-full overflow-hidden transition-all duration-200 ease-out group-hover:-translate-y-0.5 group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-gold/50",
+          highlight
+            ? "border-red-200 bg-red-50/40"
+            : "border-clay-200 group-hover:border-gold/40"
+        )}
       >
-        {/* Top accent stripe */}
-        <span
-          aria-hidden
-          className={`absolute inset-x-0 top-0 h-0.5 ${
-            highlight
-              ? "bg-gradient-to-r from-red-400/0 via-red-400/70 to-red-400/0"
-              : "bg-gradient-to-r from-gold/0 via-gold/40 to-gold/0"
-          } opacity-0 group-hover:opacity-100 transition-opacity`}
-        />
-        {/* Subtle corner glow */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -top-10 -right-10 h-24 w-24 rounded-full bg-gold/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        />
-
         <CardContent className="relative p-4 md:p-5 flex flex-col gap-3 h-full">
           <div className="flex items-center justify-between">
             <div
-              className={`relative flex h-10 w-10 items-center justify-center rounded-xl ${iconTone} ring-1 ring-inset ring-white/40 shadow-sm transition-transform duration-300 group-hover:scale-105`}
+              className={cn(
+                "flex h-10 w-10 items-center justify-center rounded-xl",
+                iconTone
+              )}
             >
               <Icon className="h-5 w-5" />
             </div>
-            <ChevronRight className="h-4 w-4 text-clay-300 transition-all duration-300 group-hover:text-gold group-hover:translate-x-0.5" />
+            <ChevronRight className="h-4 w-4 text-clay-300 transition-transform duration-200 group-hover:text-gold-dark group-hover:translate-x-0.5" />
           </div>
           <div>
             <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] font-medium">
@@ -247,7 +234,7 @@ function PulseTile({
           {highlight && (
             <span
               aria-hidden
-              className="absolute top-3 right-3 inline-flex h-2 w-2 rounded-full bg-red-400 shadow-[0_0_0_4px_rgba(248,113,113,0.18)] animate-pulse"
+              className="absolute top-3 right-3 inline-flex h-2 w-2 rounded-full bg-red-400"
             />
           )}
         </CardContent>
@@ -1098,26 +1085,66 @@ export default function DashboardPage() {
   if (!userData) return <PageLoader />;
   if (loadingCore) return <PageLoader />;
 
+  // ─── Quick actions (role-aware shortcuts to the verbs you use most) ────
+
+  const quickActions: { label: string; href: string; icon: React.ElementType }[] =
+    [];
+  if (isAdmin || isDeptLead) {
+    quickActions.push({
+      label: "Create event",
+      href: "/manage/events/new",
+      icon: CalendarPlus,
+    });
+    quickActions.push({
+      label: "Assign roles",
+      href: "/manage/services",
+      icon: ClipboardList,
+    });
+  }
+  if (isAdmin) {
+    quickActions.push({
+      label: "Approvals",
+      href: "/manage/events/approvals",
+      icon: ClipboardCheck,
+    });
+    quickActions.push({
+      label: "Members",
+      href: "/manage/members",
+      icon: Users,
+    });
+  }
+  if (!isAdmin) {
+    quickActions.push({
+      label: "My schedule",
+      href: "/my-schedule",
+      icon: CalendarDays,
+    });
+  }
+  quickActions.push({ label: "Calendar", href: "/calendar", icon: Calendar });
+  if (canPlanBraai) {
+    quickActions.push({
+      label: "Fundraising",
+      href: "/manage/fundraising",
+      icon: Flame,
+    });
+  }
+  quickActions.push({
+    label: "Affirmations",
+    href: "/affirmations",
+    icon: Sparkles,
+  });
+  const visibleQuickActions = quickActions.slice(0, 6);
+
   // ─── Render ────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6 md:space-y-8">
       {/* ── Welcome Hero ─────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden rounded-2xl border border-clay-200/70 bg-white/70 p-6 md:p-8 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 0% 0%, rgba(200,150,62,0.10), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.08), transparent 50%), linear-gradient(135deg, #FFF8F0 0%, #FFFFFF 60%, rgba(200,150,62,0.06) 100%)",
-        }}
-      >
-        {/* Decorative orbs */}
+      <section className="relative overflow-hidden rounded-2xl border border-clay-200 bg-white p-6 md:p-8">
+        {/* Subtle warm wash in the top-right corner */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-gold/20 blur-3xl"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-teal/15 blur-3xl"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-gold/[0.06] via-transparent to-transparent"
         />
 
         <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
@@ -1128,7 +1155,7 @@ export default function DashboardPage() {
             </p>
             <h1 className="text-3xl md:text-4xl font-display font-bold text-clay-700 mt-2 leading-tight">
               {greeting(now)},{" "}
-              <span className="bg-gradient-to-r from-clay-700 via-gold-dark to-gold bg-clip-text text-transparent">
+              <span className="text-gold-dark">
                 {userData.name.split(" ")[0]}
               </span>
             </h1>
@@ -1178,6 +1205,22 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ── Quick actions ───────────────────────────────────────────── */}
+      <section aria-label="Quick actions">
+        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {visibleQuickActions.map((action) => (
+            <Link
+              key={`${action.href}-${action.label}`}
+              href={action.href}
+              className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-clay-200 bg-white px-3.5 py-2 text-sm font-medium text-clay-600 transition-colors hover:border-gold/50 hover:bg-gold/5 hover:text-clay-800"
+            >
+              <action.icon className="h-4 w-4 text-clay-400 transition-colors group-hover:text-gold-dark" />
+              {action.label}
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -1244,13 +1287,12 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="flex flex-col md:flex-row md:items-center gap-4 py-2">
-                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-teal/15 to-teal/5 ring-1 ring-inset ring-teal/20">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal/10 ring-1 ring-inset ring-teal/20">
                   <Sparkles className="h-6 w-6 text-teal" />
-                  <span className="absolute -inset-1 rounded-2xl bg-teal/10 blur-md -z-10" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-clay-700">
-                    You're free right now.
+                    You&apos;re free right now.
                   </p>
                   <p className="text-xs text-clay-400 mt-0.5">
                     No upcoming role assignments. Set your availability so leads
@@ -1702,17 +1744,7 @@ export default function DashboardPage() {
       {/* ── Service-readiness deep panel (admins/leads only) ───────── */}
       {(isAdmin || isDeptLead) && nextEvent && (
         <section>
-          <Card
-            className="relative overflow-hidden border-clay-200/70"
-            style={{
-              backgroundImage:
-                "linear-gradient(135deg, #FFFFFF 0%, #FFF8F0 60%, rgba(200,150,62,0.05) 100%)",
-            }}
-          >
-            <span
-              aria-hidden
-              className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-gold/10 blur-3xl"
-            />
+          <Card className="relative overflow-hidden border-clay-200">
             <CardHeader className="pb-3 relative">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>

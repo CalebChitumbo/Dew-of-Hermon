@@ -26,7 +26,7 @@ interface MobileNavItem {
 
 /** Priority-ordered items for each "category" of mobile nav */
 const adminPriority: MobileNavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
+  { label: "Home", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
   { label: "Members", href: "/manage/members", icon: Users, pageKey: "members" },
   { label: "Services", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
   { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
@@ -34,7 +34,7 @@ const adminPriority: MobileNavItem[] = [
 ];
 
 const leadPriority: MobileNavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
+  { label: "Home", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
   { label: "Services", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
   { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
   { label: "Alerts", href: "/notifications", icon: Bell, pageKey: null },
@@ -42,10 +42,10 @@ const leadPriority: MobileNavItem[] = [
 ];
 
 const memberPriority: MobileNavItem[] = [
+  { label: "Home", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
   { label: "Schedule", href: "/my-schedule", icon: CalendarDays, pageKey: null },
   { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
   { label: "Notes", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
-  { label: "Alerts", href: "/notifications", icon: Bell, pageKey: null },
   { label: "Profile", href: "/profile", icon: UserCircle, pageKey: null },
 ];
 
@@ -79,8 +79,8 @@ export function MobileNav() {
   const items = getItems();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-clay-200 lg:hidden">
-      <div className="flex items-center justify-around py-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-clay-100 bg-white/90 backdrop-blur-md pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <div className="flex items-stretch justify-around px-1 py-1.5">
         {items.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
@@ -89,12 +89,26 @@ export function MobileNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-1 min-w-[64px]",
-                isActive ? "text-gold-dark" : "text-clay-400"
+                "flex min-w-[60px] flex-col items-center gap-1 rounded-lg px-2 py-1 transition-colors",
+                isActive ? "text-gold-dark" : "text-clay-400 hover:text-clay-600"
               )}
             >
-              <item.icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span
+                className={cn(
+                  "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
+                  isActive ? "bg-gold/15" : "bg-transparent"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+              </span>
+              <span
+                className={cn(
+                  "text-[10px]",
+                  isActive ? "font-semibold" : "font-medium"
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}
