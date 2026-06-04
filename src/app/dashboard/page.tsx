@@ -100,10 +100,12 @@ function ReadinessRing({
   filled,
   total,
   size = 120,
+  onDark = false,
 }: {
   filled: number;
   total: number;
   size?: number;
+  onDark?: boolean;
 }) {
   const percentage = total > 0 ? (filled / total) * 100 : 0;
   const strokeWidth = 10;
@@ -140,7 +142,7 @@ function ReadinessRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#FAEBD7"
+          stroke={onDark ? "rgba(255,255,255,0.16)" : "#FAEBD7"}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -158,10 +160,20 @@ function ReadinessRing({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-display font-bold text-clay-700 leading-none">
+        <span
+          className={cn(
+            "text-3xl font-display font-bold leading-none",
+            onDark ? "text-cream" : "text-clay-700"
+          )}
+        >
           {total > 0 ? `${filled}/${total}` : "—"}
         </span>
-        <span className="text-[10px] text-clay-400 uppercase tracking-[0.16em] mt-1.5">
+        <span
+          className={cn(
+            "text-[10px] uppercase tracking-[0.16em] mt-1.5",
+            onDark ? "text-cream/60" : "text-clay-400"
+          )}
+        >
           Roles Filled
         </span>
         {total > 0 && (
@@ -179,67 +191,167 @@ function ReadinessRing({
 
 // ─── Pulse Tile ──────────────────────────────────────────────────────────
 
-function PulseTile({
+// A flat, number-forward metric for the bento strip.
+function MetricTile({
   href,
   icon: Icon,
-  iconTone,
   label,
   value,
   hint,
+  accent = "clay",
   highlight = false,
 }: {
   href: string;
   icon: React.ElementType;
-  iconTone: string;
   label: string;
   value: React.ReactNode;
   hint?: string;
+  accent?: "clay" | "gold" | "teal" | "rose" | "blue";
   highlight?: boolean;
 }) {
+  const accentText = {
+    clay: "text-clay-700",
+    gold: "text-gold-dark",
+    teal: "text-teal",
+    rose: "text-rose-600",
+    blue: "text-blue-600",
+  }[accent];
   return (
-    <Link href={href} className="block group focus:outline-none">
-      <Card
+    <Link href={href} className="group block focus:outline-none">
+      <div
         className={cn(
-          "relative h-full overflow-hidden transition-all duration-200 ease-out group-hover:-translate-y-0.5 group-hover:shadow-md group-focus-visible:ring-2 group-focus-visible:ring-gold/50",
+          "relative flex h-full flex-col justify-between gap-3 rounded-2xl border bg-white p-4 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-sm group-focus-visible:ring-2 group-focus-visible:ring-gold/50",
           highlight
-            ? "border-red-200 bg-red-50/40"
+            ? "border-red-200"
             : "border-clay-200 group-hover:border-gold/40"
         )}
       >
-        <CardContent className="relative p-4 md:p-5 flex flex-col gap-3 h-full">
-          <div className="flex items-center justify-between">
-            <div
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-xl",
-                iconTone
-              )}
-            >
-              <Icon className="h-5 w-5" />
-            </div>
-            <ChevronRight className="h-4 w-4 text-clay-300 transition-transform duration-200 group-hover:text-gold-dark group-hover:translate-x-0.5" />
-          </div>
-          <div>
-            <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] font-medium">
-              {label}
-            </p>
-            <p className="text-2xl md:text-[1.6rem] font-display font-bold text-clay-700 mt-1 leading-tight">
-              {value}
-            </p>
-            {hint && (
-              <p className="text-xs text-clay-400 mt-1 line-clamp-1">
-                {hint}
-              </p>
-            )}
-          </div>
-          {highlight && (
-            <span
-              aria-hidden
-              className="absolute top-3 right-3 inline-flex h-2 w-2 rounded-full bg-red-400"
-            />
+        <div className="flex items-center justify-between">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cream text-clay-500 ring-1 ring-inset ring-clay-100">
+            <Icon className="h-4 w-4" />
+          </span>
+          {highlight ? (
+            <span aria-hidden className="h-2 w-2 rounded-full bg-red-400" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-clay-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gold-dark" />
           )}
-        </CardContent>
-      </Card>
+        </div>
+        <div>
+          <p
+            className={cn(
+              "font-display text-[1.7rem] font-bold leading-none",
+              accentText
+            )}
+          >
+            {value}
+          </p>
+          <p className="mt-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-clay-400">
+            {label}
+          </p>
+          {hint && (
+            <p className="mt-0.5 truncate text-xs text-clay-400">{hint}</p>
+          )}
+        </div>
+      </div>
     </Link>
+  );
+}
+
+// A horizontal launcher row used in the "Explore" module grid.
+function ModuleLink({
+  href,
+  icon: Icon,
+  label,
+  hint,
+  iconTone,
+}: {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  hint?: string;
+  iconTone: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-xl border border-clay-200 bg-white p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-gold/40 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-gold/50"
+    >
+      <span
+        className={cn(
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+          iconTone
+        )}
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium text-clay-700">
+          {label}
+        </span>
+        {hint && (
+          <span className="block truncate text-xs text-clay-400">{hint}</span>
+        )}
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-clay-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gold-dark" />
+    </Link>
+  );
+}
+
+// A single row in the vertical "Upcoming" timeline.
+function AgendaItem({
+  event,
+  isLast,
+}: {
+  event: AppEvent;
+  isLast: boolean;
+}) {
+  const meta = EVENT_TYPE_META[event.type] || EVENT_TYPE_META.MEETING;
+  const Icon = meta.icon;
+  return (
+    <li className="relative flex gap-4">
+      <div className="flex w-10 shrink-0 flex-col items-center pt-0.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gold-dark">
+          {format(event.startDate, "MMM")}
+        </span>
+        <span className="font-display text-2xl font-bold leading-none text-clay-700">
+          {format(event.startDate, "d")}
+        </span>
+      </div>
+      <div className="flex flex-col items-center">
+        <span
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-xl ring-1 ring-inset ring-white/40",
+            meta.tone
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        {!isLast && <span className="mt-1 w-px flex-1 bg-clay-200" />}
+      </div>
+      <Link
+        href="/calendar"
+        className="group -mx-2 mb-4 -mt-0.5 min-w-0 flex-1 rounded-lg px-2 py-1 transition-colors hover:bg-cream/60"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-sm font-medium text-clay-700">
+            {event.title}
+          </p>
+          <Badge variant="outline" className="bg-white px-1.5 py-0 text-[10px]">
+            {meta.label}
+          </Badge>
+        </div>
+        <p className="mt-1 flex flex-wrap items-center gap-3 text-xs text-clay-400">
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {format(event.startDate, "EEE, MMM d")}
+          </span>
+          <span className="inline-flex items-center gap-1 truncate">
+            <MapPin className="h-3 w-3" />
+            {event.venue}
+          </span>
+        </p>
+      </Link>
+    </li>
   );
 }
 
@@ -1085,431 +1197,486 @@ export default function DashboardPage() {
   if (!userData) return <PageLoader />;
   if (loadingCore) return <PageLoader />;
 
-  // ─── Quick actions (role-aware shortcuts to the verbs you use most) ────
+  // ─── Render-prep: spotlight CTA, metrics & module shortcuts ────────────
 
-  const quickActions: { label: string; href: string; icon: React.ElementType }[] =
-    [];
-  if (isAdmin || isDeptLead) {
-    quickActions.push({
-      label: "Create event",
-      href: "/manage/events/new",
-      icon: CalendarPlus,
-    });
-    quickActions.push({
-      label: "Assign roles",
-      href: "/manage/services",
-      icon: ClipboardList,
-    });
-  }
+  const confirmedCount = assignments.filter(
+    (a) => a.status === "CONFIRMED"
+  ).length;
+  const pendingCount = assignments.filter((a) => a.status === "PENDING").length;
+  const openRolesCount = isDeptLead
+    ? Math.max(0, scopedTotal - scopedFilled)
+    : unassignedCount;
+
+  // The single most important next step for this person, shown in the spotlight.
+  const primaryCta: { label: string; href: string } | null =
+    myAssignment && myAssignment.assignment.status === "PENDING"
+      ? { label: "Respond to assignment", href: "/my-schedule" }
+      : isAdmin && pendingApprovalCount > 0
+        ? { label: "Review approvals", href: "/manage/events/approvals" }
+        : (isAdmin || isDeptLead) && unassignedRoles.length > 0
+          ? { label: "Assign open roles", href: "/manage/services" }
+          : myAssignedFollowUps > 0
+            ? { label: "View follow-ups", href: "/department/discipleship" }
+            : myAssignment
+              ? { label: "View my schedule", href: "/my-schedule" }
+              : !isAdmin
+                ? { label: "Set availability", href: "/my-schedule/availability" }
+                : nextEvent
+                  ? { label: "Open calendar", href: "/calendar" }
+                  : null;
+
+  // Role-aware headline metrics for the bento strip.
+  const metrics: {
+    href: string;
+    icon: React.ElementType;
+    label: string;
+    value: React.ReactNode;
+    hint?: string;
+    accent?: "clay" | "gold" | "teal" | "rose" | "blue";
+    highlight?: boolean;
+  }[] = [];
   if (isAdmin) {
-    quickActions.push({
-      label: "Approvals",
-      href: "/manage/events/approvals",
-      icon: ClipboardCheck,
-    });
-    quickActions.push({
-      label: "Members",
+    metrics.push({
       href: "/manage/members",
       icon: Users,
+      label: "Members",
+      value: activeMemberCount,
+      accent: "clay",
+      hint: "Active directory",
+    });
+    metrics.push({
+      href: "/manage/events/approvals",
+      icon: ClipboardCheck,
+      label: "Approvals",
+      value: pendingApprovalCount,
+      accent: "gold",
+      highlight: pendingApprovalCount > 0,
+      hint: pendingApprovalCount > 0 ? "Awaiting you" : "All clear",
     });
   }
-  if (!isAdmin) {
-    quickActions.push({
-      label: "My schedule",
+  if (isAdmin || isDeptLead) {
+    metrics.push({
+      href: "/manage/services",
+      icon: ClipboardList,
+      label: isDeptLead ? "Dept filled" : "Roles filled",
+      value: scopedTotal > 0 ? `${scopedFilled}/${scopedTotal}` : "—",
+      accent: "teal",
+      hint: scopedTotal > 0 ? "Next service" : "No roles set",
+    });
+    metrics.push({
+      href: "/manage/services",
+      icon: AlertTriangle,
+      label: "Open roles",
+      value: openRolesCount,
+      accent: "rose",
+      highlight: openRolesCount > 0,
+      hint: openRolesCount > 0 ? "Needs filling" : "Fully staffed",
+    });
+  }
+  if (showFollowUpsTile) {
+    metrics.push({
+      href: "/department/discipleship",
+      icon: Heart,
+      label: "Follow-ups",
+      value: activeFollowUpCount,
+      accent: "rose",
+      highlight: pendingFollowUpApprovalCount > 0,
+      hint:
+        pendingFollowUpApprovalCount > 0
+          ? `${pendingFollowUpApprovalCount} to approve`
+          : "Discipleship pipeline",
+    });
+  }
+  if (canPlanBraai) {
+    metrics.push({
+      href: nextBraai
+        ? `/manage/fundraising/braai/${nextBraai.id}`
+        : "/manage/fundraising",
+      icon: Flame,
+      label: "Braai",
+      value: nextBraai
+        ? `${braaiAssignmentCount}/${BRAAI_TOTAL_RESPONSIBILITIES}`
+        : "—",
+      accent: "gold",
+      highlight:
+        Boolean(nextBraai) &&
+        (braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES ||
+          braaiPendingCount > 0),
+      hint: nextBraai
+        ? braaiPendingCount > 0
+          ? `${braaiPendingCount} pending`
+          : "Roster"
+        : "None scheduled",
+    });
+  }
+  if (!isAdmin && !isDeptLead) {
+    metrics.push({
+      href: "/calendar",
+      icon: CalendarDays,
+      label: "Upcoming",
+      value: upcomingEvents.length,
+      accent: "clay",
+      hint: "Events ahead",
+    });
+    if (userData.lifeGroup) {
+      metrics.push({
+        href: "/department/life-groups",
+        icon: UsersRound,
+        label: "Life group",
+        value: userData.lifeGroup,
+        accent: "teal",
+        hint: "Devotional & directory",
+      });
+    }
+  }
+
+  // Everything you can jump to from the dashboard's "Explore" launcher.
+  const moduleLinks: {
+    href: string;
+    icon: React.ElementType;
+    label: string;
+    hint?: string;
+    iconTone: string;
+  }[] = [];
+  moduleLinks.push({
+    href: "/calendar",
+    icon: Calendar,
+    label: "Calendar",
+    hint: "All events in one view",
+    iconTone: "bg-gold/10 text-gold-dark",
+  });
+  if (!isAdmin)
+    moduleLinks.push({
       href: "/my-schedule",
       icon: CalendarDays,
+      label: "My schedule",
+      hint: "Assignments & availability",
+      iconTone: "bg-teal/10 text-teal",
     });
-  }
-  quickActions.push({ label: "Calendar", href: "/calendar", icon: Calendar });
-  if (canPlanBraai) {
-    quickActions.push({
-      label: "Fundraising",
-      href: "/manage/fundraising",
+  if (isAdmin || isDeptLead)
+    moduleLinks.push({
+      href: "/manage/events/new",
+      icon: CalendarPlus,
+      label: "Create event",
+      hint: "Propose a new event",
+      iconTone: "bg-blue-50 text-blue-600",
+    });
+  if (showLatreouTile)
+    moduleLinks.push({
+      href: "/latreou",
+      icon: Music,
+      label: "Latreou planner",
+      hint: "Worship cycles & rehearsals",
+      iconTone: "bg-amber-50 text-amber-600",
+    });
+  if (showFollowUpsTile)
+    moduleLinks.push({
+      href: "/department/discipleship",
+      icon: Heart,
+      label: "Discipleship",
+      hint: "Follow-up pipeline",
+      iconTone: "bg-rose-50 text-rose-600",
+    });
+  moduleLinks.push({
+    href: "/department/campus-ministry",
+    icon: BookOpen,
+    label: "Devotionals",
+    hint: "This week's reading",
+    iconTone: "bg-purple-50 text-purple-600",
+  });
+  if (!isAdmin && userData.lifeGroup)
+    moduleLinks.push({
+      href: "/department/life-groups",
+      icon: UsersRound,
+      label: "My life group",
+      hint: userData.lifeGroup,
+      iconTone: "bg-emerald-50 text-emerald-600",
+    });
+  if (!isAdmin && userData.isStudent)
+    moduleLinks.push({
+      href: "/department/campus-ministry",
+      icon: GraduationCap,
+      label: "Campus ministry",
+      hint: "Updates from your campus",
+      iconTone: "bg-indigo-50 text-indigo-600",
+    });
+  if (canPlanBraai)
+    moduleLinks.push({
+      href: nextBraai
+        ? `/manage/fundraising/braai/${nextBraai.id}`
+        : "/manage/fundraising",
       icon: Flame,
+      label: "Fundraising",
+      hint: "Braai planning & orders",
+      iconTone: "bg-red-50 text-red-600",
     });
-  }
-  quickActions.push({
-    label: "Affirmations",
+  moduleLinks.push({
+    href: "/rops-camp",
+    icon: Tent,
+    label: "ROPs Camp",
+    hint: "Reserve a place by the fire",
+    iconTone: "bg-orange-50 text-orange-600",
+  });
+  if (isAdmin)
+    moduleLinks.push({
+      href: "/manage/members",
+      icon: Users,
+      label: "Members",
+      hint: "Directory & roles",
+      iconTone: "bg-teal/10 text-teal",
+    });
+  moduleLinks.push({
     href: "/affirmations",
     icon: Sparkles,
+    label: "Affirmations",
+    hint: "Encouragement for the team",
+    iconTone: "bg-pink-50 text-pink-600",
   });
-  const visibleQuickActions = quickActions.slice(0, 6);
 
   // ─── Render ────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      {/* ── Welcome Hero ─────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden rounded-2xl border border-clay-200 bg-white p-6 md:p-8">
-        {/* Subtle warm wash in the top-right corner */}
+    <div className="space-y-5">
+      {/* ── Spotlight ───────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-clay-800 via-clay-700 to-clay-800 text-cream shadow-[0_20px_50px_-24px_rgba(42,24,15,0.6)]">
+        {/* Warm corner glow + faint dotted texture */}
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-gold/[0.06] via-transparent to-transparent"
+          className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-gold/20 blur-3xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)",
+            backgroundSize: "22px 22px",
+          }}
         />
 
-        <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div className="relative grid gap-7 p-6 md:p-8 lg:grid-cols-[1.5fr,1fr] lg:items-center">
+          {/* Identity + priority + CTA */}
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-clay-400">
+            <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-cream/60">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
               {format(now, "EEEE, MMMM d")}
             </p>
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-clay-700 mt-2 leading-tight">
+            <h1 className="mt-2 font-display text-3xl font-bold leading-tight md:text-4xl">
               {greeting(now)},{" "}
-              <span className="text-gold-dark">
+              <span className="text-gold-light">
                 {userData.name.split(" ")[0]}
               </span>
             </h1>
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <Badge variant="gold" className="text-xs">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-gold/20 px-2.5 py-0.5 text-xs font-semibold text-gold-light ring-1 ring-inset ring-gold/30">
                 {roleLabels[userData.role]}
-              </Badge>
+              </span>
               {userData.lifeGroup && (
-                <Badge variant="outline" className="text-xs bg-white/60 backdrop-blur-sm">
+                <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-cream/80 ring-1 ring-inset ring-white/15">
                   {userData.lifeGroup} life group
-                </Badge>
+                </span>
               )}
             </div>
-            <p className="text-sm md:text-base text-clay-600 mt-4 max-w-2xl leading-relaxed">
-              {headline}
-            </p>
+
+            <div className="mt-5 rounded-2xl bg-white/[0.07] p-4 ring-1 ring-inset ring-white/10">
+              <p className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold-light/80">
+                <Inbox className="h-3 w-3" />
+                What needs you
+              </p>
+              <p className="mt-1.5 text-sm leading-relaxed text-cream/90 md:text-[15px]">
+                {headline}
+              </p>
+              {primaryCta && (
+                <Link href={primaryCta.href} className="mt-3 inline-block">
+                  <Button variant="gold" size="sm" className="shadow-sm">
+                    {primaryCta.label}
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
 
-          {/* Admin mini-stats */}
-          {isAdmin && (
-            <div className="relative shrink-0 rounded-xl border border-clay-200/60 bg-white/70 backdrop-blur-sm px-4 py-3 md:px-5 md:py-4 shadow-sm">
-              <div className="grid grid-cols-3 gap-5 md:gap-6 divide-x divide-clay-100">
-                <div className="text-center pr-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-clay-700 leading-none">
-                    {activeMemberCount}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
-                    Members
-                  </p>
+          {/* Focus object — readiness for leaders, assignment for members */}
+          <div className="lg:pl-2">
+            {(isAdmin || isDeptLead) && nextEvent ? (
+              <div className="rounded-2xl bg-white/[0.07] p-5 ring-1 ring-inset ring-white/10">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold-light/80">
+                  Next service
+                </p>
+                <p className="mt-0.5 truncate font-display text-lg font-semibold text-cream">
+                  {nextEvent.title}
+                </p>
+                <p className="mt-0.5 text-xs text-cream/60">
+                  {format(nextEvent.startDate, "EEE, MMM d")}
+                  {nextService?.serviceTime
+                    ? ` · ${nextService.serviceTime}`
+                    : ""}
+                </p>
+                <div className="mt-4 flex items-center gap-4">
+                  <ReadinessRing
+                    onDark
+                    filled={isDeptLead ? scopedFilled : filledCount}
+                    total={isDeptLead ? scopedTotal : totalRoles}
+                    size={104}
+                  />
+                  <ul className="flex-1 space-y-1.5 text-sm">
+                    <li className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-2 text-cream/70">
+                        <span className="h-1.5 w-1.5 rounded-full bg-teal-light" />
+                        Confirmed
+                      </span>
+                      <span className="font-display font-bold text-cream">
+                        {confirmedCount}
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-2 text-cream/70">
+                        <span className="h-1.5 w-1.5 rounded-full bg-gold" />
+                        Pending
+                      </span>
+                      <span className="font-display font-bold text-cream">
+                        {pendingCount}
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-2 text-cream/70">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                        Open
+                      </span>
+                      <span className="font-display font-bold text-cream">
+                        {openRolesCount}
+                      </span>
+                    </li>
+                  </ul>
                 </div>
-                <div className="text-center px-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-gold-dark leading-none">
-                    {pendingApprovalCount}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
-                    Approvals
-                  </p>
-                </div>
-                <div className="text-center pl-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-teal leading-none">
-                    {activeFollowUpCount}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
-                    Follow-ups
-                  </p>
-                </div>
+                <Link href="/manage/services" className="mt-4 block">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-white/20 bg-white/5 text-cream hover:bg-white/10 hover:text-cream"
+                  >
+                    View full rota
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ── Quick actions ───────────────────────────────────────────── */}
-      <section aria-label="Quick actions">
-        <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {visibleQuickActions.map((action) => (
-            <Link
-              key={`${action.href}-${action.label}`}
-              href={action.href}
-              className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-clay-200 bg-white px-3.5 py-2 text-sm font-medium text-clay-600 transition-colors hover:border-gold/50 hover:bg-gold/5 hover:text-clay-800"
-            >
-              <action.icon className="h-4 w-4 text-clay-400 transition-colors group-hover:text-gold-dark" />
-              {action.label}
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* ── My Next ─────────────────────────────────────────────────── */}
-      <section>
-        <Card className="relative overflow-hidden border-clay-200/70">
-          {/* Left accent rail — gold normally, amber if pending action */}
-          <span
-            aria-hidden
-            className={`absolute inset-y-0 left-0 w-1 ${
-              myAssignment?.assignment.status === "PENDING"
-                ? "bg-gradient-to-b from-gold via-gold-dark to-gold"
-                : "bg-gradient-to-b from-gold/60 via-teal/50 to-teal/40"
-            }`}
-          />
-          <CardHeader className="pb-3 pl-6">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
-                  <Inbox className="h-4 w-4 text-gold-dark" />
-                </span>
-                My Next
-              </CardTitle>
-              <Link href="/my-schedule">
-                <Button variant="ghost" size="sm" className="text-xs">
-                  Full schedule
-                  <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="pl-6">
-            {myAssignment ? (
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-clay-400">
-                    <Clock className="h-3 w-3" />
-                    {format(myAssignment.event.startDate, "EEE, MMM d")}
-                    {myAssignment.service.serviceTime
-                      ? ` · ${myAssignment.service.serviceTime}`
-                      : ""}
-                  </p>
-                  <p className="text-xl font-display font-semibold text-clay-700 mt-1">
-                    {myAssignment.assignment.roleName}
-                  </p>
-                  <p className="text-sm text-clay-500 mt-1 truncate inline-flex items-center gap-1.5">
-                    <span>{myAssignment.event.title}</span>
-                    <span className="text-clay-300">·</span>
-                    <MapPin className="h-3 w-3 text-clay-400" />
-                    <span className="truncate">{myAssignment.event.venue}</span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <StatusBadge status={myAssignment.assignment.status} />
+            ) : myAssignment ? (
+              <div className="rounded-2xl bg-white/[0.07] p-5 ring-1 ring-inset ring-white/10">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold-light/80">
+                  Your next role
+                </p>
+                <p className="mt-1 font-display text-2xl font-bold text-cream">
+                  {myAssignment.assignment.roleName}
+                </p>
+                <p className="mt-1 truncate text-sm text-cream/70">
+                  {myAssignment.event.title}
+                </p>
+                <p className="mt-1 inline-flex flex-wrap items-center gap-1.5 text-xs text-cream/60">
+                  <Clock className="h-3 w-3" />
+                  {format(myAssignment.event.startDate, "EEE, MMM d")}
+                  {myAssignment.service.serviceTime
+                    ? ` · ${myAssignment.service.serviceTime}`
+                    : ""}
+                  <span className="text-cream/30">·</span>
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{myAssignment.event.venue}</span>
+                </p>
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-cream ring-1 ring-inset ring-white/15">
+                    {myAssignment.assignment.status === "PENDING"
+                      ? "Awaiting your response"
+                      : myAssignment.assignment.status === "CONFIRMED"
+                        ? "Confirmed"
+                        : myAssignment.assignment.status === "DECLINED"
+                          ? "Declined"
+                          : "No response yet"}
+                  </span>
                   <Link href="/my-schedule">
-                    <Button size="sm" variant="gold" className="shadow-sm">
+                    <Button variant="gold" size="sm">
                       {myAssignment.assignment.status === "PENDING"
                         ? "Respond"
                         : "View"}
-                      <ArrowRight className="ml-1 h-3 w-3" />
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                     </Button>
                   </Link>
                 </div>
               </div>
-            ) : (
-              <div className="flex flex-col md:flex-row md:items-center gap-4 py-2">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal/10 ring-1 ring-inset ring-teal/20">
-                  <Sparkles className="h-6 w-6 text-teal" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-clay-700">
-                    You&apos;re free right now.
-                  </p>
-                  <p className="text-xs text-clay-400 mt-0.5">
-                    No upcoming role assignments. Set your availability so leads
-                    know when to call on you.
-                  </p>
-                </div>
-                <Link href="/my-schedule/availability">
-                  <Button variant="outline" size="sm">
-                    Set availability
+            ) : nextEvent ? (
+              <div className="rounded-2xl bg-white/[0.07] p-5 ring-1 ring-inset ring-white/10">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold-light/80">
+                  Coming up
+                </p>
+                <p className="mt-1 truncate font-display text-xl font-semibold text-cream">
+                  {nextEvent.title}
+                </p>
+                <p className="mt-1 inline-flex flex-wrap items-center gap-1.5 text-xs text-cream/60">
+                  <Clock className="h-3 w-3" />
+                  {format(nextEvent.startDate, "EEE, MMM d")}
+                  <span className="text-cream/30">·</span>
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{nextEvent.venue}</span>
+                </p>
+                <Link href="/calendar" className="mt-4 block">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-white/20 bg-white/5 text-cream hover:bg-white/10 hover:text-cream"
+                  >
+                    View calendar
+                    <ChevronRight className="ml-1 h-4 w-4" />
                   </Button>
                 </Link>
               </div>
+            ) : (
+              <div className="rounded-2xl bg-white/[0.07] p-6 text-center ring-1 ring-inset ring-white/10">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
+                  <Sparkles className="h-6 w-6 text-gold-light" />
+                </span>
+                <p className="mt-3 text-sm font-medium text-cream">
+                  All quiet for now
+                </p>
+                <p className="mt-1 text-xs text-cream/60">
+                  Nothing on the calendar yet.
+                </p>
+              </div>
             )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* ── Ministry Pulse Grid ─────────────────────────────────────── */}
-      <section>
-        <div className="flex items-baseline justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-medium text-clay-500 uppercase tracking-[0.16em]">
-              Ministry Pulse
-            </h2>
-            <span className="h-px flex-1 w-16 bg-gradient-to-r from-clay-200 to-transparent" />
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-          {/* Service Readiness — leaders & admins */}
-          {(isAdmin || isDeptLead || isYouthLeader) && (
-            <PulseTile
-              href="/manage/services"
-              icon={ClipboardList}
-              iconTone="bg-gold/10 text-gold-dark"
-              label={isDeptLead ? "Dept readiness" : "Service readiness"}
-              value={scopedTotal > 0 ? `${scopedFilled}/${scopedTotal}` : "—"}
-              hint={
-                scopedTotal > 0
-                  ? `${Math.max(0, scopedTotal - scopedFilled)} role${
-                      scopedTotal - scopedFilled === 1 ? "" : "s"
-                    } open`
-                  : "No roles configured yet"
-              }
-              highlight={scopedTotal > 0 && scopedFilled < scopedTotal * 0.5}
-            />
-          )}
-
-          {/* Pending event approvals — admins */}
-          {isAdmin && (
-            <PulseTile
-              href="/manage/events/approvals"
-              icon={ClipboardCheck}
-              iconTone="bg-blue-50 text-blue-600"
-              label="Pending approvals"
-              value={pendingApprovalCount}
-              hint={
-                pendingApprovalCount > 0
-                  ? "Events awaiting your decision"
-                  : "Nothing waiting"
-              }
-              highlight={pendingApprovalCount > 0}
-            />
-          )}
-
-          {/* Follow-ups — discipleship/campus/life-groups departments */}
-          {showFollowUpsTile && (
-            <PulseTile
-              href="/department/discipleship"
-              icon={Heart}
-              iconTone="bg-rose-50 text-rose-600"
-              label="Active follow-ups"
-              value={activeFollowUpCount}
-              hint={
-                pendingFollowUpApprovalCount > 0
-                  ? `${pendingFollowUpApprovalCount} awaiting lead approval`
-                  : myAssignedFollowUps > 0
-                    ? `${myAssignedFollowUps} assigned to you`
-                    : "Discipleship pipeline"
-              }
-              highlight={pendingFollowUpApprovalCount > 0}
-            />
-          )}
-
-          {/* This week's devotional — everyone */}
-          <PulseTile
-            href="/department/campus-ministry"
-            icon={BookOpen}
-            iconTone="bg-purple-50 text-purple-600"
-            label="This week's devotional"
-            value={latestDevotional ? "Read" : "—"}
-            hint={
-              latestDevotional
-                ? latestDevotional.scriptureReference || latestDevotional.title
-                : "No devotional yet"
-            }
-          />
-
-          {/* Members — admins */}
-          {isAdmin && (
-            <PulseTile
-              href="/manage/members"
-              icon={Users}
-              iconTone="bg-teal/10 text-teal"
-              label="Active members"
-              value={activeMemberCount}
-              hint="Directory & roles"
-            />
-          )}
-
-          {/* Life Groups — for life group members */}
-          {!isAdmin && userData.lifeGroup && (
-            <PulseTile
-              href="/department/life-groups"
-              icon={UsersRound}
-              iconTone="bg-emerald-50 text-emerald-600"
-              label="My life group"
-              value={userData.lifeGroup}
-              hint="Devotional & directory"
-            />
-          )}
-
-          {/* Campus ministry — for students */}
-          {!isAdmin && userData.isStudent && (
-            <PulseTile
-              href="/department/campus-ministry"
-              icon={GraduationCap}
-              iconTone="bg-indigo-50 text-indigo-600"
-              label="Campus ministry"
-              value="Open"
-              hint="Updates from your campus"
-            />
-          )}
-
-          {/* Latreou — worship dept or admin */}
-          {showLatreouTile && (
-            <PulseTile
-              href="/latreou"
-              icon={Music}
-              iconTone="bg-amber-50 text-amber-600"
-              label="Latreou planner"
-              value="Open"
-              hint="Worship cycles & rehearsals"
-            />
-          )}
-
-          {/* Fundraising Braai — chairperson, admins, Fundraising lead */}
-          {canPlanBraai && (
-            <PulseTile
-              href={
-                nextBraai
-                  ? `/manage/fundraising/braai/${nextBraai.id}`
-                  : "/manage/fundraising"
-              }
-              icon={Flame}
-              iconTone="bg-red-50 text-red-600"
-              label="Braai readiness"
-              value={
-                nextBraai
-                  ? `${braaiAssignmentCount}/${BRAAI_TOTAL_RESPONSIBILITIES}`
-                  : "—"
-              }
-              hint={
-                nextBraai
-                  ? braaiPendingCount > 0
-                    ? `${braaiPendingCount} awaiting confirmation`
-                    : braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES
-                      ? `${BRAAI_TOTAL_RESPONSIBILITIES - braaiAssignmentCount} responsibilities open`
-                      : `Confirmed: ${braaiConfirmedCount}/${braaiAssignmentCount}`
-                  : "No braai scheduled yet"
-              }
-              highlight={
-                Boolean(nextBraai) &&
-                (braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES ||
-                  braaiPendingCount > 0)
-              }
-            />
-          )}
-
-          {/* ROPs Camp registration — everyone (public page, parents-facing) */}
-          <PulseTile
-            href="/rops-camp"
-            icon={Tent}
-            iconTone="bg-orange-50 text-orange-600"
-            label="ROPs Camp"
-            value="Register"
-            hint="Reserve a place by the fire"
-          />
-
-          {/* Affirmations — everyone */}
-          <PulseTile
-            href="/affirmations"
-            icon={Sparkles}
-            iconTone="bg-pink-50 text-pink-600"
-            label="Affirmations"
-            value="Read"
-            hint="Encouragement for the team"
-          />
-        </div>
       </section>
 
-      {/* ── Upcoming + Activity ─────────────────────────────────────── */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Upcoming events — spans 2 columns */}
-        <Card className="lg:col-span-2 border-clay-200/70">
-          <CardHeader className="pb-3">
+      {/* ── Metric strip ────────────────────────────────────────────── */}
+      {metrics.length > 0 && (
+        <section aria-label="Key metrics">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {metrics.map((m) => (
+              <MetricTile
+                key={`${m.label}-${m.href}`}
+                href={m.href}
+                icon={m.icon}
+                label={m.label}
+                value={m.value}
+                hint={m.hint}
+                accent={m.accent}
+                highlight={m.highlight}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Content grid: upcoming timeline + right rail ────────────── */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Upcoming — vertical timeline */}
+        <Card className="border-clay-200 lg:col-span-2">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
-                    <CalendarDays className="h-4 w-4 text-gold-dark" />
-                  </span>
-                  Upcoming
-                </CardTitle>
-                <CardDescription className="ml-10">
-                  Services, camps, retreats, and meetings on the horizon
-                </CardDescription>
-              </div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
+                  <CalendarDays className="h-4 w-4 text-gold-dark" />
+                </span>
+                Upcoming
+              </CardTitle>
               <Link href="/calendar">
                 <Button variant="ghost" size="sm" className="text-xs">
                   Calendar
@@ -1520,55 +1687,21 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {upcomingEvents.length > 0 ? (
-              <ul className="space-y-1">
-                {upcomingEvents.map((evt) => {
-                  const meta = EVENT_TYPE_META[evt.type] || EVENT_TYPE_META.MEETING;
-                  const Icon = meta.icon;
-                  return (
-                    <li
-                      key={evt.id}
-                      className="group/item flex items-start gap-3 rounded-lg px-2 py-3 -mx-2 transition-colors hover:bg-cream/70"
-                    >
-                      <div
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${meta.tone} ring-1 ring-inset ring-white/40 shadow-sm transition-transform group-hover/item:scale-105`}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-clay-700 truncate">
-                            {evt.title}
-                          </p>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-white">
-                            {meta.label}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-clay-400 mt-1 flex items-center gap-3 flex-wrap">
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {format(evt.startDate, "EEE, MMM d")}
-                          </span>
-                          <span className="inline-flex items-center gap-1 truncate">
-                            <MapPin className="h-3 w-3" />
-                            {evt.venue}
-                          </span>
-                        </p>
-                      </div>
-                      <Badge variant="gold" className="shrink-0 text-[10px]">
-                        {formatDistanceToNow(evt.startDate, { addSuffix: true })}
-                      </Badge>
-                    </li>
-                  );
-                })}
+              <ul className="pt-1">
+                {upcomingEvents.map((evt, i) => (
+                  <AgendaItem
+                    key={evt.id}
+                    event={evt}
+                    isLast={i === upcomingEvents.length - 1}
+                  />
+                ))}
               </ul>
             ) : (
-              <div className="py-10 text-center rounded-xl border border-dashed border-clay-200/70 bg-cream/40">
+              <div className="rounded-xl border border-dashed border-clay-200 bg-cream/40 py-10 text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gold/10">
                   <CalendarDays className="h-6 w-6 text-gold-dark" />
                 </div>
-                <p className="text-sm text-clay-500 mt-3">
-                  No events scheduled.
-                </p>
+                <p className="mt-3 text-sm text-clay-500">No events scheduled.</p>
                 {isAdmin && (
                   <Link href="/manage/events/new">
                     <Button variant="outline" size="sm" className="mt-4">
@@ -1582,57 +1715,68 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Side column: Roles needing attention + Activity */}
-        <div className="space-y-6">
-          {canPlanBraai && nextBraai &&
+        {/* Right rail — attention + activity */}
+        <div className="space-y-4">
+          {/* Leaders see their own assignment here (members see it in the spotlight) */}
+          {(isAdmin || isDeptLead) && myAssignment && (
+            <Card className="border-clay-200">
+              <CardContent className="p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-clay-400">
+                  You&apos;re also serving
+                </p>
+                <p className="mt-1 font-display text-lg font-semibold text-clay-700">
+                  {myAssignment.assignment.roleName}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-clay-400">
+                  {myAssignment.event.title} ·{" "}
+                  {format(myAssignment.event.startDate, "EEE, MMM d")}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <StatusBadge status={myAssignment.assignment.status} />
+                  <Link href="/my-schedule">
+                    <Button variant="ghost" size="sm" className="text-xs">
+                      View
+                      <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Braai needing attention */}
+          {canPlanBraai &&
+            nextBraai &&
             (braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES ||
               braaiPendingCount > 0) && (
-              <Card className="relative overflow-hidden border-red-200/70 bg-gradient-to-br from-red-50/50 via-white to-cream/40">
-                <span
-                  aria-hidden
-                  className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-red-300/0 via-red-400/70 to-red-300/0"
-                />
+              <Card className="border-red-200 bg-red-50/40">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2 text-red-700">
-                    <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-red-100/80 ring-1 ring-inset ring-red-200/60">
+                  <CardTitle className="flex items-center gap-2 text-base text-red-700">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 ring-1 ring-inset ring-red-200/60">
                       <Flame className="h-4 w-4" />
                     </span>
-                    Braai needing attention
+                    Braai needs attention
                   </CardTitle>
-                  <CardDescription className="ml-10">
-                    {nextBraai.title} &middot;{" "}
-                    {format(nextBraai.eventDate, "EEE, MMM d")}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-1.5 text-sm">
                     {braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES && (
-                      <li className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 -mx-2 hover:bg-white/60 transition-colors">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                          <span className="text-clay-600">
-                            Unassigned responsibilities
-                          </span>
-                        </span>
+                      <li className="flex items-center justify-between gap-3">
+                        <span className="text-clay-600">Unassigned</span>
                         <Badge
                           variant="outline"
-                          className="text-red-600 border-red-200 bg-white"
+                          className="border-red-200 bg-white text-red-600"
                         >
                           {BRAAI_TOTAL_RESPONSIBILITIES - braaiAssignmentCount}
                         </Badge>
                       </li>
                     )}
                     {braaiPendingCount > 0 && (
-                      <li className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 -mx-2 hover:bg-white/60 transition-colors">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="h-1.5 w-1.5 rounded-full bg-gold" />
-                          <span className="text-clay-600">
-                            Awaiting confirmation
-                          </span>
-                        </span>
+                      <li className="flex items-center justify-between gap-3">
+                        <span className="text-clay-600">Awaiting confirmation</span>
                         <Badge
                           variant="outline"
-                          className="text-gold-dark border-gold/40 bg-white"
+                          className="border-gold/40 bg-white text-gold-dark"
                         >
                           {braaiPendingCount}
                         </Badge>
@@ -1641,9 +1785,9 @@ export default function DashboardPage() {
                   </ul>
                   <Link
                     href={`/manage/fundraising/braai/${nextBraai.id}`}
-                    className="block mt-4"
+                    className="mt-3 block"
                   >
-                    <Button variant="gold" size="sm" className="w-full shadow-sm">
+                    <Button variant="gold" size="sm" className="w-full">
                       <Flame className="mr-2 h-4 w-4" />
                       Follow up
                     </Button>
@@ -1652,48 +1796,44 @@ export default function DashboardPage() {
               </Card>
             )}
 
+          {/* Roles needing attention */}
           {(isAdmin || isDeptLead) && unassignedRoles.length > 0 && (
-            <Card className="relative overflow-hidden border-red-200/70 bg-gradient-to-br from-red-50/50 via-white to-cream/40">
-              <span
-                aria-hidden
-                className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-red-300/0 via-red-400/70 to-red-300/0"
-              />
+            <Card className="border-red-200 bg-red-50/40">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2 text-red-700">
-                  <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-red-100/80 ring-1 ring-inset ring-red-200/60">
+                <CardTitle className="flex items-center gap-2 text-base text-red-700">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 ring-1 ring-inset ring-red-200/60">
                     <AlertTriangle className="h-4 w-4" />
-                    <span className="absolute -inset-0.5 rounded-lg bg-red-300/30 blur-md -z-10" />
                   </span>
                   Roles needing attention
                 </CardTitle>
-                <CardDescription className="ml-10">
-                  Open seats for the next service
-                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-1.5">
                   {unassignedRoles.slice(0, 5).map((role) => (
                     <li
                       key={role.id}
-                      className="flex items-center justify-between gap-3 text-sm rounded-md px-2 py-1.5 -mx-2 hover:bg-white/60 transition-colors"
+                      className="flex items-center justify-between gap-3 text-sm"
                     >
-                      <span className="inline-flex items-center gap-2 min-w-0">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-400 shrink-0" />
-                        <span className="text-clay-600 truncate">{role.name}</span>
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+                        <span className="truncate text-clay-600">{role.name}</span>
                       </span>
-                      <Badge variant="outline" className="text-red-600 border-red-200 bg-white shrink-0">
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 border-red-200 bg-white text-red-600"
+                      >
                         Open
                       </Badge>
                     </li>
                   ))}
                   {unassignedRoles.length > 5 && (
-                    <li className="text-xs text-clay-400 pt-1 pl-4">
+                    <li className="pl-4 pt-1 text-xs text-clay-400">
                       +{unassignedRoles.length - 5} more
                     </li>
                   )}
                 </ul>
-                <Link href="/manage/services" className="block mt-4">
-                  <Button variant="destructive" size="sm" className="w-full shadow-sm">
+                <Link href="/manage/services" className="mt-3 block">
+                  <Button variant="destructive" size="sm" className="w-full">
                     <UserPlus className="mr-2 h-4 w-4" />
                     Assign roles
                   </Button>
@@ -1702,10 +1842,11 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <Card className="border-clay-200/70">
+          {/* Recent activity */}
+          <Card className="border-clay-200">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-clay-100 ring-1 ring-inset ring-clay-200/60">
                     <Activity className="h-4 w-4 text-clay-500" />
                   </span>
@@ -1727,11 +1868,11 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="py-8 text-center rounded-xl border border-dashed border-clay-200/70 bg-cream/40">
+                <div className="rounded-xl border border-dashed border-clay-200 bg-cream/40 py-8 text-center">
                   <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-clay-100">
                     <Activity className="h-5 w-5 text-clay-400" />
                   </div>
-                  <p className="text-sm text-clay-400 mt-3">
+                  <p className="mt-3 text-sm text-clay-400">
                     Nothing new to show.
                   </p>
                 </div>
@@ -1741,75 +1882,80 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Service-readiness deep panel (admins/leads only) ───────── */}
-      {(isAdmin || isDeptLead) && nextEvent && (
-        <section>
-          <Card className="relative overflow-hidden border-clay-200">
-            <CardHeader className="pb-3 relative">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
-                      <ClipboardList className="h-4 w-4 text-gold-dark" />
-                    </span>
-                    Next service at a glance
-                  </CardTitle>
-                  <CardDescription className="ml-10">
-                    {nextEvent.title} ·{" "}
-                    {format(nextEvent.startDate, "EEE, MMM d")}
-                    {nextService?.serviceTime
-                      ? ` · ${nextService.serviceTime}`
-                      : ""}
-                  </CardDescription>
+      {/* ── Explore + this week ─────────────────────────────────────── */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* Module launcher */}
+        <Card className="border-clay-200 lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
+                <Compass className="h-4 w-4 text-gold-dark" />
+              </span>
+              Explore
+            </CardTitle>
+            <CardDescription className="ml-10">
+              Jump straight into the tools for your ministry
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {moduleLinks.map((m) => (
+                <ModuleLink
+                  key={`${m.label}-${m.href}`}
+                  href={m.href}
+                  icon={m.icon}
+                  label={m.label}
+                  hint={m.hint}
+                  iconTone={m.iconTone}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* This week's devotional */}
+        <Card className="border-clay-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 ring-1 ring-inset ring-purple-100">
+                <BookOpen className="h-4 w-4 text-purple-600" />
+              </span>
+              This week
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {latestDevotional ? (
+              <Link
+                href="/department/campus-ministry"
+                className="group block"
+              >
+                {latestDevotional.scriptureReference && (
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gold-dark">
+                    {latestDevotional.scriptureReference}
+                  </p>
+                )}
+                <p className="mt-1 font-display text-lg font-semibold leading-snug text-clay-700 group-hover:text-gold-dark">
+                  {latestDevotional.title}
+                </p>
+                <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-clay-500">
+                  {latestDevotional.content}
+                </p>
+                <span className="mt-3 inline-flex items-center text-sm font-medium text-gold-dark">
+                  Read devotional
+                  <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                </span>
+              </Link>
+            ) : (
+              <div className="rounded-xl border border-dashed border-clay-200 bg-cream/40 py-8 text-center">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-50">
+                  <BookOpen className="h-5 w-5 text-purple-400" />
                 </div>
-                <Link href="/manage/services">
-                  <Button variant="outline" size="sm">
-                    View full rota
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </Link>
+                <p className="mt-3 text-sm text-clay-400">No devotional yet.</p>
               </div>
-            </CardHeader>
-            <CardContent className="relative">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-                <div className="flex justify-center md:justify-start">
-                  <ReadinessRing
-                    filled={isDeptLead ? scopedFilled : filledCount}
-                    total={isDeptLead ? scopedTotal : totalRoles}
-                    size={140}
-                  />
-                </div>
-                <div className="md:col-span-2 grid grid-cols-3 gap-3 text-center">
-                  <div className="rounded-xl border border-teal/15 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
-                    <p className="text-3xl font-display font-bold text-teal leading-none">
-                      {assignments.filter((a) => a.status === "CONFIRMED").length}
-                    </p>
-                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
-                      Confirmed
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-gold/20 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
-                    <p className="text-3xl font-display font-bold text-gold-dark leading-none">
-                      {assignments.filter((a) => a.status === "PENDING").length}
-                    </p>
-                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
-                      Pending
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-red-200/60 bg-white/70 backdrop-blur-sm py-4 transition-transform hover:-translate-y-0.5">
-                    <p className="text-3xl font-display font-bold text-red-500 leading-none">
-                      {unassignedCount}
-                    </p>
-                    <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] mt-2">
-                      Open
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      )}
+            )}
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }
