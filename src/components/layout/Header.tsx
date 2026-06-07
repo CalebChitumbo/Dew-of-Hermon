@@ -9,7 +9,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { getVisibleNavItems } from "@/components/layout/nav-config";
+import { getVisibleNavEntries } from "@/components/layout/nav-config";
+import { SidebarNav } from "@/components/layout/SidebarNav";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 import { useTransportAccess } from "@/hooks/useTransportAccess";
@@ -36,7 +37,7 @@ export function Header() {
   if (canApproveAccounts) extraKeys.push("accounts_approvals");
   if (canManageMedia) extraKeys.push("media_requests");
   if (canConfirmFood) extraKeys.push("food_requests");
-  const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
+  const navEntries = getVisibleNavEntries(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
@@ -105,32 +106,25 @@ export function Header() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-              {visibleItems.map((item) => (
+            <nav className="flex-1 p-4 overflow-y-auto">
+              <SidebarNav entries={navEntries} onNavigate={closeMenu} />
+              {/* Mobile-only shortcuts — same for every account type */}
+              <div className="mt-2 space-y-1 border-t border-clay-100 pt-2">
                 <MobileMenuItem
-                  key={item.href}
-                  href={item.href}
-                  icon={item.icon}
-                  label={item.label}
+                  href="/notifications"
+                  icon={Bell}
+                  label="Notifications"
                   pathname={pathname}
                   onClick={closeMenu}
                 />
-              ))}
-              {/* Mobile-only shortcuts — same for every account type */}
-              <MobileMenuItem
-                href="/notifications"
-                icon={Bell}
-                label="Notifications"
-                pathname={pathname}
-                onClick={closeMenu}
-              />
-              <MobileMenuItem
-                href="/profile"
-                icon={UserCircle}
-                label="Profile"
-                pathname={pathname}
-                onClick={closeMenu}
-              />
+                <MobileMenuItem
+                  href="/profile"
+                  icon={UserCircle}
+                  label="Profile"
+                  pathname={pathname}
+                  onClick={closeMenu}
+                />
+              </div>
             </nav>
             <div className="flex-shrink-0 p-4 pb-6 border-t border-clay-200 bg-white">
               <div className="flex items-center gap-3 mb-3">
