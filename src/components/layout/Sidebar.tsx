@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAccessControl } from "@/contexts/AccessControlContext";
-import { cn } from "@/lib/utils";
 import { UserCircle, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { NotificationBell } from "@/components/shared/NotificationBell";
-import { getVisibleNavItems } from "@/components/layout/nav-config";
+import { getVisibleNavEntries } from "@/components/layout/nav-config";
+import { SidebarNav } from "@/components/layout/SidebarNav";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 import { useTransportAccess } from "@/hooks/useTransportAccess";
@@ -17,7 +16,6 @@ import { useMediaAccess } from "@/hooks/useMediaAccess";
 import { useFoodAccess } from "@/hooks/useFoodAccess";
 
 export function Sidebar() {
-  const pathname = usePathname();
   const { userData, signOut } = useAuth();
   const { pagePermissions } = useAccessControl();
   const { canManage: canManageCamp } = useCampLeadAccess();
@@ -35,7 +33,7 @@ export function Sidebar() {
   if (canApproveAccounts) extraKeys.push("accounts_approvals");
   if (canManageMedia) extraKeys.push("media_requests");
   if (canConfirmFood) extraKeys.push("food_requests");
-  const visibleItems = getVisibleNavItems(userData.role, pagePermissions, extraKeys);
+  const navEntries = getVisibleNavEntries(userData.role, pagePermissions, extraKeys);
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });
@@ -58,25 +56,8 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
-        {visibleItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-clay-100 text-clay-700"
-                  : "text-clay-500 hover:bg-clay-50 hover:text-clay-700"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+        <SidebarNav entries={navEntries} />
       </nav>
 
       <Separator />
