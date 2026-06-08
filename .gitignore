@@ -36,3 +36,25 @@ next-env.d.ts
 
 # firebase
 scripts/service-account-key.json
+
+# capacitor — native projects (ios/ android/) are committed, build output is not
+/ios/App/Pods/
+/ios/App/build/
+/ios/App/output/
+/ios/App/App/public/
+/ios/DerivedData/
+/android/.gradle/
+/android/build/
+/android/app/build/
+/android/captures/
+/android/app/src/main/assets/public/
+/android/app/src/main/assets/capacitor.config.json
+/android/app/src/main/assets/capacitor.plugins.json
+/android/local.properties
+
+# mobile signing secrets — never commit these
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+*.cer

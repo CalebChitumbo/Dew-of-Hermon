@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Dew of Hermon</title>
+    <style>
+      :root { color-scheme: light; }
+      html, body {
+        margin: 0; height: 100%;
+        background: #FFF8F0; color: #5B3A29;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      .wrap {
+        height: 100%;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        text-align: center; padding: 24px; box-sizing: border-box;
+      }
+      img { width: 200px; max-width: 70%; height: auto; margin-bottom: 28px; }
+      h1 { font-size: 19px; font-weight: 600; margin: 0 0 8px; }
+      p { font-size: 15px; opacity: 0.75; margin: 0 0 24px; max-width: 320px; line-height: 1.5; }
+      button {
+        appearance: none; border: 0; border-radius: 12px;
+        background: #5B3A29; color: #FFF8F0;
+        font-size: 16px; font-weight: 600; padding: 14px 28px;
+      }
+      button:active { opacity: 0.85; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <img src="icon.png" alt="Dew of Hermon" />
+      <h1>You're offline</h1>
+      <p>Dew of Hermon needs an internet connection. Check your connection and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>
