@@ -222,7 +222,7 @@ export default function LoginPage() {
                       ROPs X · 2026
                     </p>
                     <p className="mt-1.5 text-sm font-semibold leading-tight text-cream">
-                      Register your child for camp
+                      Register for camp
                     </p>
                     <p className="mt-1 text-[11px] leading-snug text-cream/60">
                       Registration is now open

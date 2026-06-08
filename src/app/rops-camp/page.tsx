@@ -28,7 +28,7 @@ import { RopsFontStyles } from "@/components/rops-camp/RopsFontStyles";
 // ─── CONFIG ─────────────────────────────────────────────────────────
 const camp = CAMPS[0];
 const CAMP_FEE_ZMW = camp.fee;
-const CAMP_DATES = "20 — 24 August 2026";
+const CAMP_DATES = "27 — 31 August 2026";
 const VENUE = "Crested Crane Academy";
 const CHURCH_ADDRESS = "Tabernacle of David Assembly, Lusaka";
 
@@ -383,8 +383,8 @@ function Hero({
           />
           <DossierLine
             icon={<Users size={14} />}
-            label="Ages"
-            value="12 — 35 years"
+            label="Open to"
+            value="All youths"
           />
           <DossierLine
             icon={<CircleDollarSign size={14} />}
@@ -667,7 +667,7 @@ function RegistrationForm({
     if (!form.emergencyPhone.trim())
       err.emergencyPhone = "Emergency phone required";
     if (!form.dropoffLocation)
-      err.dropoffLocation = "Choose a drop-off location";
+      err.dropoffLocation = "Choose how you'll get to camp";
     if (!form.consent)
       err.consent = isSelf
         ? "Your consent is required"
@@ -1048,11 +1048,15 @@ function RegistrationForm({
         <div className="mb-12">
           <SectionHeader
             number="05"
-            title={isSelf ? "Where You're Coming From" : "Drop-off Location"}
+            title={
+              isSelf
+                ? "How would you like to get to camp?"
+                : "How will your camper get to camp?"
+            }
             sub={
               isSelf
-                ? "Where will you join us from on day one?"
-                : "Where would you like to drop your camper for transport to camp?"
+                ? "Either ride the church bus from church, or get dropped off directly at the campsite."
+                : "Either they ride the church bus from church, or you drop them directly at the campsite."
             }
           />
           <div
@@ -1065,9 +1069,13 @@ function RegistrationForm({
                 setForm((f) => ({ ...f, dropoffLocation: "church" }))
               }
               icon={<Church size={32} strokeWidth={1.4} />}
-              title={isSelf ? "From the Church" : "At the Church"}
+              title="From Church — by Bus"
               meta={CHURCH_ADDRESS}
-              detail="The team will travel together to the campsite as a group."
+              detail={
+                isSelf
+                  ? "Ride the church bus from church to the campsite together with the team."
+                  : "Your camper rides the church bus from church to the campsite with the team."
+              }
             />
             <DropoffOption
               selected={form.dropoffLocation === "campsite"}
@@ -1075,12 +1083,12 @@ function RegistrationForm({
                 setForm((f) => ({ ...f, dropoffLocation: "campsite" }))
               }
               icon={<Tent size={32} strokeWidth={1.4} />}
-              title={isSelf ? "Direct to Camp Site" : "At the Camp Site"}
+              title="Dropped at the Campsite"
               meta={VENUE}
               detail={
                 isSelf
-                  ? "You'll travel directly to the camp venue."
-                  : "You will drive your camper directly to the camp venue."
+                  ? "Make your own way directly to the campsite."
+                  : "Drop your camper off directly at the campsite."
               }
             />
           </div>

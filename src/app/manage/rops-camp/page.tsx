@@ -97,6 +97,8 @@ export default function RopsCampAdminPage() {
 
 function RopsCampAdminInner() {
   const { toast } = useToast();
+  const { userData } = useAuth();
+  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
   const [campId, setCampId] = useState<string>(DEFAULT_CAMP_ID);
   const camp = useMemo(() => CAMPS.find((c) => c.id === campId)!, [campId]);
 
@@ -105,6 +107,8 @@ function RopsCampAdminInner() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | CampPaymentStatus>("all");
   const [editing, setEditing] = useState<RegistrationRow | null>(null);
+  const [deleting, setDeleting] = useState<RegistrationRow | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -172,6 +176,34 @@ function RopsCampAdminInner() {
         description: err instanceof Error ? err.message : "Unknown error",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    try {
+      const res = await fetchWithAuth(`/api/camp-registrations/${deleting.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Failed");
+      }
+      toast({
+        title: "Registration deleted",
+        description: `${deleting.firstName} ${deleting.lastName}`,
+      });
+      setDeleting(null);
+      await load();
+    } catch (err) {
+      toast({
+        title: "Delete failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -350,6 +382,17 @@ function RopsCampAdminInner() {
                           <Button size="sm" variant="ghost" onClick={() => setEditing(row)}>
                             Details
                           </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => setDeleting(row)}
+                              aria-label={`Delete registration for ${row.firstName} ${row.lastName}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -371,6 +414,43 @@ function RopsCampAdminInner() {
             await load();
           }}
         />
+      )}
+
+      {deleting && (
+        <Dialog
+          open
+          onOpenChange={(open) => !open && !deleteBusy && setDeleting(null)}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete registration?</DialogTitle>
+              <DialogDescription>
+                This permanently removes{" "}
+                <span className="font-medium text-clay-800">
+                  {deleting.firstName} {deleting.lastName}
+                </span>
+                &rsquo;s registration and can&rsquo;t be undone. Use this to
+                clear duplicate entries or campers who have cancelled.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleting(null)}
+                disabled={deleteBusy}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteBusy}
+              >
+                {deleteBusy ? "Deleting..." : "Delete registration"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
