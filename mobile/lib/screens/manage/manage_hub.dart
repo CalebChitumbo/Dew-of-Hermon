@@ -10,6 +10,10 @@ import 'events/approvals_screen.dart';
 import 'events/create_event_screen.dart';
 import 'events/events_manage_screen.dart';
 import 'members/members_screen.dart';
+import 'queues/finance_screen.dart';
+import 'queues/food_screen.dart';
+import 'queues/media_screen.dart';
+import 'queues/transport_screen.dart';
 import 'services/services_screen.dart';
 
 class _Tool {
@@ -77,6 +81,26 @@ class ManageHub extends StatelessWidget {
             (context) => MembersScreen(canEdit: pageEdit('members'))),
     ];
     if (people.isNotEmpty) sections.add(('People', people));
+
+    final queues = <_Tool>[
+      if (feature('approve_accounts') || page('accounts_approvals'))
+        _Tool('Finance', 'Treasurer budget queue',
+            Icons.account_balance_wallet_outlined, const Color(0xFF059669),
+            (_) => const FinanceApprovalsScreen()),
+      if (feature('manage_transport_logistics') ||
+          feature('approve_accounts') ||
+          page('transport_requests'))
+        _Tool('Transport', 'Cost & approve transport',
+            Icons.directions_bus_outlined, const Color(0xFF2563EB),
+            (_) => const TransportQueueScreen()),
+      if (feature('manage_media') || page('media_requests'))
+        _Tool('Media', 'Confirm & assign roles', Icons.videocam_outlined,
+            const Color(0xFF7C3AED), (_) => const MediaQueueScreen()),
+      if (feature('confirm_food') || page('food_requests'))
+        _Tool('Food', 'Catering confirmations', Icons.restaurant_outlined,
+            const Color(0xFFEA580C), (_) => const FoodQueueScreen()),
+    ];
+    if (queues.isNotEmpty) sections.add(('Coordination queues', queues));
 
     return sections;
   }
