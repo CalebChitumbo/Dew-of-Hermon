@@ -98,6 +98,12 @@ Users opt in from **Profile → Enable push**.
 
 ### Google Play (Android)
 
+> **Note:** test builds are signed with the committed `test-signing.jks`
+> (public, throwaway — it only exists so sideloaded builds can update each
+> other). Before uploading to Play, enroll in **Play App Signing** and
+> generate a private upload key per the Flutter docs; never reuse the test
+> keystore.
+
 1. One-time: create a Play Console developer account ($25 once).
 2. Create an upload keystore and configure signing
    (https://docs.flutter.dev/deployment/android#sign-the-app).
