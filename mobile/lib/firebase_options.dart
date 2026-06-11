@@ -1,24 +1,40 @@
-// Placeholder Firebase configuration.
+// Firebase configuration for the same project the website uses
+// (dew-of-hermon-96f43). Android values come from the registered Android
+// app's google-services.json.
 //
-// Replace this file by running the FlutterFire CLI from the mobile/ folder:
-//
-//   dart pub global activate flutterfire_cli
-//   flutterfire configure --project=<your-firebase-project-id>
-//
-// That command registers Android + iOS apps in the SAME Firebase project the
-// website uses, downloads their config, and regenerates this file (plus
-// android/app/google-services.json and ios/Runner/GoogleService-Info.plist).
-//
-// Until then the app boots into a "setup required" screen.
+// iOS isn't registered yet — when you're ready for the iPhone build, run
+// `flutterfire configure` from mobile/ (see README.md) and it will extend
+// this file and add ios/Runner/GoogleService-Info.plist.
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    throw UnsupportedError(
-      'Firebase is not configured yet. Run `flutterfire configure` inside '
-      'the mobile/ folder against the same Firebase project as the website '
-      '(see mobile/README.md).',
-    );
+    if (kIsWeb) {
+      throw UnsupportedError('This app targets Android and iOS, not web.');
+    }
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return android;
+      case TargetPlatform.iOS:
+        throw UnsupportedError(
+          'The iOS app is not registered in Firebase yet. Run '
+          '`flutterfire configure` inside mobile/ (see mobile/README.md).',
+        );
+      default:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions are not supported for this platform.',
+        );
+    }
   }
+
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyCnr-EvxO1nP6_UBLntNW6a68bQ-x2QlU0',
+    appId: '1:845155172503:android:131c797e8caad5d07b69d2',
+    messagingSenderId: '845155172503',
+    projectId: 'dew-of-hermon-96f43',
+    storageBucket: 'dew-of-hermon-96f43.firebasestorage.app',
+  );
 }

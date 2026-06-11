@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "845155172503",
+    "project_id": "dew-of-hermon-96f43",
+    "storage_bucket": "dew-of-hermon-96f43.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:845155172503:android:131c797e8caad5d07b69d2",
+        "android_client_info": {
+          "package_name": "com.potterswheel.potters_wheel"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "845155172503-c6j71gjgt31v15ctdeitsdoj1au2689k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnr-EvxO1nP6_UBLntNW6a68bQ-x2QlU0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "845155172503-c6j71gjgt31v15ctdeitsdoj1au2689k.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
