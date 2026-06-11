@@ -8,7 +8,10 @@ import '../../models/models.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../affirmations/affirmations_screen.dart';
+import '../camp/camp_screen.dart';
 import '../events/event_detail_screen.dart';
+import '../fundraising/order_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -93,6 +96,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 24),
               const SectionHeader('This week'),
               _DevotionalCard(),
+              const SizedBox(height: 24),
+              const SectionHeader('Ministry pulse'),
+              const _QuickActions(),
               const SizedBox(height: 24),
               SectionHeader(
                 'Upcoming events',
@@ -340,6 +346,123 @@ class _MyNextCard extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Quick actions ───────────────────────────────────────────────────────
+
+class _QuickActions extends StatelessWidget {
+  const _QuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionTile(
+            icon: Icons.cabin_outlined,
+            iconColor: const Color(0xFFEA580C),
+            iconBg: const Color(0xFFFFEDD5),
+            label: 'ROPs Camp',
+            hint: 'Register',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CampScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ActionTile(
+            icon: Icons.outdoor_grill_outlined,
+            iconColor: const Color(0xFFDC2626),
+            iconBg: const Color(0xFFFEE2E2),
+            label: 'Braai orders',
+            hint: 'Order food',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const FundraisingOrderScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _ActionTile(
+            icon: Icons.auto_awesome,
+            iconColor: const Color(0xFFDB2777),
+            iconBg: const Color(0xFFFCE7F3),
+            label: 'Affirmations',
+            hint: 'Read',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                  builder: (_) => const AffirmationsScreen()),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBg,
+    required this.label,
+    required this.hint,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
+  final String label;
+  final String hint;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 19, color: iconColor),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelMedium?.copyWith(
+                  color: PWColors.clay700,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                hint,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.labelSmall
+                    ?.copyWith(color: PWColors.clay400),
+              ),
+            ],
+          ),
         ),
       ),
     );

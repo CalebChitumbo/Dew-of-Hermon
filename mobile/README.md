@@ -27,10 +27,17 @@ Anything done in the app appears on the website instantly, and vice versa.
 - **Alerts** — real-time notifications with unread badge, mark-as-read,
   mark-all-read.
 - **Profile** — role/life group, enable push notifications, sign out.
+- **ROPs Camp** — live capacity, full registration form (self or someone
+  else, health/logistics/guardian/emergency sections), my registrations
+  with payment status and mobile-money payment instructions.
+- **Braai orders (Potter's Shockers)** — live menu with quantity steppers,
+  pickup-time choice, order submission with order number + MoMo details;
+  orders land in the same kitchen queue the web manage pages show.
+- **Affirmations** — encouragement feed from the same collection as the web.
 
-Not yet ported (use the website meanwhile — data stays in sync): ROPS camp
-registration, fundraising orders, follow-up cards, affirmations, and all
-leader/admin tooling (approvals, members, finance, reports, settings).
+Not yet ported (use the website meanwhile — data stays in sync): follow-up
+cards, devotional archive pages, and all leader/admin tooling (approvals,
+members, finance, reports, settings).
 
 ## One-time setup
 
