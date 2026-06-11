@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../services/access_service.dart';
 import '../services/auth_service.dart';
 import '../services/push_service.dart';
 import 'calendar/calendar_screen.dart';
 import 'dashboard/dashboard_screen.dart';
+import 'manage/manage_hub.dart';
 import 'notifications/notifications_screen.dart';
 import 'profile/profile_screen.dart';
 import 'schedule/my_schedule_screen.dart';
@@ -37,7 +39,11 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = context.watch<AuthService>().profile?.id;
+    final auth = context.watch<AuthService>();
+    final access = context.watch<AccessService>();
+    final uid = auth.profile?.id;
+    final showManage = ManageHub.anyAccess(access, auth.profile);
+    if (!showManage && _index > 4) _index = 0;
 
     return Scaffold(
       body: IndexedStack(
@@ -51,6 +57,7 @@ class _AppShellState extends State<AppShell> {
           const MyScheduleScreen(),
           const NotificationsScreen(),
           const ProfileScreen(),
+          if (showManage) const ManageHub(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -82,6 +89,12 @@ class _AppShellState extends State<AppShell> {
             selectedIcon: Icon(Icons.person),
             label: 'Profile',
           ),
+          if (showManage)
+            const NavigationDestination(
+              icon: Icon(Icons.workspaces_outline),
+              selectedIcon: Icon(Icons.workspaces),
+              label: 'Manage',
+            ),
         ],
       ),
     );

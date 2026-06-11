@@ -101,6 +101,17 @@ const eventTypeMeta = <String, EventTypeMeta>{
   'OUTREACH': EventTypeMeta('Outreach'),
 };
 
+const approvalStatusLabels = <String, String>{
+  'DRAFT': 'Draft',
+  'PENDING_DISPATCH': 'Awaiting dispatch',
+  'PENDING_STAKEHOLDERS': 'With stakeholders',
+  'PENDING_VICE_CHAIR': 'With Vice Chair',
+  'PENDING_CHAIR': 'With Chairperson',
+  'APPROVED': 'Approved',
+  'REJECTED': 'Rejected',
+  'CHANGES_REQUESTED': 'Changes requested',
+};
+
 class AppEvent {
   AppEvent({
     required this.id,
@@ -111,12 +122,25 @@ class AppEvent {
     required this.endDate,
     required this.venue,
     required this.approvalStatus,
+    required this.approvalComments,
     required this.lifeGroupTarget,
     required this.speaker,
     required this.objective,
     required this.isPaid,
     required this.attendanceFee,
     required this.attendanceFeeCurrency,
+    required this.createdBy,
+    required this.createdByDepartmentId,
+    required this.transportRequired,
+    required this.transportNeeds,
+    required this.budgetRequested,
+    required this.budgetAmount,
+    required this.budgetCurrency,
+    required this.budgetPurpose,
+    required this.mediaRequired,
+    required this.mediaNeeds,
+    required this.foodRequired,
+    required this.foodNeeds,
   });
 
   final String id;
@@ -127,15 +151,32 @@ class AppEvent {
   final DateTime? endDate;
   final String venue;
   final String approvalStatus;
+  final String? approvalComments;
   final String? lifeGroupTarget;
   final String? speaker;
   final String? objective;
   final bool isPaid;
   final num? attendanceFee;
   final String? attendanceFeeCurrency;
+  final String createdBy;
+  final String? createdByDepartmentId;
+  final bool transportRequired;
+  final String? transportNeeds;
+  final bool budgetRequested;
+  final num? budgetAmount;
+  final String? budgetCurrency;
+  final String? budgetPurpose;
+  final bool mediaRequired;
+  final String? mediaNeeds;
+  final bool foodRequired;
+  final String? foodNeeds;
 
   String get typeLabel => eventTypeMeta[type]?.label ?? type;
   bool get isApproved => approvalStatus == 'APPROVED';
+  String get approvalLabel =>
+      approvalStatusLabels[approvalStatus] ?? approvalStatus;
+  bool get hasStakeholders =>
+      transportRequired || budgetRequested || mediaRequired || foodRequired;
 
   factory AppEvent.fromMap(String id, Map<String, dynamic> data) {
     return AppEvent(
@@ -148,12 +189,25 @@ class AppEvent {
       venue: asString(data['venue']),
       // Older docs predate the approval chain and are implicitly approved.
       approvalStatus: asString(data['approvalStatus'], 'APPROVED'),
+      approvalComments: asStringOrNull(data['approvalComments']),
       lifeGroupTarget: asStringOrNull(data['lifeGroupTarget']),
       speaker: asStringOrNull(data['speaker']),
       objective: asStringOrNull(data['objective']),
       isPaid: asBool(data['isPaid']),
       attendanceFee: asNumOrNull(data['attendanceFee']),
       attendanceFeeCurrency: asStringOrNull(data['attendanceFeeCurrency']),
+      createdBy: asString(data['createdBy']),
+      createdByDepartmentId: asStringOrNull(data['createdByDepartmentId']),
+      transportRequired: asBool(data['transportRequired']),
+      transportNeeds: asStringOrNull(data['transportNeeds']),
+      budgetRequested: asBool(data['budgetRequested']),
+      budgetAmount: asNumOrNull(data['budgetAmount']),
+      budgetCurrency: asStringOrNull(data['budgetCurrency']),
+      budgetPurpose: asStringOrNull(data['budgetPurpose']),
+      mediaRequired: asBool(data['mediaRequired']),
+      mediaNeeds: asStringOrNull(data['mediaNeeds']),
+      foodRequired: asBool(data['foodRequired']),
+      foodNeeds: asStringOrNull(data['foodNeeds']),
     );
   }
 }
@@ -301,6 +355,168 @@ class Affirmation {
       content: asString(data['content']),
       authorName: asString(data['authorName']),
       createdAt: asDate(data['createdAt']),
+    );
+  }
+}
+
+// ─── Departments ─────────────────────────────────────────────────────────
+
+class Department {
+  Department({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.icon,
+    required this.order,
+  });
+
+  final String id;
+  final String name;
+  final String? description;
+  final String icon;
+  final int order;
+
+  factory Department.fromMap(String id, Map<String, dynamic> data) {
+    return Department(
+      id: id,
+      name: asString(data['name']),
+      description: asStringOrNull(data['description']),
+      icon: asString(data['icon']),
+      order: (asNumOrNull(data['order']) ?? 0).toInt(),
+    );
+  }
+}
+
+class DepartmentTask {
+  DepartmentTask({
+    required this.id,
+    required this.departmentId,
+    required this.title,
+    required this.description,
+    required this.status,
+    required this.priority,
+    required this.assigneeId,
+    required this.assigneeName,
+    required this.dueDate,
+    required this.createdByName,
+  });
+
+  final String id;
+  final String departmentId;
+  final String title;
+  final String? description;
+  final String status; // TODO | IN_PROGRESS | DONE
+  final String priority; // LOW | MEDIUM | HIGH | URGENT
+  final String? assigneeId;
+  final String? assigneeName;
+  final DateTime? dueDate;
+  final String createdByName;
+
+  factory DepartmentTask.fromMap(String id, Map<String, dynamic> data) {
+    return DepartmentTask(
+      id: id,
+      departmentId: asString(data['departmentId']),
+      title: asString(data['title']),
+      description: asStringOrNull(data['description']),
+      status: asString(data['status'], 'TODO'),
+      priority: asString(data['priority'], 'MEDIUM'),
+      assigneeId: asStringOrNull(data['assigneeId']),
+      assigneeName: asStringOrNull(data['assigneeName']),
+      dueDate: asDateOrNull(data['dueDate']),
+      createdByName: asString(data['createdByName']),
+    );
+  }
+}
+
+// ─── Follow-up cards ─────────────────────────────────────────────────────
+
+const followUpStatusLabels = <String, String>{
+  'PENDING_LEAD_APPROVAL': 'Pending approval',
+  'REJECTED': 'Rejected',
+  'NEW_CONTACT': 'New contact',
+  'ASSIGNED': 'Assigned',
+  'CONTACTED': 'Contacted',
+  'FIRST_VISIT': 'First visit',
+  'REGULAR_ATTENDEE': 'Regular attendee',
+  'MEMBER': 'Member',
+};
+
+class FollowUpCard {
+  FollowUpCard({
+    required this.id,
+    required this.name,
+    required this.phone,
+    required this.source,
+    required this.sourceDetail,
+    required this.status,
+    required this.reason,
+    required this.notes,
+    required this.dateOfContact,
+    required this.assigneeId,
+    required this.assigneeName,
+    required this.createdBy,
+    required this.createdByName,
+    required this.rejectionReason,
+  });
+
+  final String id;
+  final String name;
+  final String phone;
+  final String source; // CAMPUS_MINISTRY | LIFE_GROUPS
+  final String sourceDetail;
+  final String status;
+  final String? reason;
+  final String notes;
+  final DateTime dateOfContact;
+  final String? assigneeId;
+  final String? assigneeName;
+  final String createdBy;
+  final String createdByName;
+  final String? rejectionReason;
+
+  String get statusLabel => followUpStatusLabels[status] ?? status;
+
+  factory FollowUpCard.fromMap(String id, Map<String, dynamic> data) {
+    return FollowUpCard(
+      id: id,
+      name: asString(data['name']),
+      phone: asString(data['phone']),
+      source: asString(data['source'], 'CAMPUS_MINISTRY'),
+      sourceDetail: asString(data['sourceDetail']),
+      status: asString(data['status'], 'NEW_CONTACT'),
+      reason: asStringOrNull(data['reason']),
+      notes: asString(data['notes']),
+      dateOfContact: asDate(data['dateOfContact']),
+      assigneeId: asStringOrNull(data['assigneeId']),
+      assigneeName: asStringOrNull(data['assigneeName']),
+      createdBy: asString(data['createdBy']),
+      createdByName: asString(data['createdByName']),
+      rejectionReason: asStringOrNull(data['rejectionReason']),
+    );
+  }
+}
+
+// ─── Institutions ────────────────────────────────────────────────────────
+
+class Institution {
+  Institution({
+    required this.id,
+    required this.name,
+    required this.isActive,
+    required this.order,
+  });
+
+  final String id;
+  final String name;
+  final bool isActive;
+  final int order;
+
+  factory Institution.fromMap(String id, Map<String, dynamic> data) {
+    return Institution(
+      id: id,
+      name: asString(data['name']),
+      isActive: asBool(data['isActive'], true),
+      order: (asNumOrNull(data['order']) ?? 0).toInt(),
     );
   }
 }

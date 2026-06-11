@@ -7,6 +7,7 @@ import 'core/config.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/shell.dart';
+import 'services/access_service.dart';
 import 'services/auth_service.dart';
 import 'services/push_service.dart';
 import 'theme/app_theme.dart';
@@ -46,6 +47,9 @@ class PottersWheelApp extends StatelessWidget {
         Provider<PushService>(create: (_) => PushService(api)),
         ChangeNotifierProvider<AuthService>(
           create: (_) => AuthService(api),
+        ),
+        ChangeNotifierProvider<AccessService>(
+          create: (_) => AccessService(),
         ),
       ],
       child: MaterialApp(
