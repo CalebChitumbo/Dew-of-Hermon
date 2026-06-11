@@ -6,9 +6,11 @@ import '../../services/access_service.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import 'camp/camp_admin_screen.dart';
 import 'events/approvals_screen.dart';
 import 'events/create_event_screen.dart';
 import 'events/events_manage_screen.dart';
+import 'fundraising/braai_manage_screen.dart';
 import 'members/members_screen.dart';
 import 'queues/finance_screen.dart';
 import 'queues/food_screen.dart';
@@ -101,6 +103,18 @@ class ManageHub extends StatelessWidget {
             const Color(0xFFEA580C), (_) => const FoodQueueScreen()),
     ];
     if (queues.isNotEmpty) sections.add(('Coordination queues', queues));
+
+    final programs = <_Tool>[
+      if (feature('plan_fundraising_braai') ||
+          feature('manage_fundraising_orders'))
+        _Tool('Braais', 'Roster & order queue', Icons.outdoor_grill_outlined,
+            const Color(0xFFDC2626), (_) => const BraaiManageScreen()),
+      if (feature('manage_camp_registrations'))
+        _Tool('ROPs Camp', 'Registrations & payments',
+            Icons.cabin_outlined, const Color(0xFFEA580C),
+            (_) => const CampAdminScreen()),
+    ];
+    if (programs.isNotEmpty) sections.add(('Programs', programs));
 
     return sections;
   }
