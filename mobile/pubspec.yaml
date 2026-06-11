@@ -1,0 +1,33 @@
+name: potters_wheel
+description: "Potter's Wheel — the Dew of Hermon ministry app for Android and iOS."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  cloud_firestore: ^6.5.0
+  cookie_jar: ^4.0.9
+  dio: ^5.9.2
+  dio_cookie_manager: ^3.4.0
+  firebase_auth: ^6.5.2
+  firebase_core: ^4.10.0
+  firebase_messaging: ^16.3.0
+  flutter:
+    sdk: flutter
+  google_fonts: ^8.1.0
+  intl: ^0.20.2
+  path_provider: ^2.1.5
+  provider: ^6.1.5+1
+  table_calendar: ^3.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/church-logo.png
