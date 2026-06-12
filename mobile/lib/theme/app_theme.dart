@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -73,6 +74,15 @@ ThemeData buildAppTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: PWColors.cream,
     textTheme: textTheme,
+    // Material 3 sparkle ink + modern fade-forward route transitions give
+    // every tap and navigation a lively, current feel.
+    splashFactory: InkSparkle.splashFactory,
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      },
+    ),
     appBarTheme: AppBarTheme(
       backgroundColor: PWColors.cream,
       foregroundColor: PWColors.clay700,

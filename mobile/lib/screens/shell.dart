@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../services/access_service.dart';
@@ -62,7 +63,10 @@ class _AppShellState extends State<AppShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: (i) {
+          HapticFeedback.selectionClick();
+          setState(() => _index = i);
+        },
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.home_outlined),

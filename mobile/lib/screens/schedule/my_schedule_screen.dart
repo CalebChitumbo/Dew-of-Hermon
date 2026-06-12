@@ -8,6 +8,7 @@ import '../../models/models.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 
 class MyScheduleScreen extends StatefulWidget {
   const MyScheduleScreen({super.key});
@@ -71,11 +72,14 @@ class _MyScheduleScreenState extends State<MyScheduleScreen> {
         'callerRole': auth.profile?.role,
         'callerId': auth.firebaseUser?.uid,
       });
+      if (mounted && status == 'CONFIRMED') {
+        await showCelebration(context);
+      }
       if (mounted) {
         showAppSnackBar(
           context,
           status == 'CONFIRMED'
-              ? 'Assignment confirmed — thank you!'
+              ? "You're in — thank you for serving! 🎉"
               : 'Assignment declined.',
         );
       }

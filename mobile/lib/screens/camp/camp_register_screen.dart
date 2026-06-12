@@ -7,6 +7,7 @@ import '../../models/camp.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import 'payment_card.dart';
 
 /// Camp registration form. Submits to the same public endpoint as the
@@ -155,6 +156,7 @@ class _CampRegisterScreenState extends State<CampRegisterScreen> {
           _submitted = CampRegistration.fromJson(
               registration.cast<String, dynamic>());
         });
+        showCelebration(context);
       }
     } on ApiException catch (e) {
       if (mounted) showAppSnackBar(context, e.message, isError: true);

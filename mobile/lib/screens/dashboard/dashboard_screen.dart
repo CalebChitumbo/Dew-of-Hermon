@@ -8,6 +8,7 @@ import '../../models/models.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 import '../affirmations/affirmations_screen.dart';
 import '../camp/camp_screen.dart';
 import '../events/event_detail_screen.dart';
@@ -30,6 +31,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   MyAssignment? _nextAssignment;
   bool _loadingAssignment = true;
+  bool _responding = false;
 
   @override
   void initState() {
@@ -66,6 +68,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  /// Confirm/decline straight from the dashboard — confetti on confirm.
+  Future<void> _respond(MyAssignment assignment, String status) async {
+    final auth = context.read<AuthService>();
+    final api = context.read<ApiClient>();
+    setState(() => _responding = true);
+    try {
+      await api.putJson(assignment.updateApiPath, {
+        'status': status,
+        'callerRole': auth.profile?.role,
+        'callerId': auth.firebaseUser?.uid,
+      });
+      if (!mounted) return;
+      if (status == 'CONFIRMED') {
+        await showCelebration(context);
+        if (mounted) {
+          showAppSnackBar(context, "You're in — thank you for serving! 🎉");
+        }
+      } else {
+        showAppSnackBar(context, 'Assignment declined.');
+      }
+      await _loadNextAssignment();
+    } on ApiException catch (e) {
+      if (mounted) showAppSnackBar(context, e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _responding = false);
+    }
+  }
+
   String _greeting() {
     final h = DateTime.now().hour;
     if (h < 12) return 'Good morning';
@@ -81,36 +111,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
+          color: PWColors.goldDark,
           onRefresh: _loadNextAssignment,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             children: [
-              _Hero(profile: profile, greeting: _greeting()),
-              const SizedBox(height: 20),
-              _MyNextCard(
-                loading: _loadingAssignment,
-                assignment: _nextAssignment,
-                onOpenSchedule: widget.onSeeSchedule,
-              ),
-              const SizedBox(height: 24),
-              const SectionHeader('This week'),
-              _DevotionalCard(),
-              const SizedBox(height: 24),
-              const SectionHeader('Ministry pulse'),
-              const _QuickActions(),
-              const SizedBox(height: 24),
-              SectionHeader(
-                'Upcoming events',
-                trailing: TextButton(
-                  onPressed: widget.onSeeCalendar,
-                  child: const Text('Calendar'),
+              Entrance(
+                child: _AnimatedHero(
+                  profile: profile,
+                  greeting: _greeting(),
+                  pendingAssignment:
+                      _nextAssignment?.isPending == true ? _nextAssignment : null,
                 ),
               ),
-              _UpcomingEvents(lifeGroup: profile.lifeGroup),
+              const SizedBox(height: 14),
+              if (profile.isAdmin)
+                Entrance(delayMs: 80, child: _LiveStatsRow()),
+              const SizedBox(height: 14),
+              Entrance(
+                delayMs: 140,
+                child: _MyNextCard(
+                  loading: _loadingAssignment,
+                  responding: _responding,
+                  assignment: _nextAssignment,
+                  onOpenSchedule: widget.onSeeSchedule,
+                  onConfirm: (a) => _respond(a, 'CONFIRMED'),
+                  onDecline: (a) => _respond(a, 'DECLINED'),
+                ),
+              ),
               const SizedBox(height: 24),
-              const SectionHeader('Recent activity'),
-              _RecentActivity(uid: profile.id),
+              Entrance(
+                delayMs: 200,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SectionHeader('This week'),
+                    _DevotionalCard(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Entrance(
+                delayMs: 260,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    SectionHeader('Ministry pulse'),
+                    _QuickActions(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Entrance(
+                delayMs: 320,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SectionHeader(
+                      'Upcoming events',
+                      trailing: TextButton(
+                        onPressed: widget.onSeeCalendar,
+                        child: const Text('Calendar'),
+                      ),
+                    ),
+                    _UpcomingEvents(lifeGroup: profile.lifeGroup),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Entrance(
+                delayMs: 380,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SectionHeader('Recent activity'),
+                    _RecentActivity(uid: profile.id),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -119,115 +198,389 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// ─── Hero ────────────────────────────────────────────────────────────────
+// ─── Animated hero ───────────────────────────────────────────────────────
 
-class _Hero extends StatelessWidget {
-  const _Hero({required this.profile, required this.greeting});
+class _AnimatedHero extends StatefulWidget {
+  const _AnimatedHero({
+    required this.profile,
+    required this.greeting,
+    required this.pendingAssignment,
+  });
 
   final UserProfile profile;
   final String greeting;
+  final MyAssignment? pendingAssignment;
+
+  @override
+  State<_AnimatedHero> createState() => _AnimatedHeroState();
+}
+
+class _AnimatedHeroState extends State<_AnimatedHero>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _drift = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 9),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _drift.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: PWColors.clay200.withValues(alpha: 0.7)),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            PWColors.cream,
-            Colors.white,
-            PWColors.gold.withValues(alpha: 0.08),
+    final profile = widget.profile;
+
+    return AnimatedBuilder(
+      animation: _drift,
+      builder: (context, child) {
+        final t = Curves.easeInOut.transform(_drift.value);
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border:
+                Border.all(color: PWColors.clay200.withValues(alpha: 0.7)),
+            gradient: LinearGradient(
+              begin: Alignment(-1 + t * 0.6, -1),
+              end: Alignment(1, 1 - t * 0.5),
+              colors: [
+                PWColors.cream,
+                Colors.white,
+                Color.lerp(
+                  PWColors.gold.withValues(alpha: 0.10),
+                  PWColors.teal.withValues(alpha: 0.10),
+                  t,
+                )!,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: PWColors.clay700.withValues(alpha: 0.07),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Drifting glow orbs.
+              Positioned(
+                top: -38 + t * 14,
+                right: -30,
+                child: _orb(110, PWColors.gold.withValues(alpha: 0.22)),
+              ),
+              Positioned(
+                bottom: -42 - t * 10,
+                left: -26 + t * 16,
+                child: _orb(96, PWColors.teal.withValues(alpha: 0.18)),
+              ),
+              child!,
+            ],
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _PulsingDot(),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('EEEE, MMMM d').format(DateTime.now())
+                      .toUpperCase(),
+                  style: textTheme.labelSmall?.copyWith(
+                    color: PWColors.clay400,
+                    letterSpacing: 1.8,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: '${widget.greeting}, '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [
+                          PWColors.clay700,
+                          PWColors.goldDark,
+                          PWColors.gold,
+                        ],
+                      ).createShader(bounds),
+                      child: Text(
+                        profile.firstName,
+                        style: textTheme.headlineMedium
+                            ?.copyWith(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              style: textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                _chip(context, profile.roleLabel, gold: true),
+                if (profile.lifeGroup != null)
+                  _chip(context, '${profile.lifeGroup} life group'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              child: Text(
+                widget.pendingAssignment != null
+                    ? 'You have a pending '
+                        '${widget.pendingAssignment!.roleName} assignment '
+                        'to confirm. ⤵'
+                    : 'All caught up — have a blessed day. ✨',
+                key: ValueKey(widget.pendingAssignment?.id ?? 'free'),
+                style: textTheme.bodyMedium
+                    ?.copyWith(color: PWColors.clay600, height: 1.4),
+              ),
+            ),
           ],
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(
-                  color: PWColors.gold,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                DateFormat('EEEE, MMMM d').format(DateTime.now()),
-                style: textTheme.labelSmall?.copyWith(
-                  color: PWColors.clay400,
-                  letterSpacing: 1.6,
-                ),
-              ),
-            ],
+    );
+  }
+
+  Widget _orb(double size, Color color) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [color, color.withValues(alpha: 0)],
           ),
-          const SizedBox(height: 10),
-          Text(
-            '$greeting, ${profile.firstName}',
-            style: textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: PWColors.gold.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  profile.roleLabel,
-                  style: textTheme.labelSmall?.copyWith(
-                    color: PWColors.goldDark,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (profile.lifeGroup != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: PWColors.clay200),
-                  ),
-                  child: Text(
-                    '${profile.lifeGroup} life group',
-                    style: textTheme.labelSmall
-                        ?.copyWith(color: PWColors.clay600),
-                  ),
-                ),
-            ],
-          ),
-        ],
+        ),
+      );
+
+  Widget _chip(BuildContext context, String label, {bool gold = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: gold
+            ? PWColors.gold.withValues(alpha: 0.16)
+            : Colors.white.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(999),
+        border: gold ? null : Border.all(color: PWColors.clay200),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: gold ? PWColors.goldDark : PWColors.clay600,
+              fontWeight: gold ? FontWeight.w700 : FontWeight.w500,
+            ),
       ),
     );
   }
 }
 
-// ─── My Next ─────────────────────────────────────────────────────────────
+class _PulsingDot extends StatefulWidget {
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: Tween(begin: 0.45, end: 1.0).animate(_controller),
+      child: Container(
+        width: 7,
+        height: 7,
+        decoration: BoxDecoration(
+          color: PWColors.gold,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: PWColors.gold.withValues(alpha: 0.6),
+              blurRadius: 6,
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Live admin stats with count-up numbers ──────────────────────────────
+
+class _LiveStatsRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final db = FirebaseFirestore.instance;
+    return Row(
+      children: [
+        Expanded(
+          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: db
+                .collection('users')
+                .where('isActive', isEqualTo: true)
+                .snapshots(),
+            builder: (context, snap) => _StatCard(
+              label: 'Members',
+              value: snap.data?.size,
+              icon: Icons.people_outline,
+              color: PWColors.teal,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: db.collection('events').where(
+              'approvalStatus',
+              whereIn: const [
+                'PENDING_DISPATCH',
+                'PENDING_STAKEHOLDERS',
+                'PENDING_VICE_CHAIR',
+                'PENDING_CHAIR',
+              ],
+            ).snapshots(),
+            builder: (context, snap) => _StatCard(
+              label: 'Approvals',
+              value: snap.data?.size,
+              icon: Icons.fact_check_outlined,
+              color: PWColors.goldDark,
+              highlight: (snap.data?.size ?? 0) > 0,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: db
+                .collection('events')
+                .where('startDate',
+                    isGreaterThanOrEqualTo:
+                        Timestamp.fromDate(DateTime.now()))
+                .orderBy('startDate')
+                .limit(10)
+                .snapshots(),
+            builder: (context, snap) {
+              final upcoming = (snap.data?.docs ?? const [])
+                  .map((d) => AppEvent.fromMap(d.id, d.data()))
+                  .where((e) => e.isApproved)
+                  .length;
+              return _StatCard(
+                label: 'Events up',
+                value: snap.hasData ? upcoming : null,
+                icon: Icons.event_outlined,
+                color: const Color(0xFF2563EB),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.highlight = false,
+  });
+
+  final String label;
+  final int? value;
+  final IconData icon;
+  final Color color;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: highlight
+              ? color.withValues(alpha: 0.5)
+              : PWColors.clay200.withValues(alpha: 0.7),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 17, color: color),
+            const SizedBox(height: 8),
+            value == null
+                ? const PulseSkeleton(height: 24, width: 36)
+                : CountUp(
+                    value!,
+                    style: textTheme.headlineSmall
+                        ?.copyWith(color: PWColors.clay700),
+                  ),
+            Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelSmall?.copyWith(
+                color: PWColors.clay400,
+                letterSpacing: 1.1,
+                fontSize: 9.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── My Next (with in-place confirm + confetti) ──────────────────────────
 
 class _MyNextCard extends StatelessWidget {
   const _MyNextCard({
     required this.loading,
+    required this.responding,
     required this.assignment,
     required this.onOpenSchedule,
+    required this.onConfirm,
+    required this.onDecline,
   });
 
   final bool loading;
+  final bool responding;
   final MyAssignment? assignment;
   final VoidCallback onOpenSchedule;
+  final ValueChanged<MyAssignment> onConfirm;
+  final ValueChanged<MyAssignment> onDecline;
 
   @override
   Widget build(BuildContext context) {
@@ -235,116 +588,219 @@ class _MyNextCard extends StatelessWidget {
     final a = assignment;
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
+            // Accent rail
+            Positioned.fill(
+              left: 0,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: 4,
                   decoration: BoxDecoration(
-                    color: PWColors.gold.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.inbox_outlined,
-                      size: 18, color: PWColors.goldDark),
-                ),
-                const SizedBox(width: 10),
-                Text('My Next', style: textTheme.titleMedium),
-                const Spacer(),
-                TextButton(
-                  onPressed: onOpenSchedule,
-                  child: const Text('Full schedule'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (loading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 18),
-                child: Center(
-                  child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              )
-            else if (a == null)
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: PWColors.teal.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: a?.isPending == true
+                          ? [PWColors.gold, PWColors.goldDark]
+                          : [
+                              PWColors.gold.withValues(alpha: 0.6),
+                              PWColors.teal.withValues(alpha: 0.5),
+                            ],
                     ),
-                    child: const Icon(Icons.auto_awesome,
-                        color: PWColors.teal),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                alignment: Alignment.topCenter,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          "You're free right now.",
-                          style: textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                PWColors.gold.withValues(alpha: 0.25),
+                                PWColors.gold.withValues(alpha: 0.1),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.inbox_outlined,
+                              size: 18, color: PWColors.goldDark),
                         ),
-                        Text(
-                          'No upcoming role assignments.',
-                          style: textTheme.bodySmall
-                              ?.copyWith(color: PWColors.clay400),
+                        const SizedBox(width: 10),
+                        Text('My Next', style: textTheme.titleMedium),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: onOpenSchedule,
+                          child: const Text('Full schedule'),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              )
-            else ...[
-              Text(
-                [
-                  if (a.serviceDate != null)
-                    DateFormat('EEE, MMM d').format(a.serviceDate!),
-                  if (a.serviceTime != null) a.serviceTime!,
-                ].join(' · '),
-                style: textTheme.labelSmall?.copyWith(
-                  color: PWColors.clay400,
-                  letterSpacing: 1.4,
+                    const SizedBox(height: 8),
+                    if (loading)
+                      const Column(
+                        children: [
+                          PulseSkeleton(height: 14, width: 140),
+                          SizedBox(height: 8),
+                          PulseSkeleton(height: 22),
+                          SizedBox(height: 8),
+                          PulseSkeleton(height: 14, width: 200),
+                        ],
+                      )
+                    else if (a == null)
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: PWColors.teal.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(Icons.auto_awesome,
+                                color: PWColors.teal),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "You're free right now.",
+                                  style: textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600),
+                                ),
+                                Text(
+                                  'No upcoming role assignments.',
+                                  style: textTheme.bodySmall
+                                      ?.copyWith(color: PWColors.clay400),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      Text(
+                        [
+                          if (a.serviceDate != null)
+                            DateFormat('EEE, MMM d').format(a.serviceDate!),
+                          if (a.serviceTime != null) a.serviceTime!,
+                        ].join(' · ').toUpperCase(),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: PWColors.clay400,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(a.roleName, style: textTheme.titleLarge),
+                      if (a.eventTitle != null || a.venue != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          [a.eventTitle, a.venue]
+                              .whereType<String>()
+                              .join(' · '),
+                          style: textTheme.bodySmall
+                              ?.copyWith(color: PWColors.clay500),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      if (responding)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(6),
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        )
+                      else if (a.isPending)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: PressableScale(
+                                onTap: () => onDecline(a),
+                                child: OutlinedButton(
+                                  onPressed: () => onDecline(a),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: PWColors.destructive,
+                                    side: const BorderSide(
+                                        color: Color(0xFFFECACA)),
+                                  ),
+                                  child: const Text('Decline'),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 2,
+                              child: PressableScale(
+                                onTap: () => onConfirm(a),
+                                child: Container(
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        PWColors.teal,
+                                        PWColors.tealDark,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: PWColors.teal
+                                            .withValues(alpha: 0.4),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      "I'm in — confirm 🙌",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Row(
+                          children: [
+                            StatusBadge(status: a.status),
+                            const Spacer(),
+                            TextButton(
+                              onPressed: onOpenSchedule,
+                              child: const Text('View details'),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(a.roleName, style: textTheme.titleLarge),
-              if (a.eventTitle != null || a.venue != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  [a.eventTitle, a.venue].whereType<String>().join(' · '),
-                  style:
-                      textTheme.bodySmall?.copyWith(color: PWColors.clay500),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  StatusBadge(status: a.status),
-                  const Spacer(),
-                  FilledButton(
-                    onPressed: onOpenSchedule,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: PWColors.gold,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 10),
-                    ),
-                    child: Text(a.isPending ? 'Respond' : 'View'),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ],
         ),
       ),
@@ -364,8 +820,7 @@ class _QuickActions extends StatelessWidget {
         Expanded(
           child: _ActionTile(
             icon: Icons.cabin_outlined,
-            iconColor: const Color(0xFFEA580C),
-            iconBg: const Color(0xFFFFEDD5),
+            colors: const [Color(0xFFFB923C), Color(0xFFEA580C)],
             label: 'ROPs Camp',
             hint: 'Register',
             onTap: () => Navigator.of(context).push(
@@ -377,8 +832,7 @@ class _QuickActions extends StatelessWidget {
         Expanded(
           child: _ActionTile(
             icon: Icons.outdoor_grill_outlined,
-            iconColor: const Color(0xFFDC2626),
-            iconBg: const Color(0xFFFEE2E2),
+            colors: const [Color(0xFFF87171), Color(0xFFDC2626)],
             label: 'Braai orders',
             hint: 'Order food',
             onTap: () => Navigator.of(context).push(
@@ -391,8 +845,7 @@ class _QuickActions extends StatelessWidget {
         Expanded(
           child: _ActionTile(
             icon: Icons.auto_awesome,
-            iconColor: const Color(0xFFDB2777),
-            iconBg: const Color(0xFFFCE7F3),
+            colors: const [Color(0xFFF472B6), Color(0xFFDB2777)],
             label: 'Affirmations',
             hint: 'Read',
             onTap: () => Navigator.of(context).push(
@@ -409,16 +862,14 @@ class _QuickActions extends StatelessWidget {
 class _ActionTile extends StatelessWidget {
   const _ActionTile({
     required this.icon,
-    required this.iconColor,
-    required this.iconBg,
+    required this.colors,
     required this.label,
     required this.hint,
     required this.onTap,
   });
 
   final IconData icon;
-  final Color iconColor;
-  final Color iconBg;
+  final List<Color> colors;
   final String label;
   final String hint;
   final VoidCallback onTap;
@@ -426,25 +877,35 @@ class _ActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
+    return PressableScale(
+      onTap: onTap,
+      child: Card(
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: iconBg,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: colors,
+                  ),
                   borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.last.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Icon(icon, size: 19, color: iconColor),
+                child: Icon(icon, size: 19, color: Colors.white),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 label,
                 maxLines: 1,
@@ -458,8 +919,8 @@ class _ActionTile extends StatelessWidget {
                 hint,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: textTheme.labelSmall
-                    ?.copyWith(color: PWColors.clay400),
+                style:
+                    textTheme.labelSmall?.copyWith(color: PWColors.clay400),
               ),
             ],
           ),
@@ -482,6 +943,20 @@ class _DevotionalCard extends StatelessWidget {
           .limit(1)
           .snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  PulseSkeleton(height: 14, width: 160),
+                  SizedBox(height: 8),
+                  PulseSkeleton(height: 18),
+                ],
+              ),
+            ),
+          );
+        }
         final docs = snapshot.data?.docs ?? const [];
         if (docs.isEmpty) {
           return const Card(
@@ -494,16 +969,16 @@ class _DevotionalCard extends StatelessWidget {
         }
         final devotional =
             Devotional.fromMap(docs.first.id, docs.first.data());
-        return Card(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => showModalBottomSheet<void>(
-              context: context,
-              isScrollControlled: true,
-              showDragHandle: true,
-              backgroundColor: PWColors.cream,
-              builder: (_) => _DevotionalSheet(devotional: devotional),
-            ),
+        return PressableScale(
+          scale: 0.98,
+          onTap: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            showDragHandle: true,
+            backgroundColor: PWColors.cream,
+            builder: (_) => _DevotionalSheet(devotional: devotional),
+          ),
+          child: Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -512,11 +987,23 @@ class _DevotionalCard extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF3E8FF),
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFFA78BFA), Color(0xFF7C3AED)],
+                      ),
                       borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF7C3AED)
+                              .withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: const Icon(Icons.menu_book_outlined,
-                        color: Color(0xFF7C3AED)),
+                        color: Colors.white),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -524,10 +1011,11 @@ class _DevotionalCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "This week's devotional",
+                          "THIS WEEK'S DEVOTIONAL",
                           style: textTheme.labelSmall?.copyWith(
                             color: PWColors.clay400,
-                            letterSpacing: 1.4,
+                            letterSpacing: 1.6,
+                            fontSize: 9.5,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -621,13 +1109,13 @@ class _UpcomingEvents extends StatelessWidget {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Card(
             child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
+              padding: EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  PulseSkeleton(height: 44),
+                  SizedBox(height: 10),
+                  PulseSkeleton(height: 44),
+                ],
               ),
             ),
           );
@@ -669,6 +1157,9 @@ class _EventRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final daysAway = event.startDate
+        .difference(DateTime.now())
+        .inDays;
     return InkWell(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => EventDetailScreen(event: event)),
@@ -681,7 +1172,14 @@ class _EventRow extends StatelessWidget {
               width: 48,
               padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
-                color: PWColors.cream,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    PWColors.cream,
+                    PWColors.gold.withValues(alpha: 0.12),
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                     color: PWColors.clay200.withValues(alpha: 0.7)),
@@ -719,14 +1217,22 @@ class _EventRow extends StatelessWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      EventTypeChip(
-                          type: event.type, label: event.typeLabel),
+                      EventTypeChip(type: event.type, label: event.typeLabel),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          event.venue,
-                          style: textTheme.bodySmall
-                              ?.copyWith(color: PWColors.clay400),
+                          daysAway <= 0
+                              ? 'Today!'
+                              : daysAway == 1
+                                  ? 'Tomorrow'
+                                  : 'In $daysAway days · ${event.venue}',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: daysAway <= 1
+                                ? PWColors.goldDark
+                                : PWColors.clay400,
+                            fontWeight:
+                                daysAway <= 1 ? FontWeight.w700 : null,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

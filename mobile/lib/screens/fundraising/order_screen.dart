@@ -7,6 +7,7 @@ import '../../models/fundraising.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/motion.dart';
 
 /// Potter's Shockers braai ordering — the mobile version of
 /// /fundraising/order. Loads the live menu and upcoming braais from the
@@ -149,6 +150,8 @@ class _FundraisingOrderScreenState extends State<FundraisingOrderScreen> {
           _quantities.clear();
           _notes.clear();
         });
+        await showCelebration(context);
+        if (!mounted) return;
         await showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
