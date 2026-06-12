@@ -7,6 +7,10 @@ import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import 'camp/camp_admin_screen.dart';
+import 'community/affirmations_manage_screen.dart';
+import 'community/departments_screen.dart';
+import 'community/devotionals_manage_screen.dart';
+import 'community/followups_screen.dart';
 import 'events/approvals_screen.dart';
 import 'events/create_event_screen.dart';
 import 'events/events_manage_screen.dart';
@@ -115,6 +119,28 @@ class ManageHub extends StatelessWidget {
             (_) => const CampAdminScreen()),
     ];
     if (programs.isNotEmpty) sections.add(('Programs', programs));
+
+    final community = <_Tool>[
+      if (feature('submit_follow_up') ||
+          feature('manage_follow_ups') ||
+          feature('view_assigned_follow_ups') ||
+          feature('approve_follow_up'))
+        _Tool('Follow-ups', 'Discipleship pipeline', Icons.favorite_outline,
+            const Color(0xFFE11D48), (_) => const FollowUpsScreen()),
+      if (feature('manage_devotionals') ||
+          feature('manage_life_group_devotionals'))
+        _Tool('Devotionals', 'Post the weekly word',
+            Icons.menu_book_outlined, const Color(0xFF7C3AED),
+            (_) => const DevotionalsManageScreen()),
+      if (feature('manage_affirmations'))
+        _Tool('Affirmations', 'Encourage the team', Icons.auto_awesome,
+            const Color(0xFFDB2777),
+            (_) => const AffirmationsManageScreen()),
+      if (page('departments'))
+        _Tool('Departments', 'Members & task boards', Icons.groups_outlined,
+            PWColors.teal, (_) => const DepartmentsScreen()),
+    ];
+    if (community.isNotEmpty) sections.add(('Community', community));
 
     return sections;
   }
