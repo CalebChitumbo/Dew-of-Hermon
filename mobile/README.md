@@ -13,31 +13,46 @@ the website changes:
 
 Anything done in the app appears on the website instantly, and vice versa.
 
-## What's implemented (Phase 1 — member app)
+## What's implemented
 
-- **Sign in / register / forgot password** — same accounts as the website.
-  Registration supports life group + student (auto-joins Campus Ministry,
-  handled server-side by `/api/auth/login` exactly like the web).
-- **Home** — greeting hero, "My Next" assignment with respond shortcut,
-  this week's devotional (full reader), upcoming events, recent activity.
-- **Calendar** — month view with event markers and per-day agenda.
-- **Serve (My Schedule)** — upcoming/past assignments (services *and*
-  fundraising braais), confirm/decline via the same API the website calls,
-  plus "I'm unavailable on…" dates.
-- **Alerts** — real-time notifications with unread badge, mark-as-read,
-  mark-all-read.
-- **Profile** — role/life group, enable push notifications, sign out.
-- **ROPs Camp** — live capacity, full registration form (self or someone
-  else, health/logistics/guardian/emergency sections), my registrations
-  with payment status and mobile-money payment instructions.
-- **Braai orders (Potter's Shockers)** — live menu with quantity steppers,
-  pickup-time choice, order submission with order number + MoMo details;
-  orders land in the same kitchen queue the web manage pages show.
-- **Affirmations** — encouragement feed from the same collection as the web.
+**Member features** — sign in / register / forgot password (same accounts
+as the website), home dashboard (greeting, My Next assignment, weekly
+devotional reader, quick actions, upcoming events, recent activity),
+calendar with per-day agenda, My Schedule (service + braai assignments
+with confirm/decline, unavailability dates), real-time notifications with
+unread badge, ROPs Camp registration with payment instructions, braai
+food ordering, affirmations feed, profile with push enrolment.
 
-Not yet ported (use the website meanwhile — data stays in sync): follow-up
-cards, devotional archive pages, and all leader/admin tooling (approvals,
-members, finance, reports, settings).
+**Leadership features** (Manage tab, permission-gated with the same
+access-control system as the web — including the saved
+settings/accessControl overrides):
+
+- **Events** — full approval chain (dispatch stakeholders → Events Lead →
+  Vice Chair → Chairperson) with live stakeholder status chips; create
+  event form incl. transport/budget/media/food needs; all-events list
+  with status filters
+- **Services & rotas** — create services, assign roles from a member
+  picker, unassign, send reminders, preparation checklist
+- **Members** — directory with filters, add/edit roles, departments,
+  leadership, active flag, super-admin delete
+- **Coordination queues** — Finance (treasurer budget decisions),
+  Transport (costing + treasurer decision), Media (confirm + assign
+  Sound/Publicity/Coverage), Food (catering plan + optional budget)
+- **Programs** — braai planning with the 12-responsibility roster and
+  the live kitchen/order queue (mark paid, prep status); ROPs Camp
+  admin (registrations, payment marking, capacity)
+- **Community** — follow-up pipeline (submit/approve/assign/progress),
+  weekly devotionals for both scopes, affirmations management,
+  departments with member lists and task boards
+- **Reports** — post-event questionnaires (draft/submit) and the
+  reviewer queue (mark reviewed / request changes)
+- **Settings** — institutions list
+
+**Deliberately web-only** (rarely used, config-heavy, or PDF-export
+based — the app fully *respects* their effects): the access-control
+permissions editor, service role/email template editor, the Latreou
+worship planner, the analytics/PDF reports dashboard, editing an event
+after submission, and per-event department role generation.
 
 ## One-time setup
 

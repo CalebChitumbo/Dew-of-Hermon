@@ -20,7 +20,10 @@ import 'queues/finance_screen.dart';
 import 'queues/food_screen.dart';
 import 'queues/media_screen.dart';
 import 'queues/transport_screen.dart';
+import 'reports/event_reports_screen.dart';
+import 'reports/review_reports_screen.dart';
 import 'services/services_screen.dart';
+import 'settings/institutions_screen.dart';
 
 class _Tool {
   const _Tool(this.label, this.hint, this.icon, this.color, this.builder);
@@ -141,6 +144,25 @@ class ManageHub extends StatelessWidget {
             PWColors.teal, (_) => const DepartmentsScreen()),
     ];
     if (community.isNotEmpty) sections.add(('Community', community));
+
+    final reports = <_Tool>[
+      if (feature('submit_event_report'))
+        _Tool('My reports', 'Post-event questionnaires',
+            Icons.assignment_outlined, const Color(0xFF2563EB),
+            (_) => const EventReportsScreen()),
+      if (feature('review_event_reports') || page('event_reports_review'))
+        _Tool('Report reviews', 'Approve submitted reports',
+            Icons.rate_review_outlined, const Color(0xFF7C3AED),
+            (_) => const ReviewReportsScreen()),
+    ];
+    if (reports.isNotEmpty) sections.add(('Reports', reports));
+
+    final settings = <_Tool>[
+      if (feature('manage_institutions'))
+        _Tool('Institutions', 'Campuses & schools', Icons.school_outlined,
+            PWColors.teal, (_) => const InstitutionsScreen()),
+    ];
+    if (settings.isNotEmpty) sections.add(('Settings', settings));
 
     return sections;
   }
