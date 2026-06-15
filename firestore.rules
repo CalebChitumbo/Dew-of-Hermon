@@ -202,6 +202,19 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // ─── Department Join Requests ───
+    // A member's request to join a department, flowing through the
+    // Manager → Chairperson approval chain. The requester can read their own
+    // request; department leads (and admins/chair) can read all so the
+    // approval queue works. All writes go through the API, which enforces
+    // the workflow transitions, role gating, and department-membership update.
+    match /departmentJoinRequests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isDeptLead()
+      );
+      allow write: if false;
+    }
+
     // ─── Institutions ───
     match /institutions/{instId} {
       allow read: if true; // Public — needed for registration form (unauthenticated users)

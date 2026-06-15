@@ -62,6 +62,7 @@ import type {
   Notification,
   Devotional,
   FollowUpCard,
+  DepartmentJoinRequestStatus,
 } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -332,6 +333,12 @@ export default function DashboardPage() {
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [activeMemberCount, setActiveMemberCount] = useState(0);
   const [followUps, setFollowUps] = useState<FollowUpCard[]>([]);
+
+  // Department join requests (mine + the queue actionable by leads/chair)
+  const [myJoinRequests, setMyJoinRequests] = useState<
+    { id: string; status: DepartmentJoinRequestStatus; departmentName: string }[]
+  >([]);
+  const [actionableJoinCount, setActionableJoinCount] = useState(0);
 
   // Fundraising braai (for chairperson + Fundraising lead)
   const [nextBraai, setNextBraai] = useState<{
@@ -812,6 +819,63 @@ export default function DashboardPage() {
     return unsub;
   }, [userData]);
 
+  // My own department join requests — drives the "Join a department" tile.
+  useEffect(() => {
+    if (!userData) return;
+    const q = query(
+      safeCollection("departmentJoinRequests"),
+      where("userId", "==", userData.id)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) =>
+        setMyJoinRequests(
+          snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              status: data.status as DepartmentJoinRequestStatus,
+              departmentName: (data.departmentName as string) || "a department",
+            };
+          })
+        ),
+      () => setMyJoinRequests([])
+    );
+    return unsub;
+  }, [userData]);
+
+  // Join requests awaiting this user (managers & chair). Reads are only
+  // permitted for department leads and above; lower roles fail silently.
+  useEffect(() => {
+    if (!userData || !hasMinRole(userData.role, "DEPARTMENT_LEAD")) {
+      setActionableJoinCount(0);
+      return;
+    }
+    const isAdminRole = hasMinRole(userData.role, "ADMIN");
+    const isChair = userData.role === "SUPER_ADMIN";
+    const leadSet = new Set(userData.leadsDepartmentIds || []);
+    const unsub = onSnapshot(
+      safeCollection("departmentJoinRequests"),
+      (snap) => {
+        let count = 0;
+        snap.docs.forEach((d) => {
+          const data = d.data();
+          if (
+            data.status === "PENDING_MANAGER" &&
+            (isAdminRole || leadSet.has(data.departmentId))
+          ) {
+            count += 1;
+          } else if (data.status === "PENDING_CHAIR" && isChair) {
+            count += 1;
+          }
+        });
+        setActionableJoinCount(count);
+      },
+      () => setActionableJoinCount(0)
+    );
+    return unsub;
+  }, [userData]);
+
   // Next upcoming fundraising braai for the dashboard tile.
   //
   // We pull from the API (which uses the Admin SDK and so works even before
@@ -981,6 +1045,16 @@ export default function DashboardPage() {
   const isAdmin = userData ? hasMinRole(userData.role, "ADMIN") : false;
   const isDeptLead = userData?.role === "DEPARTMENT_LEAD";
   const isYouthLeader = userData?.role === "YOUTH_LEADER";
+  const isManagerOrChair = userData
+    ? hasMinRole(userData.role, "DEPARTMENT_LEAD")
+    : false;
+  const myPendingJoinRequest = useMemo(
+    () =>
+      myJoinRequests.find(
+        (r) => r.status === "PENDING_MANAGER" || r.status === "PENDING_CHAIR"
+      ) || null,
+    [myJoinRequests]
+  );
 
   const totalRoles = allRoles.length;
   const filledCount = assignments.length;
@@ -1315,6 +1389,23 @@ export default function DashboardPage() {
             />
           )}
 
+          {/* Department join requests — managers & chairperson */}
+          {isManagerOrChair && (
+            <PulseTile
+              href="/manage/department-requests"
+              icon={ClipboardCheck}
+              iconTone="bg-indigo-50 text-indigo-600"
+              label="Department requests"
+              value={actionableJoinCount}
+              hint={
+                actionableJoinCount > 0
+                  ? "Members waiting to join"
+                  : "No join requests waiting"
+              }
+              highlight={actionableJoinCount > 0}
+            />
+          )}
+
           {/* Follow-ups — discipleship/campus/life-groups departments */}
           {showFollowUpsTile && (
             <PulseTile
@@ -1357,6 +1448,23 @@ export default function DashboardPage() {
               label="Active members"
               value={activeMemberCount}
               hint="Directory & roles"
+            />
+          )}
+
+          {/* Join a department — members & leads (entry point for joining) */}
+          {!isAdmin && (
+            <PulseTile
+              href="/department/join"
+              icon={UserPlus}
+              iconTone="bg-teal/10 text-teal"
+              label="Join a department"
+              value={myPendingJoinRequest ? "Pending" : "Browse"}
+              hint={
+                myPendingJoinRequest
+                  ? `${myPendingJoinRequest.departmentName} request in review`
+                  : "Find a place to serve"
+              }
+              highlight={false}
             />
           )}
 

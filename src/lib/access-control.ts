@@ -35,6 +35,14 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
   {
+    key: "department_join_requests",
+    label: "Department Join Requests",
+    description:
+      "Manager recommendations and Chairperson approvals for members requesting to join a department",
+    route: "/manage/department-requests",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
+  {
     key: "services",
     label: "Services & Rotas",
     description: "Service management and role assignments",
@@ -203,6 +211,14 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  department_join_requests: {
+    SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "edit",
     YOUTH_LEADER: "none",
     MEMBER: "none",
   },
