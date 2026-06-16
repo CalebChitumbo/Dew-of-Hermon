@@ -22,7 +22,7 @@ export default function CalendarLayout({ children }: { children: React.ReactNode
   if (!firebaseUser) return null;
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-[#FAF7F4]">
       <Sidebar />
       <Header />
       <main className="lg:pl-64 pb-20 lg:pb-0">
