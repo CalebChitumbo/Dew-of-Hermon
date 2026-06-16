@@ -182,57 +182,24 @@ function ReadinessRing({
   );
 }
 
-// ─── Hero decorative art (sits on the shared hero wash) ──────────────────
+// ─── Hero sanctuary image (flush to the left edge, full height) ──────────
 
 function HeroArt() {
   return (
-    <div className="relative h-44 md:h-auto md:w-[38%] lg:w-[40%] shrink-0 md:min-h-[300px]">
-      {/* Full altar art floats on the shared cream wash; its surround is
-          transparent, so it blends seamlessly into the greeting panel. If the
-          asset is missing, the section gradient simply shows through. */}
+    <div className="relative h-44 w-full md:h-auto md:w-[300px] lg:w-[330px] shrink-0">
+      {/* Tall portrait inset: fills the left of the banner and bleeds to the
+          edges. If the asset is missing, the cream banner shows through. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/images/dashboard/welcome-hero.png"
         alt=""
         aria-hidden
-        className="absolute inset-0 h-full w-full object-contain object-center md:object-[left_bottom] p-3 md:p-4"
+        className="absolute inset-0 h-full w-full object-cover object-center"
         onError={(e) => {
           e.currentTarget.style.display = "none";
         }}
       />
     </div>
-  );
-}
-
-// ─── Hero gold flourish (crisp SVG sweep — no image asset needed) ────────
-
-function HeroFlourish() {
-  const N = 9;
-  const curves = Array.from({ length: N }).map((_, i) => {
-    const t = i / (N - 1);
-    const o = (t - 0.5) * 64; // vertical spread for the fanned ribbon
-    return `M -40 ${250 + o * 0.25} C 250 ${230 + o}, 470 ${90 + o}, 900 ${30 + o * 0.7}`;
-  });
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 900 300"
-      preserveAspectRatio="none"
-      className="pointer-events-none absolute right-0 top-0 h-full w-[82%]"
-    >
-      <defs>
-        <linearGradient id="heroGold" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0%" stopColor="#E8C879" />
-          <stop offset="55%" stopColor="#C8963E" />
-          <stop offset="100%" stopColor="#ECD49A" />
-        </linearGradient>
-      </defs>
-      <g fill="none" stroke="url(#heroGold)" strokeOpacity="0.34" strokeWidth="0.7">
-        {curves.map((d, i) => (
-          <path key={i} d={d} />
-        ))}
-      </g>
-    </svg>
   );
 }
 
@@ -268,7 +235,7 @@ interface StatItemData {
 function StatStrip({ items }: { items: StatItemData[] }) {
   if (items.length === 0) return null;
   return (
-    <Card className="border-clay-200/70 overflow-hidden">
+    <Card className="border-clay-100/70 shadow-none bg-white/55 overflow-hidden rounded-2xl">
       <div className="flex flex-col divide-y divide-clay-100 md:flex-row md:divide-y-0 md:divide-x">
         {items.map((it) => {
           const Icon = it.icon;
@@ -280,7 +247,7 @@ function StatStrip({ items }: { items: StatItemData[] }) {
             >
               <div className="flex items-center justify-between">
                 <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-full ${it.iconTone} ring-1 ring-inset ring-white/50 shadow-sm`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full ${it.iconTone}`}
                 >
                   <Icon className="h-4 w-4" />
                 </span>
@@ -330,16 +297,12 @@ function FeatureShell({
 }) {
   return (
     <Link href={href} className="group block h-full focus:outline-none">
-      <Card className="relative h-full overflow-hidden border-clay-200/70 bg-gradient-to-br from-white to-cream/60 transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-gold/50 group-hover:shadow-[0_10px_30px_-12px_rgba(200,150,62,0.35)] group-focus-visible:ring-2 group-focus-visible:ring-gold/50">
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-gold/0 via-gold/40 to-gold/0 opacity-0 group-hover:opacity-100 transition-opacity"
-        />
+      <Card className="relative h-full overflow-hidden border-clay-100/70 bg-white/55 shadow-none transition-all duration-200 ease-out group-hover:bg-white group-hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)] group-focus-visible:ring-2 group-focus-visible:ring-gold/40">
         {accent}
         <CardContent className="relative p-5 flex flex-col h-full min-h-[150px]">
           <div className="flex items-center justify-between">
             <span
-              className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconTone} ring-1 ring-inset ring-white/50 shadow-sm transition-transform duration-300 group-hover:scale-105`}
+              className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconTone} transition-transform duration-300 group-hover:scale-105`}
             >
               <Icon className="h-5 w-5" />
             </span>
@@ -1394,7 +1357,7 @@ export default function DashboardPage() {
     statItems.push({
       href: "/manage/services",
       icon: ClipboardList,
-      iconTone: "bg-gold/10 text-gold-dark",
+      iconTone: "bg-[#E6EDE4] text-[#6E8A6C]",
       label: isDeptLead ? "Dept readiness" : "Service readiness",
       value: scopedTotal > 0 ? `${scopedFilled}/${scopedTotal}` : "—",
       hint:
@@ -1410,7 +1373,7 @@ export default function DashboardPage() {
     statItems.push({
       href: "/manage/events/approvals",
       icon: ClipboardCheck,
-      iconTone: "bg-blue-50 text-blue-600",
+      iconTone: "bg-[#E6E8F6] text-[#6E74B8]",
       label: "Pending approvals",
       value: pendingApprovalCount,
       hint: pendingApprovalCount > 0 ? "Events awaiting you" : "Nothing waiting",
@@ -1421,7 +1384,7 @@ export default function DashboardPage() {
     statItems.push({
       href: "/manage/department-requests",
       icon: ClipboardCheck,
-      iconTone: "bg-indigo-50 text-indigo-600",
+      iconTone: "bg-[#EEE6F5] text-[#8A6CB0]",
       label: "Department requests",
       value: actionableJoinCount,
       hint:
@@ -1435,7 +1398,7 @@ export default function DashboardPage() {
     statItems.push({
       href: "/department/discipleship",
       icon: Heart,
-      iconTone: "bg-rose-50 text-rose-600",
+      iconTone: "bg-[#F6E6EA] text-[#BC7488]",
       label: "Active follow-ups",
       value: activeFollowUpCount,
       hint:
@@ -1452,107 +1415,86 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 md:space-y-8">
-      {/* ── Welcome Hero ─────────────────────────────────────────────── */}
+      {/* ── Welcome Hero (full-bleed banner) ─────────────────────────── */}
       <section
-        className="relative overflow-hidden rounded-2xl border border-clay-200/70 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]"
+        className="relative overflow-hidden -mx-4 -mt-4 md:-mx-6 md:-mt-6 lg:-mx-8 lg:-mt-8"
         style={{
           backgroundImage:
-            "radial-gradient(115% 85% at 10% 22%, #F6E6C6 0%, rgba(246,230,198,0) 55%), radial-gradient(95% 120% at 100% 0%, rgba(200,150,62,0.22), transparent 50%), radial-gradient(80% 110% at 98% 100%, rgba(74,155,142,0.12), transparent 52%), linear-gradient(105deg, #F4E3C0 0%, #FBEFDF 42%, #FFFBF4 78%, #FFFDFB 100%)",
+            "linear-gradient(105deg, #FDF6EC 0%, #F5EBD8 55%, #EFE4D0 100%)",
         }}
       >
-        {/* Soft decorative glows */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -top-24 right-16 h-64 w-64 rounded-full bg-gold/25 blur-3xl"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -bottom-16 left-1/3 h-44 w-44 rounded-full bg-teal/10 blur-3xl"
-        />
-        {/* Elegant gold flowing lines on the right */}
-        <HeroFlourish />
-        <div className="relative flex flex-col md:flex-row md:items-stretch">
-          {/* Decorative sanctuary art (left on desktop, banner on mobile) */}
+        <div className="flex flex-col md:flex-row md:items-stretch md:min-h-[340px]">
+          {/* Sanctuary image — flush to the left edge, full height */}
           <HeroArt />
-          {/* Greeting + stats panel */}
-          <div className="relative flex flex-1 flex-col justify-center p-6 md:p-8 md:pl-2">
+          {/* Greeting + integrated stats */}
+          <div className="relative flex flex-1 flex-col justify-center px-6 py-8 md:px-10 md:py-10">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="min-w-0">
+                <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-clay-400">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
+                  {format(now, "EEEE, MMMM d")}
+                </p>
+                <h1 className="text-3xl md:text-4xl font-display font-bold text-clay-700 mt-2 leading-tight">
+                  {greeting(now)},{" "}
+                  <span className="bg-gradient-to-r from-clay-700 via-gold-dark to-gold bg-clip-text text-transparent">
+                    {userData.name.split(" ")[0]}
+                  </span>
+                </h1>
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  <Badge variant="gold" className="text-xs">
+                    {roleLabels[userData.role]}
+                  </Badge>
+                  {userData.lifeGroup && (
+                    <Badge variant="outline" className="text-xs bg-white/60 backdrop-blur-sm">
+                      {userData.lifeGroup} life group
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm md:text-base text-clay-600 mt-4 max-w-2xl leading-relaxed">
+                  {headline}
+                </p>
+              </div>
 
-        <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-          <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-clay-400">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-gold" />
-              {format(now, "EEEE, MMMM d")}
-            </p>
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-clay-700 mt-2 leading-tight">
-              {greeting(now)},{" "}
-              <span className="bg-gradient-to-r from-clay-700 via-gold-dark to-gold bg-clip-text text-transparent">
-                {userData.name.split(" ")[0]}
-              </span>
-            </h1>
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <Badge variant="gold" className="text-xs">
-                {roleLabels[userData.role]}
-              </Badge>
-              {userData.lifeGroup && (
-                <Badge variant="outline" className="text-xs bg-white/60 backdrop-blur-sm">
-                  {userData.lifeGroup} life group
-                </Badge>
+              {/* Stats — integrated white panel, soft shadow only */}
+              {isAdmin && (
+                <div className="shrink-0 rounded-2xl bg-white/85 px-5 py-4 md:px-6 md:py-5 shadow-[0_8px_30px_-14px_rgba(91,58,41,0.20)]">
+                  <div className="grid grid-cols-3 gap-5 md:gap-7 divide-x divide-clay-100">
+                    <div className="text-center pr-1">
+                      <p className="text-2xl md:text-3xl font-display font-bold text-clay-700 leading-none">
+                        {activeMemberCount}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
+                        Members
+                      </p>
+                    </div>
+                    <div className="text-center px-1">
+                      <p className="text-2xl md:text-3xl font-display font-bold text-gold-dark leading-none">
+                        {pendingApprovalCount}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
+                        Approvals
+                      </p>
+                    </div>
+                    <div className="text-center pl-1">
+                      <p className="text-2xl md:text-3xl font-display font-bold text-teal leading-none">
+                        {activeFollowUpCount}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
+                        Follow-ups
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-            <p className="text-sm md:text-base text-clay-600 mt-4 max-w-2xl leading-relaxed">
-              {headline}
-            </p>
-          </div>
-
-          {/* Admin mini-stats */}
-          {isAdmin && (
-            <div className="relative shrink-0 rounded-xl border border-clay-200/60 bg-white/70 backdrop-blur-sm px-4 py-3 md:px-5 md:py-4 shadow-sm">
-              <div className="grid grid-cols-3 gap-5 md:gap-6 divide-x divide-clay-100">
-                <div className="text-center pr-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-clay-700 leading-none">
-                    {activeMemberCount}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
-                    Members
-                  </p>
-                </div>
-                <div className="text-center px-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-gold-dark leading-none">
-                    {pendingApprovalCount}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
-                    Approvals
-                  </p>
-                </div>
-                <div className="text-center pl-1">
-                  <p className="text-2xl md:text-3xl font-display font-bold text-teal leading-none">
-                    {activeFollowUpCount}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-clay-400 mt-1.5">
-                    Follow-ups
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
           </div>
         </div>
       </section>
 
       {/* ── My Next ─────────────────────────────────────────────────── */}
       <section>
-        <Card className="relative overflow-hidden border-clay-200/70">
-          {/* Left accent rail — gold normally, amber if pending action */}
-          <span
-            aria-hidden
-            className={`absolute inset-y-0 left-0 w-1 ${
-              myAssignment?.assignment.status === "PENDING"
-                ? "bg-gradient-to-b from-gold via-gold-dark to-gold"
-                : "bg-gradient-to-b from-gold/60 via-teal/50 to-teal/40"
-            }`}
-          />
-          <CardHeader className="pb-3 pl-6">
+        <Card className="relative overflow-hidden border-clay-100/70 bg-white/55 shadow-none">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-inset ring-gold/20">
@@ -1829,7 +1771,7 @@ export default function DashboardPage() {
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming events — spans 2 columns */}
-        <Card className="lg:col-span-2 border-clay-200/70">
+        <Card className="lg:col-span-2 border-clay-100/70 shadow-none bg-white/55">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -2035,7 +1977,7 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <Card className="border-clay-200/70">
+          <Card className="border-clay-100/70 shadow-none bg-white/55">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -2079,7 +2021,7 @@ export default function DashboardPage() {
       {(isAdmin || isDeptLead) && nextEvent && (
         <section>
           <Card
-            className="relative overflow-hidden border-clay-200/70"
+            className="relative overflow-hidden border-clay-100/70 shadow-none"
             style={{
               backgroundImage:
                 "linear-gradient(135deg, #FFFFFF 0%, #FFF8F0 60%, rgba(200,150,62,0.05) 100%)",
