@@ -28,6 +28,7 @@ import {
   HeartHandshake,
   Inbox,
   ShieldCheck,
+  UserPlus,
 } from "lucide-react";
 import { canAccessPage } from "@/lib/access-control";
 import type { PagePermissions, UserRole } from "@/types";
@@ -92,6 +93,7 @@ const MINISTRIES: NavGroup = {
   icon: HeartHandshake,
   items: [
     { label: "Departments", href: "/departments", icon: Building2, pageKey: "departments" },
+    { label: "Join Requests", href: "/manage/department-requests", icon: UserPlus, pageKey: "department_join_requests" },
     { label: "Campus Ministry", href: "/department/campus-ministry", icon: GraduationCap, pageKey: "campus_ministry" },
     { label: "Life Groups", href: "/department/life-groups", icon: UsersRound, pageKey: "life_groups" },
     { label: "Discipleship", href: "/department/discipleship", icon: Heart, pageKey: "discipleship" },

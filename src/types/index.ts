@@ -45,6 +45,13 @@ export type FoodRequestStatus =
   | "DECLINED"
   | "CANCELLED";
 
+export type DepartmentJoinRequestStatus =
+  | "PENDING_MANAGER"
+  | "PENDING_CHAIR"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED";
+
 export type FollowUpStatus =
   | "PENDING_LEAD_APPROVAL"
   | "REJECTED"
@@ -297,6 +304,51 @@ export interface FoodRequest {
   confirmedAt: Date | null;
 
   statusHistory: FoodRequestStatusHistoryEntry[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DepartmentJoinRequestHistoryEntry {
+  status: DepartmentJoinRequestStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+/**
+ * A member's request to join a department. Flows through a two-stage
+ * approval chain: the department Manager (DEPARTMENT_LEAD) recommends it,
+ * then the Chairperson (SUPER_ADMIN) gives final approval, at which point
+ * the member is added to the department. Departments with no manager skip
+ * straight to the Chairperson.
+ */
+export interface DepartmentJoinRequest {
+  id: string;
+  departmentId: string;
+  departmentName: string;
+
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+  /** Optional note from the requester ("why I'd like to join"). */
+  message: string | null;
+
+  status: DepartmentJoinRequestStatus;
+
+  // Manager recommendation stage
+  managerId: string | null;
+  managerName: string | null;
+  managerDecidedAt: Date | null;
+  managerComments: string | null;
+
+  // Chairperson final decision stage
+  chairId: string | null;
+  chairName: string | null;
+  chairDecidedAt: Date | null;
+  chairComments: string | null;
+
+  statusHistory: DepartmentJoinRequestHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }

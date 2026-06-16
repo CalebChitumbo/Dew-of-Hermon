@@ -153,7 +153,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md border-clay-200 shadow-lg">
+      <Card className="w-full max-w-md border-clay-200 bg-white shadow-lg">
       <CardHeader className="text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
