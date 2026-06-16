@@ -1457,17 +1457,6 @@ export default function DashboardPage() {
               aria-hidden
               className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-gold/15 blur-3xl"
             />
-            {/* Optional gold flourish along the bottom — self-hides if absent */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/dashboard/hero-flourish.png"
-              alt=""
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 w-full select-none opacity-40"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
 
         <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div className="min-w-0">
