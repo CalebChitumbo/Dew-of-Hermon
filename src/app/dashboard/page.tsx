@@ -182,43 +182,23 @@ function ReadinessRing({
   );
 }
 
-// ─── Hero decorative art (graceful fallback to a gradient) ───────────────
+// ─── Hero decorative art (sits on the shared hero wash) ──────────────────
 
 function HeroArt() {
   return (
-    <div className="relative w-full md:w-[34%] lg:w-[36%] shrink-0 overflow-hidden min-h-[180px] md:min-h-[260px]">
-      {/* Fallback wash + orbs — always rendered, sit behind the photo */}
-      <div
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 30% 25%, rgba(200,150,62,0.20), transparent 60%), radial-gradient(circle at 75% 80%, rgba(74,155,142,0.16), transparent 60%), linear-gradient(135deg, #FBF1E2 0%, #FFFFFF 75%)",
-        }}
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -top-10 -left-8 h-40 w-40 rounded-full bg-gold/25 blur-3xl"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0 h-32 w-32 rounded-full bg-teal/15 blur-3xl"
-      />
-      {/* Decorative photo — hides itself until the asset is dropped in */}
+    <div className="relative h-44 md:h-auto md:w-[38%] lg:w-[40%] shrink-0 md:min-h-[300px]">
+      {/* Full altar art floats on the shared cream wash; its surround is
+          transparent, so it blends seamlessly into the greeting panel. If the
+          asset is missing, the section gradient simply shows through. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/images/dashboard/welcome-hero.png"
         alt=""
         aria-hidden
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-contain object-center md:object-[left_bottom] p-3 md:p-4"
         onError={(e) => {
           e.currentTarget.style.display = "none";
         }}
-      />
-      {/* Soft seam where the art meets the greeting panel */}
-      <div
-        aria-hidden
-        className="hidden md:block absolute inset-y-0 -right-px w-20 bg-gradient-to-r from-transparent to-white/80"
       />
     </div>
   );
@@ -1441,22 +1421,27 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 md:space-y-8">
       {/* ── Welcome Hero ─────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden rounded-2xl border border-clay-200/70 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]">
-        <div className="flex flex-col md:flex-row">
+      <section
+        className="relative overflow-hidden rounded-2xl border border-clay-200/70 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 90% 12%, rgba(200,150,62,0.12), transparent 42%), radial-gradient(circle at 96% 105%, rgba(74,155,142,0.07), transparent 55%), linear-gradient(100deg, #FAF0DF 0%, #FFF8EF 48%, #FFFDFA 100%)",
+        }}
+      >
+        {/* Soft decorative glows */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-20 right-10 h-56 w-56 rounded-full bg-gold/15 blur-3xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -bottom-16 left-1/3 h-44 w-44 rounded-full bg-teal/10 blur-3xl"
+        />
+        <div className="relative flex flex-col md:flex-row md:items-stretch">
           {/* Decorative sanctuary art (left on desktop, banner on mobile) */}
           <HeroArt />
           {/* Greeting + stats panel */}
-          <div
-            className="relative flex-1 p-6 md:p-8"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 100% 0%, rgba(200,150,62,0.10), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.08), transparent 50%), linear-gradient(135deg, #FFFFFF 0%, #FFF8F0 70%, rgba(200,150,62,0.06) 100%)",
-            }}
-          >
-            <span
-              aria-hidden
-              className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-gold/15 blur-3xl"
-            />
+          <div className="relative flex flex-1 flex-col justify-center p-6 md:p-8 md:pl-2">
 
         <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div className="min-w-0">
