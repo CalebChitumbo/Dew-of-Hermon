@@ -419,19 +419,29 @@ function Sparkline({ data, className = "" }: { data: number[]; className?: strin
   );
 }
 
-// ─── Mini calendar chip (today's date) ───────────────────────────────────
+// ─── Mini calendar chip (today's date, desk-calendar styling) ────────────
 
 function MiniCalendar({ date }: { date: Date }) {
   return (
-    <div className="inline-flex w-14 flex-col items-center overflow-hidden rounded-xl border border-clay-200/70 bg-white shadow-sm">
-      <div className="w-full bg-gradient-to-br from-gold to-gold-dark py-1 text-center">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-white">
+    <div className="relative w-16 shrink-0 pt-2">
+      {/* Spiral binding rings */}
+      <div className="absolute top-0 left-0 right-0 z-10 flex justify-center gap-2">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="h-3 w-1.5 rounded-full bg-gradient-to-b from-[#E8C879] to-gold-dark ring-1 ring-white/70"
+          />
+        ))}
+      </div>
+      {/* Paper */}
+      <div className="rounded-lg border border-clay-200/70 bg-[#FBF6EC] pb-2 pt-3 text-center shadow-sm">
+        <span className="block font-display text-2xl font-bold leading-none text-gold-dark">
+          {format(date, "d")}
+        </span>
+        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-dark/80">
           {format(date, "MMM")}
         </span>
       </div>
-      <span className="py-1.5 text-2xl font-display font-bold leading-none text-clay-700">
-        {format(date, "d")}
-      </span>
     </div>
   );
 }
@@ -1446,6 +1456,17 @@ export default function DashboardPage() {
             <span
               aria-hidden
               className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-gold/15 blur-3xl"
+            />
+            {/* Optional gold flourish along the bottom — self-hides if absent */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/dashboard/hero-flourish.png"
+              alt=""
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 w-full select-none opacity-40"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
             />
 
         <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
