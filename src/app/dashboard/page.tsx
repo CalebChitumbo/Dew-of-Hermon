@@ -182,19 +182,19 @@ function ReadinessRing({
   );
 }
 
-// ─── Hero sanctuary image (flush to the left edge, full height) ──────────
+// ─── Hero sanctuary image (centred scene, melts into the cream banner) ───
 
 function HeroArt() {
   return (
-    <div className="relative h-44 w-full md:h-auto md:w-[300px] lg:w-[330px] shrink-0">
-      {/* Tall portrait inset: fills the left of the banner and bleeds to the
-          edges. If the asset is missing, the cream banner shows through. */}
+    <div className="relative h-52 w-full md:h-auto md:w-[340px] lg:w-[380px] shrink-0">
+      {/* Whole scene shown via object-contain; its transparent surround melts
+          into the cream banner. If the asset is missing, the banner shows. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/images/dashboard/welcome-hero.png"
         alt=""
         aria-hidden
-        className="absolute inset-0 h-full w-full object-cover object-center"
+        className="absolute inset-0 h-full w-full object-contain object-center"
         onError={(e) => {
           e.currentTarget.style.display = "none";
         }}
