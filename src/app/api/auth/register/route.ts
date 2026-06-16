@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { email, password, name, lifeGroup, isStudent, institutionId } =
+    const { email, password, name, dateOfBirth, lifeGroup, isStudent, institutionId } =
       await request.json();
 
     if (!email || !password || !name) {
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       lifeGroup: lifeGroup || null,
       isStudent: !!isStudent,
       institutionId: isStudent ? institutionId || null : null,
+      dateOfBirth: dateOfBirth || null,
       createdAt: now,
       updatedAt: now,
     });

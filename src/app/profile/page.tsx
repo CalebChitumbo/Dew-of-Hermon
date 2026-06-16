@@ -27,6 +27,7 @@ import {
   Shield,
   CheckCircle,
   AlertCircle,
+  Cake,
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -35,8 +36,10 @@ export default function ProfilePage() {
   // Profile form state
   const [name, setName] = useState(userData?.name || "");
   const [phone, setPhone] = useState(userData?.phone || "");
+  const [dateOfBirth, setDateOfBirth] = useState(userData?.dateOfBirth || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   // Password form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -55,6 +58,7 @@ export default function ProfilePage() {
       await updateDoc(safeDoc("users", firebaseUser.uid), {
         name: name.trim(),
         phone: phone.trim() || null,
+        dateOfBirth: dateOfBirth || null,
         updatedAt: Timestamp.now(),
       });
       setProfileSaved(true);
@@ -197,6 +201,30 @@ export default function ProfilePage() {
                 className="pl-9"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <div className="relative">
+              <Cake className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-clay-400" />
+              <Input
+                id="dateOfBirth"
+                type="date"
+                max={todayISO}
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {dateOfBirth ? (
+              <p className="text-xs text-clay-400">
+                We&apos;ll celebrate you on your birthday 🎂
+              </p>
+            ) : (
+              <p className="text-xs text-gold-dark">
+                Please add your birthday so the team can celebrate you.
+              </p>
+            )}
           </div>
 
           {profileSaved && (

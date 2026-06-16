@@ -35,6 +35,14 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
   {
+    key: "birthdays",
+    label: "Birthdays",
+    description:
+      "See whose birthday it is, send birthday wishes, and export the monthly cake list",
+    route: "/manage/birthdays",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
+  {
     key: "department_join_requests",
     label: "Department Join Requests",
     description:
@@ -211,6 +219,14 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "view",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  birthdays: {
+    SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
     YOUTH_LEADER: "none",
     MEMBER: "none",
   },
@@ -606,6 +622,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     category: "Members",
     supportsDepartmentRules: false,
   },
+  {
+    key: "manage_birthdays",
+    label: "Manage Birthdays & Send Wishes",
+    description:
+      "View the birthday list, send birthday wishes to members, and export the monthly cake list",
+    category: "Members",
+    supportsDepartmentRules: false,
+  },
   // Services
   {
     key: "create_service",
@@ -798,6 +822,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_members: "ADMIN",
   delete_members: "SUPER_ADMIN",
   change_user_roles: "ADMIN",
+  manage_birthdays: "ADMIN",
   create_service: "ADMIN",
   create_events: "DEPARTMENT_LEAD",
   manage_templates: "ADMIN",

@@ -29,6 +29,7 @@ import {
   Inbox,
   ShieldCheck,
   UserPlus,
+  Cake,
 } from "lucide-react";
 import { canAccessPage } from "@/lib/access-control";
 import type { PagePermissions, UserRole } from "@/types";
@@ -116,6 +117,7 @@ const REQUESTS: NavGroup = {
 // ─── Standalone items shown below the main groups ───
 const MID_ITEMS: NavItem[] = [
   { label: "Members", href: "/manage/members", icon: Users, pageKey: "members" },
+  { label: "Birthdays", href: "/manage/birthdays", icon: Cake, pageKey: "birthdays" },
   { label: "ROPs Camp", href: "/manage/rops-camp", icon: Tent, pageKey: "rops_camp" },
   { label: "Fundraising", href: "/manage/fundraising", icon: Flame, pageKey: "fundraising" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },

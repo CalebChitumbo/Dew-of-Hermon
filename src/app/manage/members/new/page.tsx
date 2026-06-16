@@ -49,6 +49,7 @@ export default function NewMemberPage() {
   const [name, setName] = useState(searchParams.get("prefillName") || "");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState(searchParams.get("prefillPhone") || "");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [role, setRole] = useState<UserRole>("MEMBER");
   const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
   const [lifeGroup, setLifeGroup] = useState<LifeGroup | "">("");
@@ -141,6 +142,7 @@ export default function NewMemberPage() {
           name: name.trim(),
           email: email.trim().toLowerCase(),
           phone: phone.trim() || null,
+          dateOfBirth: dateOfBirth || null,
           role,
           departmentIds: selectedDeptIds,
           lifeGroup: lifeGroup || null,
@@ -286,6 +288,21 @@ export default function NewMemberPage() {
               {errors.phone && (
                 <p className="text-sm text-red-500">{errors.phone}</p>
               )}
+            </div>
+
+            {/* Date of Birth */}
+            <div className="space-y-2">
+              <Label htmlFor="dateOfBirth">Date of Birth</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+              />
+              <p className="text-xs text-clay-400">
+                Used for birthday reminders and the monthly cake list.
+              </p>
             </div>
 
             <Separator />

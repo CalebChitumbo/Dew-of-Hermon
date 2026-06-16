@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { idToken, isGoogleSignIn, registrationName, lifeGroup, isStudent, institutionId } = await request.json();
+    const { idToken, isGoogleSignIn, registrationName, dateOfBirth, lifeGroup, isStudent, institutionId } = await request.json();
 
     if (!idToken) {
       return NextResponse.json({ error: "Missing ID token" }, { status: 400 });
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
         lifeGroup: lifeGroup || null,
         isStudent: isStudent || false,
         institutionId: isStudent ? (institutionId || null) : null,
+        dateOfBirth: dateOfBirth || null,
         createdAt: now,
         updatedAt: now,
       };

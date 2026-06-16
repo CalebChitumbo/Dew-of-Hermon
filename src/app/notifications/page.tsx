@@ -23,6 +23,7 @@ import {
   CheckCheck,
   Inbox,
   Clock,
+  Cake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, isToday, isYesterday, format } from "date-fns";
@@ -49,6 +50,10 @@ const NOTIFICATION_ICON: Record<
   announcement: {
     icon: Megaphone,
     className: "bg-purple-50 text-purple-600",
+  },
+  birthday: {
+    icon: Cake,
+    className: "bg-[#C8963E]/10 text-[#C8963E]",
   },
 };
 

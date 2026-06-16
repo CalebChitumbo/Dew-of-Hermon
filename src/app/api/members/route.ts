@@ -57,6 +57,7 @@ export async function GET() {
         lifeGroup: data.lifeGroup || null,
         isStudent: data.isStudent || false,
         institutionId: data.institutionId || null,
+        dateOfBirth: data.dateOfBirth || null,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
       };
@@ -75,7 +76,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, phone, role, departmentIds, isStudent, institutionId, lifeGroup } = body;
+    const { name, email, phone, role, departmentIds, isStudent, institutionId, lifeGroup, dateOfBirth } = body;
 
     // Verify the caller's role from their session
     const caller = await getCallerRole();
@@ -149,6 +150,7 @@ export async function POST(request: Request) {
       lifeGroup: lifeGroup || null,
       isStudent: isStudent || false,
       institutionId: isStudent ? (institutionId || null) : null,
+      dateOfBirth: dateOfBirth || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

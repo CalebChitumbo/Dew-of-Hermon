@@ -84,6 +84,9 @@ export interface User {
   lifeGroup: LifeGroup | null;
   isStudent: boolean;
   institutionId: string | null;
+  /** Date of birth as an ISO `yyyy-mm-dd` string (date only). Drives the
+   * birthday reminders, wishes, and the monthly "Cake Sunday" list. */
+  dateOfBirth: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -412,7 +415,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: "reminder" | "assignment" | "event" | "announcement";
+  type: "reminder" | "assignment" | "event" | "announcement" | "birthday";
   isRead: boolean;
   link: string | null;
   emailStatus: EmailDeliveryStatus;
@@ -428,6 +431,25 @@ export interface ReminderLog {
   sentAt: Date;
   recipientCount: number;
   errors: string | null;
+}
+
+/**
+ * Records that a birthday wish was sent to a member in a given year, so the
+ * chairperson isn't prompted to send a duplicate and the celebrant's card can
+ * show a "Wish sent" badge. The document id is `${userId}_${year}`, which makes
+ * the send idempotent.
+ */
+export interface BirthdayWish {
+  id: string;
+  userId: string;
+  userName: string;
+  /** Calendar year the wish was sent for. */
+  year: number;
+  sentBy: string;
+  sentByName: string;
+  sentAt: Date;
+  /** Whether the whole youth was also notified, not just the celebrant. */
+  broadcast: boolean;
 }
 
 export interface UserAvailability {

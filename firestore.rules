@@ -172,6 +172,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── Birthday Wishes ───
+    // Tracks which members have been wished each year. Written by the API
+    // (Admin SDK) only; admins can read for the Birthdays page.
+    match /birthdayWishes/{wishId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // ─── Birthday Cron Logs ───
+    match /birthdayCronLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // ─── Event Department Roles ───
     match /eventDepartmentRoles/{roleId} {
       allow read: if isSignedIn();

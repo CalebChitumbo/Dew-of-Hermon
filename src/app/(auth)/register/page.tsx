@@ -54,6 +54,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [lifeGroup, setLifeGroup] = useState<LifeGroup | "">("");
   const [isStudent, setIsStudent] = useState(false);
   const [institutionId, setInstitutionId] = useState("");
@@ -65,6 +66,7 @@ export default function RegisterPage() {
 
   const isSafeNext = nextUrl && nextUrl.startsWith("/") && !nextUrl.startsWith("//");
   const postAuthRedirect = isSafeNext ? nextUrl : "/dashboard";
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     async function fetchInstitutions() {
@@ -112,6 +114,15 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!dateOfBirth) {
+      setError("Please enter your date of birth");
+      return;
+    }
+    if (dateOfBirth > todayISO) {
+      setError("Date of birth cannot be in the future");
+      return;
+    }
+
     if (isStudent && !institutionId) {
       setError("Please select your campus so you appear under it on the register");
       return;
@@ -121,6 +132,7 @@ export default function RegisterPage() {
 
     try {
       await signUp(email, password, name, {
+        dateOfBirth,
         lifeGroup: lifeGroup || undefined,
         isStudent,
         institutionId: isStudent ? institutionId || undefined : undefined,
@@ -218,6 +230,22 @@ export default function RegisterPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
+          </div>
+
+          {/* Date of Birth */}
+          <div className="space-y-2">
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <Input
+              id="dateOfBirth"
+              type="date"
+              max={todayISO}
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              required
+            />
+            <p className="text-xs text-clay-400">
+              So we can celebrate you on your birthday 🎂
+            </p>
           </div>
 
           {/* Life Group Selection */}

@@ -20,7 +20,7 @@ interface AuthContextType {
   userData: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string, extra?: { lifeGroup?: string; isStudent?: boolean; institutionId?: string }) => Promise<void>;
+  signUp: (email: string, password: string, name: string, extra?: { dateOfBirth?: string; lifeGroup?: string; isStudent?: boolean; institutionId?: string }) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: FirebaseUser,
     isGoogleSignIn = false,
     registrationName?: string,
-    extra?: { lifeGroup?: string; isStudent?: boolean; institutionId?: string }
+    extra?: { dateOfBirth?: string; lifeGroup?: string; isStudent?: boolean; institutionId?: string }
   ) => {
     const idToken = await user.getIdToken();
     const res = await fetch("/api/auth/login", {
@@ -111,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     name: string,
-    extra?: { lifeGroup?: string; isStudent?: boolean; institutionId?: string }
+    extra?: { dateOfBirth?: string; lifeGroup?: string; isStudent?: boolean; institutionId?: string }
   ) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     try {

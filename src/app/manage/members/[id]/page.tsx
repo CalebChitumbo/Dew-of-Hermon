@@ -70,6 +70,7 @@ interface MemberData {
   lifeGroup: LifeGroup | null;
   isStudent: boolean;
   institutionId: string | null;
+  dateOfBirth: string | null;
 }
 
 export default function EditMemberPage() {
@@ -97,6 +98,7 @@ export default function EditMemberPage() {
   const [lifeGroup, setLifeGroup] = useState<LifeGroup | "">("");
   const [isStudent, setIsStudent] = useState(false);
   const [institutionId, setInstitutionId] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
 
   // Validation
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -122,6 +124,7 @@ export default function EditMemberPage() {
         setLifeGroup(m.lifeGroup || "");
         setIsStudent(m.isStudent || false);
         setInstitutionId(m.institutionId || "");
+        setDateOfBirth(m.dateOfBirth || "");
 
         // Fetch departments
         try {
@@ -211,6 +214,7 @@ export default function EditMemberPage() {
           name: name.trim(),
           email: email.trim().toLowerCase(),
           phone: phone.trim() || null,
+          dateOfBirth: dateOfBirth || null,
           role,
           departmentIds: selectedDeptIds,
           leadsDepartmentIds: leadsDeptIds,
@@ -448,6 +452,21 @@ export default function EditMemberPage() {
                 {errors.phone && (
                   <p className="text-sm text-red-500">{errors.phone}</p>
                 )}
+              </div>
+
+              {/* Date of Birth */}
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  max={new Date().toISOString().slice(0, 10)}
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                />
+                <p className="text-xs text-clay-400">
+                  Used for birthday reminders and the monthly cake list.
+                </p>
               </div>
             </CardContent>
           </Card>

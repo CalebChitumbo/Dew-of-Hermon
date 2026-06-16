@@ -48,8 +48,10 @@ import {
   Inbox,
   Tent,
   Flame,
+  Cake,
 } from "lucide-react";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
+import { BirthdayBanner } from "@/components/shared/BirthdayBanner";
 import { BRAAI_TOTAL_RESPONSIBILITIES } from "@/lib/braai";
 import { format, formatDistanceToNow, subMonths, endOfMonth } from "date-fns";
 import type {
@@ -433,6 +435,7 @@ function ActivityItem({
     reminder: { icon: Bell, tone: "bg-gold/10 text-gold-dark" },
     event: { icon: CalendarDays, tone: "bg-blue-50 text-blue-600" },
     announcement: { icon: Sparkles, tone: "bg-purple-50 text-purple-600" },
+    birthday: { icon: Cake, tone: "bg-gold/10 text-gold-dark" },
   };
   const { icon: Icon, tone } =
     meta[notif.type] || { icon: Activity, tone: "bg-clay-100 text-clay-500" };
@@ -1490,6 +1493,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Birthday banner (everyone; only shows when someone's celebrating) ── */}
+      <BirthdayBanner />
 
       {/* ── My Next ─────────────────────────────────────────────────── */}
       <section>

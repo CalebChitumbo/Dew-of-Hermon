@@ -12,7 +12,7 @@ interface CreateNotificationParams {
   userId: string;
   title: string;
   message: string;
-  type: "reminder" | "assignment" | "event" | "announcement";
+  type: "reminder" | "assignment" | "event" | "announcement" | "birthday";
   link?: string | null;
   /** Pass the recipient email directly to avoid an extra Firestore lookup */
   recipientEmail?: string;

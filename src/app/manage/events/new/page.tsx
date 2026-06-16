@@ -161,6 +161,7 @@ export default function NewEventPage() {
             lifeGroup: u.lifeGroup || null,
             isStudent: u.isStudent || false,
             institutionId: u.institutionId || null,
+            dateOfBirth: u.dateOfBirth || null,
             createdAt: u.createdAt?.toDate?.() || new Date(),
             updatedAt: u.updatedAt?.toDate?.() || new Date(),
           };
