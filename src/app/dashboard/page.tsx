@@ -204,6 +204,38 @@ function HeroArt() {
   );
 }
 
+// ─── Hero gold flourish (crisp SVG sweep — no image asset needed) ────────
+
+function HeroFlourish() {
+  const N = 9;
+  const curves = Array.from({ length: N }).map((_, i) => {
+    const t = i / (N - 1);
+    const o = (t - 0.5) * 64; // vertical spread for the fanned ribbon
+    return `M -40 ${250 + o * 0.25} C 250 ${230 + o}, 470 ${90 + o}, 900 ${30 + o * 0.7}`;
+  });
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 900 300"
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute right-0 top-0 h-full w-[82%]"
+    >
+      <defs>
+        <linearGradient id="heroGold" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#E8C879" />
+          <stop offset="55%" stopColor="#C8963E" />
+          <stop offset="100%" stopColor="#ECD49A" />
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="url(#heroGold)" strokeOpacity="0.34" strokeWidth="0.7">
+        {curves.map((d, i) => (
+          <path key={i} d={d} />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
 // ─── Decorative leaf accent (optional asset) ─────────────────────────────
 
 function LeafAccent({ className = "" }: { className?: string }) {
@@ -1425,18 +1457,20 @@ export default function DashboardPage() {
         className="relative overflow-hidden rounded-2xl border border-clay-200/70 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]"
         style={{
           backgroundImage:
-            "radial-gradient(circle at 90% 12%, rgba(200,150,62,0.12), transparent 42%), radial-gradient(circle at 96% 105%, rgba(74,155,142,0.07), transparent 55%), linear-gradient(100deg, #FAF0DF 0%, #FFF8EF 48%, #FFFDFA 100%)",
+            "radial-gradient(115% 85% at 10% 22%, #F6E6C6 0%, rgba(246,230,198,0) 55%), radial-gradient(95% 120% at 100% 0%, rgba(200,150,62,0.22), transparent 50%), radial-gradient(80% 110% at 98% 100%, rgba(74,155,142,0.12), transparent 52%), linear-gradient(105deg, #F4E3C0 0%, #FBEFDF 42%, #FFFBF4 78%, #FFFDFB 100%)",
         }}
       >
         {/* Soft decorative glows */}
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-20 right-10 h-56 w-56 rounded-full bg-gold/15 blur-3xl"
+          className="pointer-events-none absolute -top-24 right-16 h-64 w-64 rounded-full bg-gold/25 blur-3xl"
         />
         <span
           aria-hidden
           className="pointer-events-none absolute -bottom-16 left-1/3 h-44 w-44 rounded-full bg-teal/10 blur-3xl"
         />
+        {/* Elegant gold flowing lines on the right */}
+        <HeroFlourish />
         <div className="relative flex flex-col md:flex-row md:items-stretch">
           {/* Decorative sanctuary art (left on desktop, banner on mobile) */}
           <HeroArt />
