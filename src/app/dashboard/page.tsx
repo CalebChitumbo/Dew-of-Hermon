@@ -51,7 +51,7 @@ import {
 } from "lucide-react";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 import { BRAAI_TOTAL_RESPONSIBILITIES } from "@/lib/braai";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, subMonths, endOfMonth } from "date-fns";
 import type {
   AppEvent,
   Service,
@@ -182,78 +182,257 @@ function ReadinessRing({
   );
 }
 
-// ─── Pulse Tile ──────────────────────────────────────────────────────────
+// ─── Hero decorative art (graceful fallback to a gradient) ───────────────
 
-function PulseTile({
+function HeroArt() {
+  return (
+    <div className="relative w-full md:w-[34%] lg:w-[36%] shrink-0 overflow-hidden min-h-[180px] md:min-h-[260px]">
+      {/* Fallback wash + orbs — always rendered, sit behind the photo */}
+      <div
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 30% 25%, rgba(200,150,62,0.20), transparent 60%), radial-gradient(circle at 75% 80%, rgba(74,155,142,0.16), transparent 60%), linear-gradient(135deg, #FBF1E2 0%, #FFFFFF 75%)",
+        }}
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -top-10 -left-8 h-40 w-40 rounded-full bg-gold/25 blur-3xl"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 right-0 h-32 w-32 rounded-full bg-teal/15 blur-3xl"
+      />
+      {/* Decorative photo — hides itself until the asset is dropped in */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/dashboard/welcome-hero.png"
+        alt=""
+        aria-hidden
+        className="absolute inset-0 h-full w-full object-cover"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+      {/* Soft seam where the art meets the greeting panel */}
+      <div
+        aria-hidden
+        className="hidden md:block absolute inset-y-0 -right-px w-20 bg-gradient-to-r from-transparent to-white/80"
+      />
+    </div>
+  );
+}
+
+// ─── Decorative leaf accent (optional asset) ─────────────────────────────
+
+function LeafAccent({ className = "" }: { className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/images/dashboard/leaf-accent.png"
+      alt=""
+      aria-hidden
+      className={`pointer-events-none absolute select-none opacity-70 ${className}`}
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  );
+}
+
+// ─── Ministry Pulse: connected stat strip ────────────────────────────────
+
+interface StatItemData {
+  href: string;
+  icon: React.ElementType;
+  iconTone: string;
+  label: string;
+  value: React.ReactNode;
+  hint: string;
+  highlight?: boolean;
+}
+
+function StatStrip({ items }: { items: StatItemData[] }) {
+  if (items.length === 0) return null;
+  return (
+    <Card className="border-clay-200/70 overflow-hidden">
+      <div className="flex flex-col divide-y divide-clay-100 md:flex-row md:divide-y-0 md:divide-x">
+        {items.map((it) => {
+          const Icon = it.icon;
+          return (
+            <Link
+              key={it.label}
+              href={it.href}
+              className="group relative flex-1 min-w-0 p-4 md:p-5 transition-colors hover:bg-cream/50 focus:outline-none focus-visible:bg-cream/60"
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-full ${it.iconTone} ring-1 ring-inset ring-white/50 shadow-sm`}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                {it.highlight && (
+                  <span
+                    aria-hidden
+                    className="h-2 w-2 rounded-full bg-red-400 shadow-[0_0_0_4px_rgba(248,113,113,0.18)] animate-pulse"
+                  />
+                )}
+              </div>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-clay-400 font-medium mt-3">
+                {it.label}
+              </p>
+              <p className="text-2xl md:text-[1.7rem] font-display font-bold text-clay-700 mt-1 leading-none">
+                {it.value}
+              </p>
+              <p className="text-xs text-clay-400 mt-2 inline-flex items-center gap-1 group-hover:text-gold-dark transition-colors">
+                <span className="truncate">{it.hint}</span>
+                <ArrowRight className="h-3 w-3 shrink-0 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+              </p>
+            </Link>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Ministry Pulse: richer feature card shell ───────────────────────────
+
+function FeatureShell({
   href,
   icon: Icon,
   iconTone,
   label,
+  cta,
+  accent,
+  children,
+}: {
+  href: string;
+  icon: React.ElementType;
+  iconTone: string;
+  label: string;
+  cta?: string;
+  accent?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link href={href} className="group block h-full focus:outline-none">
+      <Card className="relative h-full overflow-hidden border-clay-200/70 bg-gradient-to-br from-white to-cream/60 transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-gold/50 group-hover:shadow-[0_10px_30px_-12px_rgba(200,150,62,0.35)] group-focus-visible:ring-2 group-focus-visible:ring-gold/50">
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-gold/0 via-gold/40 to-gold/0 opacity-0 group-hover:opacity-100 transition-opacity"
+        />
+        {accent}
+        <CardContent className="relative p-5 flex flex-col h-full min-h-[150px]">
+          <div className="flex items-center justify-between">
+            <span
+              className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconTone} ring-1 ring-inset ring-white/50 shadow-sm transition-transform duration-300 group-hover:scale-105`}
+            >
+              <Icon className="h-5 w-5" />
+            </span>
+            <ChevronRight className="h-4 w-4 text-clay-300 transition-all duration-300 group-hover:text-gold group-hover:translate-x-0.5" />
+          </div>
+          <p className="text-[11px] uppercase tracking-[0.14em] text-clay-400 font-medium mt-4">
+            {label}
+          </p>
+          <div className="mt-1 flex-1">{children}</div>
+          {cta && (
+            <p className="text-xs text-gold-dark/90 mt-3 inline-flex items-center gap-1 opacity-0 -translate-y-0.5 group-hover:opacity-100 group-hover:translate-y-0 transition-all">
+              {cta}
+              <ArrowRight className="h-3 w-3" />
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function FeatureTile({
+  href,
+  icon,
+  iconTone,
+  label,
   value,
   hint,
-  highlight = false,
+  cta,
 }: {
   href: string;
   icon: React.ElementType;
   iconTone: string;
   label: string;
   value: React.ReactNode;
-  hint?: string;
-  highlight?: boolean;
+  hint: string;
+  cta?: string;
 }) {
   return (
-    <Link href={href} className="block group focus:outline-none">
-      <Card
-        className={`relative h-full overflow-hidden border-clay-200/70 bg-gradient-to-br from-white to-cream/70 transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:border-gold/60 group-hover:shadow-[0_10px_30px_-12px_rgba(200,150,62,0.35)] group-focus-visible:ring-2 group-focus-visible:ring-gold/50 ${
-          highlight ? "border-red-200/80 bg-gradient-to-br from-red-50/40 to-cream/40" : ""
-        }`}
-      >
-        {/* Top accent stripe */}
-        <span
-          aria-hidden
-          className={`absolute inset-x-0 top-0 h-0.5 ${
-            highlight
-              ? "bg-gradient-to-r from-red-400/0 via-red-400/70 to-red-400/0"
-              : "bg-gradient-to-r from-gold/0 via-gold/40 to-gold/0"
-          } opacity-0 group-hover:opacity-100 transition-opacity`}
-        />
-        {/* Subtle corner glow */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -top-10 -right-10 h-24 w-24 rounded-full bg-gold/10 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        />
+    <FeatureShell href={href} icon={icon} iconTone={iconTone} label={label} cta={cta}>
+      <p className="text-2xl font-display font-bold text-clay-700 leading-tight mt-1">
+        {value}
+      </p>
+      <p className="text-xs text-clay-400 mt-1 line-clamp-2">{hint}</p>
+    </FeatureShell>
+  );
+}
 
-        <CardContent className="relative p-4 md:p-5 flex flex-col gap-3 h-full">
-          <div className="flex items-center justify-between">
-            <div
-              className={`relative flex h-10 w-10 items-center justify-center rounded-xl ${iconTone} ring-1 ring-inset ring-white/40 shadow-sm transition-transform duration-300 group-hover:scale-105`}
-            >
-              <Icon className="h-5 w-5" />
-            </div>
-            <ChevronRight className="h-4 w-4 text-clay-300 transition-all duration-300 group-hover:text-gold group-hover:translate-x-0.5" />
-          </div>
-          <div>
-            <p className="text-[11px] text-clay-400 uppercase tracking-[0.14em] font-medium">
-              {label}
-            </p>
-            <p className="text-2xl md:text-[1.6rem] font-display font-bold text-clay-700 mt-1 leading-tight">
-              {value}
-            </p>
-            {hint && (
-              <p className="text-xs text-clay-400 mt-1 line-clamp-1">
-                {hint}
-              </p>
-            )}
-          </div>
-          {highlight && (
-            <span
-              aria-hidden
-              className="absolute top-3 right-3 inline-flex h-2 w-2 rounded-full bg-red-400 shadow-[0_0_0_4px_rgba(248,113,113,0.18)] animate-pulse"
-            />
-          )}
-        </CardContent>
-      </Card>
-    </Link>
+// ─── Tiny SVG sparkline (member growth) ──────────────────────────────────
+
+function Sparkline({ data, className = "" }: { data: number[]; className?: string }) {
+  if (data.length < 2) return null;
+  const w = 120;
+  const h = 36;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const step = w / (data.length - 1);
+  const pts = data.map(
+    (v, i) => [i * step, h - 2 - ((v - min) / range) * (h - 4)] as const
+  );
+  const line = pts
+    .map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`)
+    .join(" ");
+  const area = `${line} L${w},${h} L0,${h} Z`;
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className={className}
+      preserveAspectRatio="none"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4A9B8E" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#4A9B8E" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#sparkFill)" />
+      <path
+        d={line}
+        fill="none"
+        stroke="#4A9B8E"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ─── Mini calendar chip (today's date) ───────────────────────────────────
+
+function MiniCalendar({ date }: { date: Date }) {
+  return (
+    <div className="inline-flex w-14 flex-col items-center overflow-hidden rounded-xl border border-clay-200/70 bg-white shadow-sm">
+      <div className="w-full bg-gradient-to-br from-gold to-gold-dark py-1 text-center">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-white">
+          {format(date, "MMM")}
+        </span>
+      </div>
+      <span className="py-1.5 text-2xl font-display font-bold leading-none text-clay-700">
+        {format(date, "d")}
+      </span>
+    </div>
   );
 }
 
@@ -332,6 +511,7 @@ export default function DashboardPage() {
   // Admin/leader pulses
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
   const [activeMemberCount, setActiveMemberCount] = useState(0);
+  const [memberTrend, setMemberTrend] = useState<number[]>([]);
   const [followUps, setFollowUps] = useState<FollowUpCard[]>([]);
 
   // Department join requests (mine + the queue actionable by leads/chair)
@@ -769,7 +949,20 @@ export default function DashboardPage() {
     const q = query(safeCollection("users"), where("isActive", "==", true));
     const unsub = onSnapshot(
       q,
-      (snap) => setActiveMemberCount(snap.size),
+      (snap) => {
+        setActiveMemberCount(snap.size);
+        // Build a 6-month cumulative growth series for the sparkline.
+        const created = snap.docs
+          .map((d) => d.data().createdAt?.toDate?.() as Date | undefined)
+          .filter((d): d is Date => d instanceof Date);
+        const base = new Date();
+        const series: number[] = [];
+        for (let i = 5; i >= 0; i--) {
+          const cutoff = endOfMonth(subMonths(base, i));
+          series.push(created.filter((c) => c <= cutoff).length);
+        }
+        setMemberTrend(series);
+      },
       (err) => console.error("dashboard: members listener", err)
     );
     return unsub;
@@ -1172,27 +1365,88 @@ export default function DashboardPage() {
   if (!userData) return <PageLoader />;
   if (loadingCore) return <PageLoader />;
 
+  // ─── Ministry Pulse stat strip (role-aware) ────────────────────────────
+
+  const statItems: StatItemData[] = [];
+  if (isAdmin || isDeptLead || isYouthLeader) {
+    statItems.push({
+      href: "/manage/services",
+      icon: ClipboardList,
+      iconTone: "bg-gold/10 text-gold-dark",
+      label: isDeptLead ? "Dept readiness" : "Service readiness",
+      value: scopedTotal > 0 ? `${scopedFilled}/${scopedTotal}` : "—",
+      hint:
+        scopedTotal > 0
+          ? `${Math.max(0, scopedTotal - scopedFilled)} role${
+              scopedTotal - scopedFilled === 1 ? "" : "s"
+            } open`
+          : "No roles configured yet",
+      highlight: scopedTotal > 0 && scopedFilled < scopedTotal * 0.5,
+    });
+  }
+  if (isAdmin) {
+    statItems.push({
+      href: "/manage/events/approvals",
+      icon: ClipboardCheck,
+      iconTone: "bg-blue-50 text-blue-600",
+      label: "Pending approvals",
+      value: pendingApprovalCount,
+      hint: pendingApprovalCount > 0 ? "Events awaiting you" : "Nothing waiting",
+      highlight: pendingApprovalCount > 0,
+    });
+  }
+  if (isManagerOrChair) {
+    statItems.push({
+      href: "/manage/department-requests",
+      icon: ClipboardCheck,
+      iconTone: "bg-indigo-50 text-indigo-600",
+      label: "Department requests",
+      value: actionableJoinCount,
+      hint:
+        actionableJoinCount > 0
+          ? "Members waiting to join"
+          : "No join requests waiting",
+      highlight: actionableJoinCount > 0,
+    });
+  }
+  if (showFollowUpsTile) {
+    statItems.push({
+      href: "/department/discipleship",
+      icon: Heart,
+      iconTone: "bg-rose-50 text-rose-600",
+      label: "Active follow-ups",
+      value: activeFollowUpCount,
+      hint:
+        pendingFollowUpApprovalCount > 0
+          ? `${pendingFollowUpApprovalCount} awaiting lead approval`
+          : myAssignedFollowUps > 0
+            ? `${myAssignedFollowUps} assigned to you`
+            : "Discipleship pipeline",
+      highlight: pendingFollowUpApprovalCount > 0,
+    });
+  }
+
   // ─── Render ────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6 md:space-y-8">
       {/* ── Welcome Hero ─────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden rounded-2xl border border-clay-200/70 bg-white/70 p-6 md:p-8 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 0% 0%, rgba(200,150,62,0.10), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.08), transparent 50%), linear-gradient(135deg, #FFF8F0 0%, #FFFFFF 60%, rgba(200,150,62,0.06) 100%)",
-        }}
-      >
-        {/* Decorative orbs */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-gold/20 blur-3xl"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-teal/15 blur-3xl"
-        />
+      <section className="relative overflow-hidden rounded-2xl border border-clay-200/70 shadow-[0_1px_2px_rgba(91,58,41,0.04),0_8px_24px_-12px_rgba(91,58,41,0.12)]">
+        <div className="flex flex-col md:flex-row">
+          {/* Decorative sanctuary art (left on desktop, banner on mobile) */}
+          <HeroArt />
+          {/* Greeting + stats panel */}
+          <div
+            className="relative flex-1 p-6 md:p-8"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 100% 0%, rgba(200,150,62,0.10), transparent 45%), radial-gradient(circle at 100% 100%, rgba(74,155,142,0.08), transparent 50%), linear-gradient(135deg, #FFFFFF 0%, #FFF8F0 70%, rgba(200,150,62,0.06) 100%)",
+            }}
+          >
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-gold/15 blur-3xl"
+            />
 
         <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div className="min-w-0">
@@ -1252,6 +1506,8 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+        </div>
+          </div>
         </div>
       </section>
 
@@ -1324,7 +1580,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-clay-700">
-                    You're free right now.
+                    You&apos;re free right now.
                   </p>
                   <p className="text-xs text-clay-400 mt-0.5">
                     No upcoming role assignments. Set your availability so leads
@@ -1342,171 +1598,146 @@ export default function DashboardPage() {
         </Card>
       </section>
 
-      {/* ── Ministry Pulse Grid ─────────────────────────────────────── */}
-      <section>
-        <div className="flex items-baseline justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-sm font-medium text-clay-500 uppercase tracking-[0.16em]">
+      {/* ── Ministry Pulse ──────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xl md:text-2xl font-display font-bold text-clay-700">
               Ministry Pulse
             </h2>
-            <span className="h-px flex-1 w-16 bg-gradient-to-r from-clay-200 to-transparent" />
+            <p className="text-sm text-clay-400 mt-0.5">
+              A real-time snapshot of what matters most.
+            </p>
           </div>
+          <Link
+            href="/notifications"
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-gold-dark hover:gap-1.5 transition-all"
+          >
+            View all activity
+            <ArrowRight className="h-3 w-3" />
+          </Link>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-          {/* Service Readiness — leaders & admins */}
-          {(isAdmin || isDeptLead || isYouthLeader) && (
-            <PulseTile
-              href="/manage/services"
-              icon={ClipboardList}
-              iconTone="bg-gold/10 text-gold-dark"
-              label={isDeptLead ? "Dept readiness" : "Service readiness"}
-              value={scopedTotal > 0 ? `${scopedFilled}/${scopedTotal}` : "—"}
-              hint={
-                scopedTotal > 0
-                  ? `${Math.max(0, scopedTotal - scopedFilled)} role${
-                      scopedTotal - scopedFilled === 1 ? "" : "s"
-                    } open`
-                  : "No roles configured yet"
-              }
-              highlight={scopedTotal > 0 && scopedFilled < scopedTotal * 0.5}
-            />
-          )}
 
-          {/* Pending event approvals — admins */}
-          {isAdmin && (
-            <PulseTile
-              href="/manage/events/approvals"
-              icon={ClipboardCheck}
-              iconTone="bg-blue-50 text-blue-600"
-              label="Pending approvals"
-              value={pendingApprovalCount}
-              hint={
-                pendingApprovalCount > 0
-                  ? "Events awaiting your decision"
-                  : "Nothing waiting"
-              }
-              highlight={pendingApprovalCount > 0}
-            />
-          )}
+        {/* Connected key-metric strip */}
+        <StatStrip items={statItems} />
 
-          {/* Department join requests — managers & chairperson */}
-          {isManagerOrChair && (
-            <PulseTile
-              href="/manage/department-requests"
-              icon={ClipboardCheck}
-              iconTone="bg-indigo-50 text-indigo-600"
-              label="Department requests"
-              value={actionableJoinCount}
-              hint={
-                actionableJoinCount > 0
-                  ? "Members waiting to join"
-                  : "No join requests waiting"
-              }
-              highlight={actionableJoinCount > 0}
-            />
-          )}
-
-          {/* Follow-ups — discipleship/campus/life-groups departments */}
-          {showFollowUpsTile && (
-            <PulseTile
-              href="/department/discipleship"
-              icon={Heart}
-              iconTone="bg-rose-50 text-rose-600"
-              label="Active follow-ups"
-              value={activeFollowUpCount}
-              hint={
-                pendingFollowUpApprovalCount > 0
-                  ? `${pendingFollowUpApprovalCount} awaiting lead approval`
-                  : myAssignedFollowUps > 0
-                    ? `${myAssignedFollowUps} assigned to you`
-                    : "Discipleship pipeline"
-              }
-              highlight={pendingFollowUpApprovalCount > 0}
-            />
-          )}
-
-          {/* This week's devotional — everyone */}
-          <PulseTile
+        {/* Richer feature cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          {/* Today's devotional — everyone */}
+          <FeatureShell
             href="/department/campus-ministry"
             icon={BookOpen}
             iconTone="bg-purple-50 text-purple-600"
-            label="This week's devotional"
-            value={latestDevotional ? "Read" : "—"}
-            hint={
-              latestDevotional
-                ? latestDevotional.scriptureReference || latestDevotional.title
-                : "No devotional yet"
-            }
-          />
+            label="Today's devotional"
+            cta="Read devotional"
+            accent={<LeafAccent className="-bottom-4 -right-3 w-28 rotate-6" />}
+          >
+            {latestDevotional ? (
+              <>
+                <p className="text-lg font-display font-semibold text-clay-700 leading-snug mt-1 line-clamp-2">
+                  {latestDevotional.title}
+                </p>
+                {latestDevotional.scriptureReference && (
+                  <p className="text-xs text-gold-dark/80 mt-1">
+                    {latestDevotional.scriptureReference}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-clay-400 mt-1">
+                No devotional posted yet.
+              </p>
+            )}
+          </FeatureShell>
 
-          {/* Members — admins */}
+          {/* Active members with growth sparkline — admins */}
           {isAdmin && (
-            <PulseTile
+            <FeatureShell
               href="/manage/members"
               icon={Users}
               iconTone="bg-teal/10 text-teal"
               label="Active members"
-              value={activeMemberCount}
-              hint="Directory & roles"
-            />
+              cta="View members"
+            >
+              <div className="flex items-end justify-between gap-3 mt-1">
+                <p className="text-3xl font-display font-bold text-clay-700 leading-none">
+                  {activeMemberCount}
+                </p>
+                <Sparkline data={memberTrend} className="h-9 w-28" />
+              </div>
+              <p className="text-xs text-clay-400 mt-2">Directory &amp; roles</p>
+            </FeatureShell>
           )}
 
-          {/* Join a department — members & leads (entry point for joining) */}
+          {/* Join a department — members & leads */}
           {!isAdmin && (
-            <PulseTile
+            <FeatureShell
               href="/department/join"
               icon={UserPlus}
               iconTone="bg-teal/10 text-teal"
               label="Join a department"
-              value={myPendingJoinRequest ? "Pending" : "Browse"}
-              hint={
-                myPendingJoinRequest
-                  ? `${myPendingJoinRequest.departmentName} request in review`
-                  : "Find a place to serve"
-              }
-              highlight={false}
-            />
+              cta={myPendingJoinRequest ? "Track request" : "Browse departments"}
+            >
+              <p className="text-lg font-display font-semibold text-clay-700 leading-snug mt-1">
+                {myPendingJoinRequest
+                  ? "Request in review"
+                  : "Find your place to serve"}
+              </p>
+              <p className="text-xs text-clay-400 mt-1">
+                {myPendingJoinRequest
+                  ? `${myPendingJoinRequest.departmentName} — awaiting approval`
+                  : "Request to join a ministry team"}
+              </p>
+            </FeatureShell>
           )}
 
-          {/* Life Groups — for life group members */}
+          {/* Latreou planner with calendar chip — worship dept or admin */}
+          {showLatreouTile && (
+            <FeatureShell
+              href="/latreou"
+              icon={Music}
+              iconTone="bg-amber-50 text-amber-600"
+              label="Latreou planner"
+              cta="View plan"
+            >
+              <div className="flex items-center gap-3 mt-1">
+                <MiniCalendar date={now} />
+                <p className="text-sm text-clay-500 leading-snug">
+                  Worship cycles &amp; rehearsals
+                </p>
+              </div>
+            </FeatureShell>
+          )}
+
+          {/* My life group — life group members */}
           {!isAdmin && userData.lifeGroup && (
-            <PulseTile
+            <FeatureTile
               href="/department/life-groups"
               icon={UsersRound}
               iconTone="bg-emerald-50 text-emerald-600"
               label="My life group"
               value={userData.lifeGroup}
               hint="Devotional & directory"
+              cta="Open life group"
             />
           )}
 
-          {/* Campus ministry — for students */}
+          {/* Campus ministry — students */}
           {!isAdmin && userData.isStudent && (
-            <PulseTile
+            <FeatureTile
               href="/department/campus-ministry"
               icon={GraduationCap}
               iconTone="bg-indigo-50 text-indigo-600"
               label="Campus ministry"
               value="Open"
               hint="Updates from your campus"
+              cta="Open campus"
             />
           )}
 
-          {/* Latreou — worship dept or admin */}
-          {showLatreouTile && (
-            <PulseTile
-              href="/latreou"
-              icon={Music}
-              iconTone="bg-amber-50 text-amber-600"
-              label="Latreou planner"
-              value="Open"
-              hint="Worship cycles & rehearsals"
-            />
-          )}
-
-          {/* Fundraising Braai — chairperson, admins, Fundraising lead */}
+          {/* Fundraising braai — chairperson, admins, fundraising lead */}
           {canPlanBraai && (
-            <PulseTile
+            <FeatureTile
               href={
                 nextBraai
                   ? `/manage/fundraising/braai/${nextBraai.id}`
@@ -1529,38 +1760,45 @@ export default function DashboardPage() {
                       : `Confirmed: ${braaiConfirmedCount}/${braaiAssignmentCount}`
                   : "No braai scheduled yet"
               }
-              highlight={
-                Boolean(nextBraai) &&
-                (braaiAssignmentCount < BRAAI_TOTAL_RESPONSIBILITIES ||
-                  braaiPendingCount > 0)
-              }
+              cta="Open braai"
             />
           )}
 
-          {/* ROPs Camp registration — everyone (public page, parents-facing) */}
-          <PulseTile
+          {/* ROPs camp — everyone */}
+          <FeatureTile
             href="/rops-camp"
             icon={Tent}
             iconTone="bg-orange-50 text-orange-600"
             label="ROPs Camp"
             value="Register"
             hint="Reserve a place by the fire"
+            cta="Open camp"
           />
 
           {/* Affirmations — everyone */}
-          <PulseTile
+          <FeatureTile
             href="/affirmations"
             icon={Sparkles}
             iconTone="bg-pink-50 text-pink-600"
             label="Affirmations"
             value="Read"
             hint="Encouragement for the team"
+            cta="Open affirmations"
           />
         </div>
       </section>
 
       {/* ── Upcoming + Activity ─────────────────────────────────────── */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl md:text-2xl font-display font-bold text-clay-700">
+            Happening soon
+          </h2>
+          <p className="text-sm text-clay-400 mt-0.5">
+            Upcoming gatherings and the latest from your ministry.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Upcoming events — spans 2 columns */}
         <Card className="lg:col-span-2 border-clay-200/70">
           <CardHeader className="pb-3">
@@ -1805,6 +2043,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+        </div>
       </section>
 
       {/* ── Service-readiness deep panel (admins/leads only) ───────── */}
@@ -1821,6 +2060,7 @@ export default function DashboardPage() {
               aria-hidden
               className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-gold/10 blur-3xl"
             />
+            <LeafAccent className="bottom-0 right-2 w-28 -rotate-12 opacity-40" />
             <CardHeader className="pb-3 relative">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
