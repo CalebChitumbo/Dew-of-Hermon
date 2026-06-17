@@ -308,7 +308,7 @@ function Hero({
               begins.
             </h1>
             <p className="rise rise-3 mt-8 font-body text-rops-ink-2 text-lg max-w-xl leading-relaxed">
-              It&rsquo;s that session again.
+              It&rsquo;s that season again.
             </p>
             <p className="rise rise-3 mt-4 font-body text-rops-ink-2 text-lg max-w-xl leading-relaxed">
               Three days. One question that never gets old: who are you
