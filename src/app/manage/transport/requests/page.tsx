@@ -3,20 +3,31 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { EmptyState } from "@/components/shared/EmptyState";
+import {
+  EmptyStateLux,
+  SegmentedTabsList,
+  SegmentedTab,
+  DecorImage,
+  SoftWaves,
+  luxSurface,
+  luxSurfaceHover,
+} from "@/components/shared/lux";
+import { TransportScene } from "@/components/shared/illustrations";
 import {
   Bus,
   Shield,
   ChevronRight,
   Calendar,
   MapPin,
-  Inbox,
+  FileClock,
+  Banknote,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { useTransportAccess } from "@/hooks/useTransportAccess";
 import { useToast } from "@/hooks/use-toast";
@@ -53,17 +64,22 @@ const STATUS_COLOR: Record<TransportRequestStatus, string> = {
   CANCELLED: "bg-clay-50 text-clay-500 border-clay-200",
 };
 
-const TAB_FILTERS: { key: string; label: string; statuses: TransportRequestStatus[] }[] =
-  [
-    { key: "awaiting", label: "Awaiting Details", statuses: ["PENDING_DETAILS"] },
-    { key: "treasurer", label: "Sent to Treasurer", statuses: ["PENDING_TREASURER"] },
-    { key: "approved", label: "Approved", statuses: ["APPROVED"] },
-    {
-      key: "closed",
-      label: "Cancelled / Rejected",
-      statuses: ["CANCELLED", "REJECTED_TREASURER"],
-    },
-  ];
+const TAB_FILTERS: {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+  statuses: TransportRequestStatus[];
+}[] = [
+  { key: "awaiting", label: "Awaiting Details", icon: FileClock, statuses: ["PENDING_DETAILS"] },
+  { key: "treasurer", label: "Sent to Treasurer", icon: Banknote, statuses: ["PENDING_TREASURER"] },
+  { key: "approved", label: "Approved", icon: CheckCircle2, statuses: ["APPROVED"] },
+  {
+    key: "closed",
+    label: "Cancelled / Rejected",
+    icon: XCircle,
+    statuses: ["CANCELLED", "REJECTED_TREASURER"],
+  },
+];
 
 export default function TransportRequestsPage() {
   const { loading: accessLoading, canManageTransport } = useTransportAccess();
@@ -83,8 +99,7 @@ export default function TransportRequestsPage() {
       const data = await res.json();
       setRequests(data.requests || []);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to load requests";
+      const message = error instanceof Error ? error.message : "Failed to load requests";
       toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -105,14 +120,14 @@ export default function TransportRequestsPage() {
 
   if (!canManageTransport) {
     return (
-      <EmptyState
+      <EmptyStateLux
         icon={Shield}
         title="Access Denied"
         description="Only the Transport & Logistics lead can view transport requests."
         tone="clay"
         action={
           <Link href="/calendar">
-            <Button variant="outline">Back to Calendar</Button>
+            <Button variant="outline" className="rounded-xl">Back to Calendar</Button>
           </Link>
         }
       />
@@ -125,7 +140,7 @@ export default function TransportRequestsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <PageHeader
         backHref="/dashboard"
         icon={Bus}
@@ -134,87 +149,82 @@ export default function TransportRequestsPage() {
         description="Cost and schedule transport for events that need it."
       />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
+        <SegmentedTabsList>
           {TAB_FILTERS.map((tab) => (
-            <TabsTrigger key={tab.key} value={tab.key} className="text-xs sm:text-sm">
-              {tab.label}{" "}
-              {counts[tab.key] > 0 && (
-                <span className="ml-1 text-xs opacity-70">({counts[tab.key]})</span>
-              )}
-            </TabsTrigger>
+            <SegmentedTab key={tab.key} value={tab.key} icon={tab.icon} count={counts[tab.key]}>
+              {tab.label}
+            </SegmentedTab>
           ))}
-        </TabsList>
+        </SegmentedTabsList>
 
         {TAB_FILTERS.map((tab) => {
           const filtered = requests.filter((r) => tab.statuses.includes(r.status));
           return (
-            <TabsContent key={tab.key} value={tab.key} className="mt-4 space-y-3">
+            <TabsContent key={tab.key} value={tab.key} className="mt-0 space-y-3">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <LoadingSpinner size="md" />
                 </div>
               ) : filtered.length === 0 ? (
-                <EmptyState
-                  icon={Inbox}
-                  title="Nothing here yet"
-                  description="No requests in this group."
-                  tone="clay"
-                />
+                <div className={cn("relative overflow-hidden", luxSurface)}>
+                  <SoftWaves className="absolute inset-x-0 bottom-0 h-24 w-full text-teal/10" />
+                  <DecorImage
+                    src="/images/dashboard/asset-soft-waves.png"
+                    className="absolute inset-x-0 bottom-0 h-28 w-full object-cover opacity-40"
+                  />
+                  <EmptyStateLux
+                    illustration={<TransportScene />}
+                    tone="teal"
+                    title="Nothing here yet"
+                    description="No requests in this group."
+                  />
+                </div>
               ) : (
                 filtered.map((req) => (
                   <Link
                     key={req.id}
                     href={`/manage/transport/requests/${req.id}`}
-                    className="block"
+                    className={cn("group block p-5", luxSurface, luxSurfaceHover)}
                   >
-                    <Card className="transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <CardTitle className="text-base text-clay-900">
-                              {req.eventTitle}
-                            </CardTitle>
-                            <div className="flex gap-2 mt-1.5">
-                              <Badge
-                                variant="outline"
-                                className={cn("text-xs", STATUS_COLOR[req.status])}
-                              >
-                                {STATUS_LABEL[req.status]}
-                              </Badge>
-                            </div>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-clay-400" />
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-display text-base font-semibold text-clay-700">
+                          {req.eventTitle}
+                        </h3>
+                        <div className="mt-1.5">
+                          <Badge variant="outline" className={cn("text-xs", STATUS_COLOR[req.status])}>
+                            {STATUS_LABEL[req.status]}
+                          </Badge>
                         </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2 pb-3">
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-clay-500">
-                          {req.eventStartDate && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {format(parseISO(req.eventStartDate), "d MMM yyyy, h:mm a")}
-                            </span>
-                          )}
-                          {req.vehicleType && (
-                            <span className="flex items-center gap-1">
-                              <Bus className="h-3 w-3" />
-                              {req.vehicleCount ?? "?"} × {req.vehicleType}
-                            </span>
-                          )}
-                          {req.estimatedCost !== null && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {req.currency} {req.estimatedCost.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                        {req.needsDescription && (
-                          <p className="text-sm text-clay-600 line-clamp-2">
-                            {req.needsDescription}
-                          </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 shrink-0 text-clay-300 transition-all group-hover:translate-x-0.5 group-hover:text-gold" />
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-clay-500">
+                        {req.eventStartDate && (
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(parseISO(req.eventStartDate), "d MMM yyyy, h:mm a")}
+                          </span>
                         )}
-                      </CardContent>
-                    </Card>
+                        {req.vehicleType && (
+                          <span className="inline-flex items-center gap-1">
+                            <Bus className="h-3 w-3" />
+                            {req.vehicleCount ?? "?"} × {req.vehicleType}
+                          </span>
+                        )}
+                        {req.estimatedCost !== null && (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {req.currency} {req.estimatedCost.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                      {req.needsDescription && (
+                        <p className="line-clamp-2 text-sm text-clay-600">{req.needsDescription}</p>
+                      )}
+                    </div>
                   </Link>
                 ))
               )}
