@@ -43,13 +43,15 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatTile } from "@/components/shared/StatTile";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Users,
   Phone,
   Calendar,
   ArrowRight,
   UserPlus,
-  BarChart3,
   GraduationCap,
   Heart,
   Filter,
@@ -544,16 +546,13 @@ export default function DiscipleshipPipelinePage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Heart className="h-12 w-12 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-600">
-          Access Restricted
-        </h2>
-        <p className="text-clay-400 mt-2 text-center max-w-md">
-          This page is only accessible to Discipleship & Follow-Up department
-          members.
-        </p>
-      </div>
+      <EmptyState
+        icon={Heart}
+        tone="clay"
+        title="Access Restricted"
+        description="This page is only accessible to Discipleship & Follow-Up department members."
+        className="py-20"
+      />
     );
   }
 
@@ -562,16 +561,16 @@ export default function DiscipleshipPipelinePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-          {assigneeOnlyView ? "My Assigned Contacts" : "Discipleship Pipeline"}
-        </h1>
-        <p className="text-clay-500 mt-1">
-          {assigneeOnlyView
+      <PageHeader
+        icon={Heart}
+        tone="lavender"
+        title={assigneeOnlyView ? "My Assigned Contacts" : "Discipleship Pipeline"}
+        description={
+          assigneeOnlyView
             ? "Follow up with the contacts assigned to you and move them through the pipeline"
-            : "Track and manage follow-up contacts through their discipleship journey"}
-        </p>
-      </div>
+            : "Track and manage follow-up contacts through their discipleship journey"
+        }
+      />
 
       <Tabs defaultValue="pipeline" className="space-y-4">
         <TabsList>
@@ -648,7 +647,7 @@ export default function DiscipleshipPipelinePage() {
                     columnCards.map((card) => (
                       <Card
                         key={card.id}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        className="cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]"
                         onClick={() => openCardDetail(card)}
                       >
                         <CardContent className="p-3">
@@ -752,66 +751,30 @@ export default function DiscipleshipPipelinePage() {
         <TabsContent value="analytics" className="space-y-6">
           {/* Summary Cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-clay-100">
-                    <Users className="h-5 w-5 text-clay-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-clay-700">
-                      {analytics.total}
-                    </p>
-                    <p className="text-xs text-clay-500">Total Contacts</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/20">
-                    <GraduationCap className="h-5 w-5 text-gold-dark" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-clay-700">
-                      {analytics.byCampus}
-                    </p>
-                    <p className="text-xs text-clay-500">From Campus Ministry</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100">
-                    <Heart className="h-5 w-5 text-teal-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-clay-700">
-                      {analytics.byLifeGroups}
-                    </p>
-                    <p className="text-xs text-clay-500">From Life Groups</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                    <UserCheck className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-clay-700">
-                      {analytics.memberCount}
-                    </p>
-                    <p className="text-xs text-clay-500">Reached Member</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <StatTile
+              icon={Users}
+              tone="clay"
+              label="Total Contacts"
+              value={analytics.total}
+            />
+            <StatTile
+              icon={GraduationCap}
+              tone="gold"
+              label="From Campus Ministry"
+              value={analytics.byCampus}
+            />
+            <StatTile
+              icon={Heart}
+              tone="teal"
+              label="From Life Groups"
+              value={analytics.byLifeGroups}
+            />
+            <StatTile
+              icon={UserCheck}
+              tone="sage"
+              label="Reached Member"
+              value={analytics.memberCount}
+            />
           </div>
 
           {/* Conversion Funnel */}
@@ -875,7 +838,7 @@ export default function DiscipleshipPipelinePage() {
                 {STATUS_ORDER.slice(0, -1).map((status) => (
                   <div
                     key={status}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-clay-50"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-cream/40"
                   >
                     <div className="flex-1">
                       <p className="text-xs text-clay-500">
@@ -894,7 +857,7 @@ export default function DiscipleshipPipelinePage() {
           </Card>
 
           {/* Overall Conversion Rate */}
-          <Card className="border-gold/30 bg-gold/5">
+          <Card className="border-clay-100/70 bg-cream/40">
             <CardContent className="flex items-center justify-between p-6">
               <div>
                 <h3 className="font-display font-semibold text-clay-700">

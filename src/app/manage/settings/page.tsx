@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { iconTones } from "@/lib/icon-tones";
 import {
   Settings,
   Save,
@@ -112,25 +116,22 @@ function SettingsContent() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-display text-clay-700 flex items-center gap-2">
-          <Settings className="h-6 w-6" />
-          Settings
-        </h1>
-        <p className="text-clay-500 mt-1">
-          Manage system configuration and defaults
-        </p>
-      </div>
+      <PageHeader
+        icon={Settings}
+        tone="clay"
+        title="Settings"
+        description="Manage system configuration and defaults"
+      />
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link href="/manage/settings/access-control">
-          <Card className="hover:border-gold/50 hover:shadow-md transition-all cursor-pointer">
+          <Card className="cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]">
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-teal-500/10 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-teal-600" />
-                </div>
+                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconTones.teal}`}>
+                  <Shield className="h-5 w-5" />
+                </span>
                 <div>
                   <p className="font-medium text-clay-700">Access Control</p>
                   <p className="text-sm text-clay-500">Customise role permissions for pages</p>
@@ -141,12 +142,12 @@ function SettingsContent() {
           </Card>
         </Link>
         <Link href="/manage/settings/institutions">
-          <Card className="hover:border-gold/50 hover:shadow-md transition-all cursor-pointer">
+          <Card className="cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]">
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gold/10 flex items-center justify-center">
-                  <GraduationCap className="h-5 w-5 text-gold" />
-                </div>
+                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconTones.gold}`}>
+                  <GraduationCap className="h-5 w-5" />
+                </span>
                 <div>
                   <p className="font-medium text-clay-700">Institutions</p>
                   <p className="text-sm text-clay-500">Manage student institutions</p>
@@ -173,7 +174,7 @@ function SettingsContent() {
           {/* Grouped by category */}
           {categories.map((category) => (
             <div key={category}>
-              <h3 className="text-sm font-semibold text-clay-600 mb-2">{category}</h3>
+              <SectionHeading className="mb-2">{category}</SectionHeading>
               <div className="space-y-2">
                 {checklistItems
                   .map((item, originalIndex) => ({ item, originalIndex }))
@@ -181,7 +182,7 @@ function SettingsContent() {
                   .map(({ item, originalIndex }) => (
                     <div
                       key={originalIndex}
-                      className="flex items-center gap-3 rounded-md border border-clay-200 bg-white px-3 py-2"
+                      className="flex items-center gap-3 rounded-md border border-clay-100/70 bg-white/70 px-3 py-2"
                     >
                       <GripVertical className="h-4 w-4 text-clay-300 flex-shrink-0" />
                       <span className="flex-1 text-sm text-clay-700">{item.task}</span>
@@ -200,14 +201,18 @@ function SettingsContent() {
           ))}
 
           {checklistItems.length === 0 && (
-            <p className="text-sm text-clay-400 text-center py-4">
-              No checklist items yet. Add one below.
-            </p>
+            <EmptyState
+              icon={CheckSquare}
+              title="No checklist items yet"
+              description="Add one below to get started."
+              tone="clay"
+              className="py-8"
+            />
           )}
 
           {/* Add new item */}
-          <div className="border-t border-clay-200 pt-4">
-            <h3 className="text-sm font-semibold text-clay-600 mb-3">Add New Item</h3>
+          <div className="border-t border-clay-100/70 pt-4">
+            <SectionHeading className="mb-3">Add New Item</SectionHeading>
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
                 <Label htmlFor="newTask" className="text-xs text-clay-500">Task</Label>
@@ -254,7 +259,7 @@ function SettingsContent() {
           </div>
 
           {/* Save */}
-          <div className="flex justify-end border-t border-clay-200 pt-4">
+          <div className="flex justify-end border-t border-clay-100/70 pt-4">
             <Button onClick={handleSave} disabled={saving}>
               {saving ? (
                 <>

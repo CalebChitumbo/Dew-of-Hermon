@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StatTile } from "@/components/shared/StatTile";
 import {
   Plus,
   Calendar,
@@ -86,7 +89,7 @@ function ServiceCard({ service }: { service: ServiceWithEvent }) {
 
   return (
     <Link href={`/manage/services/${service.id}`}>
-      <Card className="hover:shadow-md transition-shadow cursor-pointer border-clay-200 hover:border-clay-300">
+      <Card className="cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -227,86 +230,62 @@ function ServicesListContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
-        <h3 className="text-lg font-display text-clay-600 mb-2">
-          Something went wrong
-        </h3>
-        <p className="text-sm text-clay-400 mb-4">{error}</p>
-        <Button variant="outline" onClick={fetchServices}>
-          Try Again
-        </Button>
-      </div>
+      <EmptyState
+        icon={AlertCircle}
+        tone="clay"
+        title="Something went wrong"
+        description={error}
+        action={
+          <Button variant="outline" onClick={fetchServices}>
+            Try Again
+          </Button>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-clay-700">
-            Services
-          </h1>
-          <p className="mt-1 text-clay-500">
-            Manage service schedules and rota assignments
-          </p>
-        </div>
-        <Link href="/manage/services/new">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Create Service
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Services"
+        description="Manage service schedules and rota assignments"
+        icon={Calendar}
+        tone="sage"
+        actions={
+          <Link href="/manage/services/new">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Create Service
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Stats cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-teal/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-teal" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">
-                  {upcomingServices.length}
-                </p>
-                <p className="text-sm text-clay-500">Upcoming</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gold/10 flex items-center justify-center">
-                <AlertCircle className="h-5 w-5 text-gold" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">
-                  {upcomingServices.filter((s) => s.assignmentCount < TOTAL_ROLES).length}
-                </p>
-                <p className="text-sm text-clay-500">Need Assignments</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">
-                  {upcomingServices.filter((s) => s.assignmentCount >= TOTAL_ROLES).length}
-                </p>
-                <p className="text-sm text-clay-500">Fully Staffed</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          icon={Calendar}
+          tone="teal"
+          label="Upcoming"
+          value={upcomingServices.length}
+        />
+        <StatTile
+          icon={AlertCircle}
+          tone="gold"
+          label="Need Assignments"
+          value={
+            upcomingServices.filter((s) => s.assignmentCount < TOTAL_ROLES).length
+          }
+        />
+        <StatTile
+          icon={CheckCircle2}
+          tone="sage"
+          label="Fully Staffed"
+          value={
+            upcomingServices.filter((s) => s.assignmentCount >= TOTAL_ROLES).length
+          }
+        />
       </div>
 
       {/* Services tabs */}
@@ -328,23 +307,20 @@ function ServicesListContent() {
 
         <TabsContent value="upcoming">
           {upcomingServices.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 text-clay-300 mx-auto mb-4" />
-                <h3 className="text-lg font-display text-clay-600 mb-2">
-                  No upcoming services
-                </h3>
-                <p className="text-sm text-clay-400 mb-4">
-                  Create a new service to get started with rota assignments.
-                </p>
+            <EmptyState
+              icon={Calendar}
+              tone="clay"
+              title="No upcoming services"
+              description="Create a new service to get started with rota assignments."
+              action={
                 <Link href="/manage/services/new">
                   <Button variant="outline" className="gap-2">
                     <Plus className="h-4 w-4" />
                     Create Service
                   </Button>
                 </Link>
-              </CardContent>
-            </Card>
+              }
+            />
           ) : (
             <div className="space-y-3">
               {upcomingServices.map((service) => (
@@ -356,17 +332,12 @@ function ServicesListContent() {
 
         <TabsContent value="past">
           {pastServices.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Clock className="h-12 w-12 text-clay-300 mx-auto mb-4" />
-                <h3 className="text-lg font-display text-clay-600 mb-2">
-                  No past services
-                </h3>
-                <p className="text-sm text-clay-400">
-                  Past services will appear here after their date has passed.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Clock}
+              tone="clay"
+              title="No past services"
+              description="Past services will appear here after their date has passed."
+            />
           ) : (
             <div className="space-y-3">
               {pastServices.map((service) => (

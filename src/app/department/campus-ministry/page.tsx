@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   GraduationCap,
   Plus,
@@ -701,35 +704,31 @@ export default function CampusMinistryPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <GraduationCap className="h-12 w-12 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-600">
-          Access Restricted
-        </h2>
-        <p className="text-clay-400 mt-2 text-center max-w-md">
-          This page is only accessible to Campus Ministry department members.
-        </p>
-      </div>
+      <EmptyState
+        icon={GraduationCap}
+        tone="clay"
+        title="Access Restricted"
+        description="This page is only accessible to Campus Ministry department members."
+        className="py-20"
+      />
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Campus Ministry
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Log contacts from campus outreach and track their journey
-          </p>
-        </div>
-        <Button variant="gold" onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Log New Contact
-        </Button>
-      </div>
+      <PageHeader
+        icon={GraduationCap}
+        tone="sage"
+        title="Campus Ministry"
+        description="Log contacts from campus outreach and track their journey"
+        actions={
+          <Button variant="gold" onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Log New Contact
+          </Button>
+        }
+      />
 
       <Tabs defaultValue="devotional" className="space-y-4">
         <TabsList>
@@ -750,38 +749,35 @@ export default function CampusMinistryPage() {
 
         {/* Devotional Focus Tab */}
         <TabsContent value="devotional" className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-display font-semibold text-clay-700 flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-gold-dark" />
-                Weekly Devotional Focus
-              </h2>
-              <p className="text-sm text-clay-500">
-                Posted by the Campus Ministry coordinator for every campus.
-              </p>
-            </div>
-            {canManageDevotionals && (
-              <Button variant="gold" onClick={() => openDevotionalDialog()}>
-                <Plus className="mr-2 h-4 w-4" />
-                Post Devotional
-              </Button>
-            )}
+          <div className="space-y-1">
+            <SectionHeading
+              actions={
+                canManageDevotionals ? (
+                  <Button variant="gold" onClick={() => openDevotionalDialog()}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Post Devotional
+                  </Button>
+                ) : undefined
+              }
+            >
+              Weekly Devotional Focus
+            </SectionHeading>
+            <p className="text-sm text-clay-500">
+              Posted by the Campus Ministry coordinator for every campus.
+            </p>
           </div>
 
           {devotionals.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <BookOpen className="h-12 w-12 text-clay-300 mb-4" />
-                <h3 className="text-lg font-display font-semibold text-clay-600">
-                  No Devotionals Posted Yet
-                </h3>
-                <p className="text-clay-400 text-sm mt-1 text-center max-w-md">
-                  {canManageDevotionals
-                    ? "Post the first devotional focus to share with every campus this week."
-                    : "Check back soon — your coordinator will post this week's focus here."}
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={BookOpen}
+              tone="sage"
+              title="No Devotionals Posted Yet"
+              description={
+                canManageDevotionals
+                  ? "Post the first devotional focus to share with every campus this week."
+                  : "Check back soon — your coordinator will post this week's focus here."
+              }
+            />
           ) : (
             <div className="space-y-4">
               {devotionals.map((dev, idx) => (
@@ -849,11 +845,8 @@ export default function CampusMinistryPage() {
         {/* Pending Approvals Tab */}
         {canApproveFollowUp && (
           <TabsContent value="approvals" className="space-y-4">
-            <div>
-              <h2 className="text-lg font-display font-semibold text-clay-700 flex items-center gap-2">
-                <ClipboardCheck className="h-5 w-5 text-gold-dark" />
-                Submissions Awaiting Approval
-              </h2>
+            <div className="space-y-1">
+              <SectionHeading>Submissions Awaiting Approval</SectionHeading>
               <p className="text-sm text-clay-500">
                 Youth-leader submissions only reach the discipleship team after
                 you approve them.
@@ -861,17 +854,12 @@ export default function CampusMinistryPage() {
             </div>
 
             {pendingCards.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <CheckCircle2 className="h-12 w-12 text-clay-300 mb-4" />
-                  <h3 className="text-lg font-display font-semibold text-clay-600">
-                    Nothing Pending
-                  </h3>
-                  <p className="text-clay-400 text-sm mt-1">
-                    All caught up — no submissions awaiting your approval.
-                  </p>
-                </CardContent>
-              </Card>
+              <EmptyState
+                icon={CheckCircle2}
+                tone="sage"
+                title="Nothing Pending"
+                description="All caught up — no submissions awaiting your approval."
+              />
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {pendingCards.map((card) => (
@@ -957,25 +945,18 @@ export default function CampusMinistryPage() {
         {/* Contacts Tab */}
         <TabsContent value="contacts" className="space-y-4">
           {myCards.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-clay-300 mb-4" />
-                <h3 className="text-lg font-display font-semibold text-clay-600">
-                  No Contacts Logged
-                </h3>
-                <p className="text-clay-400 text-sm mt-1 text-center max-w-md">
-                  Start logging contacts from your campus outreach activities.
-                </p>
-                <Button
-                  variant="gold"
-                  className="mt-4"
-                  onClick={() => setDialogOpen(true)}
-                >
+            <EmptyState
+              icon={FileText}
+              tone="sage"
+              title="No Contacts Logged"
+              description="Start logging contacts from your campus outreach activities."
+              action={
+                <Button variant="gold" onClick={() => setDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Log First Contact
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {myCards.map((card) => (
@@ -1030,17 +1011,12 @@ export default function CampusMinistryPage() {
         {/* Student Register Tab */}
         <TabsContent value="students" className="space-y-4">
           {studentMembers.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Users className="h-12 w-12 text-clay-300 mb-4" />
-                <h3 className="text-lg font-display font-semibold text-clay-600">
-                  No Students Registered
-                </h3>
-                <p className="text-clay-400 text-sm mt-1">
-                  No members are currently registered as students.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Users}
+              tone="sage"
+              title="No Students Registered"
+              description="No members are currently registered as students."
+            />
           ) : (
             Object.entries(studentsByInstitution)
               .sort(([a], [b]) => {
@@ -1085,7 +1061,7 @@ export default function CampusMinistryPage() {
                           return (
                             <div
                               key={student.id}
-                              className="flex items-center gap-3 p-2 rounded-md hover:bg-clay-50"
+                              className="flex items-center gap-3 p-2 rounded-md hover:bg-cream/50"
                             >
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold/20 text-gold-dark text-xs font-bold">
                                 {student.name.charAt(0).toUpperCase()}

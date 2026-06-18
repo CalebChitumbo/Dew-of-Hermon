@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { query, where, onSnapshot, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,6 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +34,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft,
   Building2,
   Users,
   CheckCircle2,
@@ -308,26 +309,17 @@ export default function JoinDepartmentPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Join a Department
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Request to join a department. Your request goes to the department
-            manager, then to the Chairperson for final approval.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/dashboard"
+        icon={Building2}
+        tone="lavender"
+        title="Join a Department"
+        description="Request to join a department. Your request goes to the department manager, then to the Chairperson for final approval."
+      />
 
       {/* Your requests */}
       {(activeRequests.length > 0 || pastRequests.length > 0) && (
-        <Card className="border-clay-200/70">
+        <Card className="border-clay-100/70">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Clock className="h-5 w-5 text-gold-dark" />
@@ -345,7 +337,7 @@ export default function JoinDepartmentPage() {
               return (
                 <div
                   key={req.id}
-                  className="rounded-lg border border-clay-200/70 bg-white/60 p-4"
+                  className="rounded-lg border border-clay-100/70 bg-white/70 p-4"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="min-w-0">
@@ -390,33 +382,22 @@ export default function JoinDepartmentPage() {
       )}
 
       {/* Departments you can join */}
-      <section>
-        <div className="flex items-baseline gap-3 mb-4">
-          <h2 className="text-sm font-medium text-clay-500 uppercase tracking-[0.16em]">
-            Departments you can join
-          </h2>
-          <span className="h-px flex-1 bg-gradient-to-r from-clay-200 to-transparent" />
-        </div>
+      <section className="space-y-4">
+        <SectionHeading>Departments you can join</SectionHeading>
 
         {joinable.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Building2 className="h-12 w-12 text-clay-300 mb-4" />
-              <h3 className="text-lg font-display font-semibold text-clay-600">
-                Nothing to join right now
-              </h3>
-              <p className="text-clay-400 text-sm mt-1 text-center max-w-sm">
-                You&apos;re already a member of every department, or you have
-                pending requests for the rest.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Building2}
+            tone="lavender"
+            title="Nothing to join right now"
+            description="You're already a member of every department, or you have pending requests for the rest."
+          />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {joinable.map((dept) => (
               <Card
                 key={dept.id}
-                className="h-full border-clay-200/70 hover:border-gold/40 hover:shadow-md transition-all"
+                className="h-full border-clay-100/70 transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]"
               >
                 <CardContent className="p-5 flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-3">

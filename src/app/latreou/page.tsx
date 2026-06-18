@@ -35,6 +35,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
 import type { Department } from "@/types";
 
 import { ProgressBar } from "./components/ProgressBar";
@@ -248,7 +249,7 @@ export default function LatreouPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-clay-200 bg-white p-4 md:p-6">
+      <div className="rounded-lg border border-clay-100/70 bg-white/70 p-4 md:p-6">
         <ProgressBar currentStep={step} onSelect={setStep} />
       </div>
 
@@ -310,22 +311,19 @@ export default function LatreouPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gold/15 text-gold-dark">
-            <Music className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="font-display text-3xl text-clay-700">Latreou</h1>
-            <p className="text-sm text-clay-500">
-              Suggest songs for the team and{isLead ? " " : " — leads "}
-              {isLead
-                ? "prepare the two-Sunday worship cycle document."
-                : "prepare the cycle document."}
-            </p>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        icon={Music}
+        tone="teal"
+        title="Latreou"
+        description={
+          <>
+            Suggest songs for the team and{isLead ? " " : " — leads "}
+            {isLead
+              ? "prepare the two-Sunday worship cycle document."
+              : "prepare the cycle document."}
+          </>
+        }
+      />
 
       {isLead ? (
         <Tabs defaultValue="suggestions">

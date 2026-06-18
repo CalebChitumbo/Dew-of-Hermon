@@ -22,8 +22,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   Shield,
   UserPlus,
   UserMinus,
@@ -509,18 +510,17 @@ export default function EventRoleBoardPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          Department Lead access or higher is required to view role boards.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="Department Lead access or higher is required to view role boards."
+        className="py-20"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -534,39 +534,37 @@ export default function EventRoleBoardPage() {
 
   if (!event) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Event not found
-        </h2>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Calendar}
+        title="Event not found"
+        className="py-20"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/calendar">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900 truncate">
-            Role Board
-          </h1>
-          <p className="text-sm text-clay-500 mt-0.5 truncate">{event.title}</p>
-        </div>
-        <Badge variant="outline" className="text-xs hidden sm:block">
-          {EVENT_TYPE_LABELS[event.type] || event.type}
-        </Badge>
-      </div>
+      <PageHeader
+        backHref="/calendar"
+        icon={Users}
+        tone="periwinkle"
+        title="Role Board"
+        description={event.title}
+        actions={
+          <Badge variant="outline" className="text-xs hidden sm:block">
+            {EVENT_TYPE_LABELS[event.type] || event.type}
+          </Badge>
+        }
+      />
 
       {/* Event Info */}
-      <Card className="border-clay-200">
+      <Card>
         <CardContent className="pt-4 pb-4">
           <div className="flex flex-wrap gap-4 text-sm text-clay-600">
             <div className="flex items-center gap-1.5">
@@ -592,7 +590,7 @@ export default function EventRoleBoardPage() {
         const isCreator = userData?.id === event.createdBy;
         if (!hasEnded || !(isCreator || isAdmin)) return null;
         return (
-          <Card className="border-clay-200 bg-cream/40">
+          <Card className="border-clay-100/70 bg-cream/40">
             <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row sm:items-center gap-3">
               <ClipboardList className="h-5 w-5 text-clay-500 flex-shrink-0" />
               <div className="flex-1 text-sm text-clay-700">
@@ -668,7 +666,7 @@ export default function EventRoleBoardPage() {
                       "flex items-center justify-between rounded-lg border px-3 py-2.5 gap-2",
                       isFilled
                         ? "border-green-200 bg-green-50"
-                        : "border-clay-200 bg-clay-50"
+                        : "border-clay-100/70 bg-cream/40"
                     )}
                   >
                     <div className="min-w-0">
@@ -727,44 +725,36 @@ export default function EventRoleBoardPage() {
 
       {/* Department Role Sections */}
       {deptSections.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="h-10 w-10 text-clay-300 mx-auto mb-3" />
-            {event.approvalStatus !== "APPROVED" ? (
-              <p className="text-clay-500">
-                Department roles will appear here once the event is approved.
-              </p>
-            ) : (
-              <>
-                <p className="text-clay-600 font-medium">
-                  No department roles set up for this event yet.
-                </p>
-                <p className="text-sm text-clay-400 mt-1 max-w-md mx-auto">
-                  This usually means the role-template departments
-                  (e.g.&nbsp;Media&nbsp;&amp; Technical, Hospitality) aren&apos;t
-                  configured under those exact names. Admins can regenerate
-                  them below.
-                </p>
-                {isAdmin && (
-                  <Button
-                    variant="gold"
-                    size="sm"
-                    className="mt-4"
-                    onClick={handleGenerateRoles}
-                    disabled={generatingRoles}
-                  >
-                    {generatingRoles ? (
-                      <LoadingSpinner size="sm" className="mr-2" />
-                    ) : (
-                      <UserPlus className="mr-2 h-4 w-4" />
-                    )}
-                    Generate department roles
-                  </Button>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+        event.approvalStatus !== "APPROVED" ? (
+          <EmptyState
+            icon={Users}
+            title="Roles not ready yet"
+            description="Department roles will appear here once the event is approved."
+          />
+        ) : (
+          <EmptyState
+            icon={Users}
+            title="No department roles set up for this event yet."
+            description="This usually means the role-template departments (e.g. Media & Technical, Hospitality) aren't configured under those exact names. Admins can regenerate them below."
+            action={
+              isAdmin ? (
+                <Button
+                  variant="gold"
+                  size="sm"
+                  onClick={handleGenerateRoles}
+                  disabled={generatingRoles}
+                >
+                  {generatingRoles ? (
+                    <LoadingSpinner size="sm" className="mr-2" />
+                  ) : (
+                    <UserPlus className="mr-2 h-4 w-4" />
+                  )}
+                  Generate department roles
+                </Button>
+              ) : undefined
+            }
+          />
+        )
       ) : (
         deptSections.map((section) => {
           const filled = section.roles.filter((r) => r.assignedUserId).length;
@@ -809,7 +799,7 @@ export default function EventRoleBoardPage() {
                           "flex items-center justify-between rounded-lg border px-3 py-2.5 gap-2",
                           isFilled
                             ? "border-green-200 bg-green-50"
-                            : "border-clay-200 bg-white"
+                            : "border-clay-100/70 bg-white/60"
                         )}
                       >
                         <div className="min-w-0">

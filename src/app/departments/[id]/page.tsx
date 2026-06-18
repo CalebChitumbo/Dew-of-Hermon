@@ -29,6 +29,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StatTile } from "@/components/shared/StatTile";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +60,6 @@ import {
   Circle,
   Clock,
   Trash2,
-  ArrowLeft,
   Search,
   AlertCircle,
   CalendarDays,
@@ -312,97 +315,91 @@ export default function DepartmentDetailPage() {
 
   if (!department) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Building2 className="h-12 w-12 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-600">
-          Department Not Found
-        </h2>
-        <Link href="/departments" className="mt-4">
-          <Button variant="outline">Back to Departments</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Building2}
+        tone="clay"
+        title="Department Not Found"
+        className="py-20"
+        action={
+          <Link href="/departments">
+            <Button variant="outline">Back to Departments</Button>
+          </Link>
+        }
+      />
     );
   }
 
   if (!isDeptLead) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <AlertCircle className="h-12 w-12 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-600">
-          Access Restricted
-        </h2>
-        <p className="text-clay-400 mt-2 text-center max-w-md">
-          You must be a department lead or admin to manage this department.
-        </p>
-        <Link href="/departments" className="mt-4">
-          <Button variant="outline">Back to Departments</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={AlertCircle}
+        tone="clay"
+        title="Access Restricted"
+        description="You must be a department lead or admin to manage this department."
+        className="py-20"
+        action={
+          <Link href="/departments">
+            <Button variant="outline">Back to Departments</Button>
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/departments">
-            <Button variant="ghost" size="icon" className="shrink-0">
-              <ArrowLeft className="h-5 w-5" />
+      <PageHeader
+        backHref="/departments"
+        icon={Building2}
+        tone="teal"
+        title={
+          <span className="flex items-center gap-2">
+            <span className="text-2xl">{department.icon}</span>
+            {department.name}
+          </span>
+        }
+        description={department.description || undefined}
+        actions={
+          <>
+            <Button variant="gold" onClick={() => setCreateTaskOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Task
             </Button>
-          </Link>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{department.icon}</span>
-              <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-                {department.name}
-              </h1>
-            </div>
-            {department.description && (
-              <p className="text-clay-500 text-sm mt-1 ml-10">
-                {department.description}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="gold" onClick={() => setCreateTaskOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Task
-          </Button>
-          <Button variant="outline" onClick={() => setAddMemberOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add Member
-          </Button>
-        </div>
-      </div>
+            <Button variant="outline" onClick={() => setAddMemberOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Member
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-clay-700">{members.length}</p>
-            <p className="text-xs text-clay-500">Members</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-orange-600">{todoTasks.length + inProgressTasks.length}</p>
-            <p className="text-xs text-clay-500">Active Tasks</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-blue-600">{inProgressTasks.length}</p>
-            <p className="text-xs text-clay-500">In Progress</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{doneTasks.length}</p>
-            <p className="text-xs text-clay-500">Completed</p>
-          </CardContent>
-        </Card>
+        <StatTile
+          icon={Users}
+          tone="sage"
+          label="Members"
+          value={members.length}
+        />
+        <StatTile
+          icon={Clock}
+          tone="gold"
+          label="Active Tasks"
+          value={todoTasks.length + inProgressTasks.length}
+        />
+        <StatTile
+          icon={Circle}
+          tone="blue"
+          label="In Progress"
+          value={inProgressTasks.length}
+        />
+        <StatTile
+          icon={CheckCircle2}
+          tone="teal"
+          label="Completed"
+          value={doneTasks.length}
+        />
       </div>
 
       {/* Tabs */}
@@ -437,25 +434,18 @@ export default function DepartmentDetailPage() {
               <LoadingSpinner />
             </div>
           ) : tasks.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <CheckCircle2 className="h-12 w-12 text-clay-300 mb-4" />
-                <h3 className="text-lg font-display font-semibold text-clay-600">
-                  No Tasks Yet
-                </h3>
-                <p className="text-clay-400 text-sm mt-1">
-                  Create your first task to get started
-                </p>
-                <Button
-                  variant="gold"
-                  className="mt-4"
-                  onClick={() => setCreateTaskOpen(true)}
-                >
+            <EmptyState
+              icon={CheckCircle2}
+              tone="clay"
+              title="No Tasks Yet"
+              description="Create your first task to get started"
+              action={
+                <Button variant="gold" onClick={() => setCreateTaskOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Task
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ) : (
             <>
               {/* To Do */}
@@ -502,25 +492,18 @@ export default function DepartmentDetailPage() {
       {activeTab === "members" && (
         <div>
           {members.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Users className="h-12 w-12 text-clay-300 mb-4" />
-                <h3 className="text-lg font-display font-semibold text-clay-600">
-                  No Members Yet
-                </h3>
-                <p className="text-clay-400 text-sm mt-1">
-                  Add members to this department to get started
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => setAddMemberOpen(true)}
-                >
+            <EmptyState
+              icon={Users}
+              tone="clay"
+              title="No Members Yet"
+              description="Add members to this department to get started"
+              action={
+                <Button variant="outline" onClick={() => setAddMemberOpen(true)}>
                   <UserPlus className="mr-2 h-4 w-4" />
                   Add Member
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {members.map((member) => (
@@ -777,9 +760,9 @@ function TaskSection({
 }) {
   return (
     <div>
-      <h3 className="text-sm font-semibold text-clay-600 mb-3 uppercase tracking-wide">
+      <SectionHeading className="mb-3">
         {title} ({tasks.length})
-      </h3>
+      </SectionHeading>
       <div className="space-y-2">
         {tasks.map((task) => {
           const StatusIcon = statusIcons[task.status];

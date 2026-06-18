@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { roleLabels } from "@/lib/permissions";
 import {
   UserCircle,
@@ -120,14 +121,12 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-          My Profile
-        </h1>
-        <p className="text-clay-500 mt-1">
-          Manage your account settings and personal information
-        </p>
-      </div>
+      <PageHeader
+        icon={UserCircle}
+        tone="periwinkle"
+        title="My Profile"
+        description="Manage your account settings and personal information"
+      />
 
       {/* Profile Image & Role */}
       <Card>

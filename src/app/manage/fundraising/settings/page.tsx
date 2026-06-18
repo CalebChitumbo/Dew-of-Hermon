@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
@@ -11,8 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, EyeOff, Save, AlertCircle } from "lucide-react";
+import { EyeOff, Save, AlertCircle, Receipt } from "lucide-react";
 import {
   CAMPAIGN_NAME,
   CURRENCY_SYMBOL,
@@ -133,35 +134,25 @@ function FundraisingSettingsContent() {
 
   if (!canPlanBraai) {
     return (
-      <div className="flex h-[60vh] items-center justify-center text-center">
-        <div>
-          <h2 className="text-2xl font-display text-clay-700">Settings</h2>
-          <p className="mt-2 text-clay-500">
-            Only the Fundraising lead can edit menu prices.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={Receipt}
+        title="Settings"
+        description="Only the Fundraising lead can edit menu prices."
+        tone="clay"
+        className="min-h-[60vh] justify-center"
+      />
     );
   }
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Link href="/manage/fundraising">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-display font-bold text-clay-700">
-            Menu & Settings
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Edit the prices buyers see on the {CAMPAIGN_NAME} page, and the
-            Mobile Money number used on receipts.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/manage/fundraising"
+        icon={Receipt}
+        tone="sage"
+        title="Menu & Settings"
+        description={`Edit the prices buyers see on the ${CAMPAIGN_NAME} page, and the Mobile Money number used on receipts.`}
+      />
 
       {error && (
         <Card className="border-red-200">
@@ -339,13 +330,12 @@ function SettingsFallback() {
   if (loading) return <PageLoader />;
   if (canPlanBraai) return <FundraisingSettingsContent />;
   return (
-    <div className="flex h-[60vh] items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-display text-clay-700">Access Denied</h2>
-        <p className="mt-2 text-clay-500">
-          You don&apos;t have permission to edit fundraising settings.
-        </p>
-      </div>
-    </div>
+    <EmptyState
+      icon={Receipt}
+      title="Access Denied"
+      description="You don't have permission to edit fundraising settings."
+      tone="clay"
+      className="min-h-[60vh] justify-center"
+    />
   );
 }

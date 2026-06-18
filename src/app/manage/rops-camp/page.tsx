@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 import { PageLoader } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StatTile } from "@/components/shared/StatTile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,14 +85,13 @@ export default function RopsCampAdminPage() {
   if (loading) return <PageLoader />;
   if (!canManage) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-display text-clay-700">Access Denied</h2>
-          <p className="mt-2 text-clay-500">
-            You don&apos;t have permission to view ROPs Camp registrations.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={Tent}
+        tone="clay"
+        title="Access Denied"
+        description="You don't have permission to view ROPs Camp registrations."
+        className="min-h-[60vh] justify-center"
+      />
     );
   }
   return <RopsCampAdminInner />;
@@ -209,64 +211,64 @@ function RopsCampAdminInner() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-2 text-clay-500 text-sm mb-1">
-            <Tent className="h-4 w-4" />
-            <span>ROPs Camp</span>
-          </div>
-          <h1 className="font-display text-3xl text-clay-800">{camp.name}</h1>
-          <p className="text-clay-600 text-sm">
+      <PageHeader
+        icon={Tent}
+        tone="gold"
+        title={camp.name}
+        description={
+          <>
             {format(parseISO(camp.startDate), "MMMM d")}–
             {format(parseISO(camp.endDate), "d, yyyy")} · Registrations & payments
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {CAMPS.length > 1 && (
-            <Select value={campId} onValueChange={setCampId}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CAMPS.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            {CAMPS.length > 1 && (
+              <Select value={campId} onValueChange={setCampId}>
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CAMPS.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Button variant="outline" onClick={load} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard
+        <StatTile
           icon={Users}
+          tone="teal"
           label="Registered"
           value={stats.total}
-          accent="bg-teal/10 text-teal"
         />
-        <StatCard
+        <StatTile
           icon={CheckCircle2}
+          tone="sage"
           label="Paid"
           value={stats.paid}
-          accent="bg-green-100 text-green-700"
         />
-        <StatCard
+        <StatTile
           icon={Clock}
+          tone="gold"
           label="Unpaid"
           value={stats.unpaid}
-          accent="bg-amber-100 text-amber-700"
         />
-        <StatCard
+        <StatTile
           icon={DollarSign}
+          tone="clay"
           label="Revenue"
           value={`${camp.currency} ${stats.revenue.toLocaleString()}`}
-          accent="bg-clay-100 text-clay-700"
         />
       </div>
 
@@ -307,16 +309,21 @@ function RopsCampAdminInner() {
               <LoadingSpinner />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-clay-500">
-              {rows.length === 0
-                ? "No registrations yet."
-                : "No registrations match your filters."}
-            </div>
+            <EmptyState
+              icon={Tent}
+              tone="clay"
+              title={rows.length === 0 ? "No registrations yet" : "No matches"}
+              description={
+                rows.length === 0
+                  ? "Registrations will appear here once campers sign up."
+                  : "No registrations match your filters."
+              }
+            />
           ) : (
             <div className="overflow-x-auto -mx-2">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wider text-clay-500 border-b border-clay-200">
+                  <tr className="text-left text-xs uppercase tracking-wider text-clay-500 border-b border-clay-100">
                     <th className="px-2 py-3 font-medium">Camper</th>
                     <th className="px-2 py-3 font-medium">Contact</th>
                     <th className="px-2 py-3 font-medium">Parent / guardian</th>
@@ -328,7 +335,7 @@ function RopsCampAdminInner() {
                 </thead>
                 <tbody className="divide-y divide-clay-100">
                   {filtered.map((row) => (
-                    <tr key={row.id} className="hover:bg-clay-50/50">
+                    <tr key={row.id} className="hover:bg-cream/50">
                       <td className="px-2 py-3">
                         <div className="font-medium text-clay-800">
                           {row.firstName} {row.lastName}
@@ -453,37 +460,6 @@ function RopsCampAdminInner() {
         </Dialog>
       )}
     </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  accent,
-  extra,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  accent: string;
-  extra?: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-clay-500">{label}</div>
-            <div className="font-display text-2xl text-clay-800 mt-1">{value}</div>
-          </div>
-          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${accent}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-        </div>
-        {extra}
-      </CardContent>
-    </Card>
   );
 }
 

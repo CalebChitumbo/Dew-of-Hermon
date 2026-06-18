@@ -15,12 +15,13 @@ import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft,
   CheckCircle2,
   Circle,
   ClipboardList,
@@ -67,7 +68,7 @@ function ChecklistItemRow({ item, onToggle, toggling }: ChecklistItemRowProps) {
       className={`w-full text-left flex items-start gap-3 p-3 rounded-lg transition-colors border ${
         item.isCompleted
           ? "bg-green-50/50 border-green-200/50"
-          : "bg-white border-clay-200 hover:bg-clay-50"
+          : "bg-white/70 border-clay-100/70 hover:bg-cream/50"
       }`}
     >
       <div className="mt-0.5 shrink-0">
@@ -294,19 +295,18 @@ function ChecklistContent() {
 
   if (!service) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-display text-clay-700">
-            Service Not Found
-          </h2>
-          <p className="mt-2 text-clay-500 mb-4">
-            This service may have been deleted.
-          </p>
+      <EmptyState
+        icon={ClipboardList}
+        tone="clay"
+        title="Service Not Found"
+        description="This service may have been deleted."
+        action={
           <Link href="/manage/services">
             <Button variant="outline">Back to Services</Button>
           </Link>
-        </div>
-      </div>
+        }
+        className="min-h-[60vh] justify-center"
+      />
     );
   }
 
@@ -317,17 +317,13 @@ function ChecklistContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href={`/manage/services/${serviceId}`}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-display font-bold text-clay-700">
-            Service Checklist
-          </h1>
-          <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-clay-500">
+      <PageHeader
+        backHref={`/manage/services/${serviceId}`}
+        icon={ClipboardList}
+        tone="sage"
+        title="Service Checklist"
+        description={
+          <span className="flex flex-wrap items-center gap-3">
             <span>{service.theme || "Untitled Service"}</span>
             {eventDate && (
               <span className="flex items-center gap-1">
@@ -335,9 +331,9 @@ function ChecklistContent() {
                 {format(eventDate, "d MMM yyyy")}
               </span>
             )}
-          </div>
-        </div>
-      </div>
+          </span>
+        }
+      />
 
       {/* Progress */}
       <Card>
@@ -375,17 +371,12 @@ function ChecklistContent() {
 
       {/* Checklist by Category */}
       {totalCount === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <ClipboardList className="h-12 w-12 text-clay-300 mx-auto mb-4" />
-            <h3 className="text-lg font-display text-clay-600 mb-2">
-              No Checklist Items
-            </h3>
-            <p className="text-sm text-clay-400">
-              No checklist items have been created for this service yet.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={ClipboardList}
+          tone="clay"
+          title="No Checklist Items"
+          description="No checklist items have been created for this service yet."
+        />
       ) : (
         <div className="space-y-6">
           {Object.entries(itemsByCategory).map(([category, items]) => {

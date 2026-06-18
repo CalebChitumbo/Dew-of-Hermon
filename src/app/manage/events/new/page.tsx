@@ -22,7 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus, Banknote, Mic, Target, Ticket, Clapperboard, UtensilsCrossed } from "lucide-react";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { CalendarPlus, Users, Shield, CheckCircle2, Clock, Bus, Banknote, Mic, Target, Ticket, Clapperboard, UtensilsCrossed } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hasMinRole } from "@/lib/permissions";
 
@@ -326,18 +328,17 @@ export default function NewEventPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You need Department Lead access or higher to create events.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="You need Department Lead access or higher to create events."
+        className="py-20"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -401,23 +402,17 @@ export default function NewEventPage() {
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       {/* Page Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/calendar">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900">
-            Create New Event
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            {userData && hasMinRole(userData.role, "ADMIN")
-              ? "Events you create will be automatically approved."
-              : "Events will be reviewed by the Events & Fellowship team before appearing on the calendar."}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/calendar"
+        icon={CalendarPlus}
+        tone="periwinkle"
+        title="Create New Event"
+        description={
+          userData && hasMinRole(userData.role, "ADMIN")
+            ? "Events you create will be automatically approved."
+            : "Events will be reviewed by the Events & Fellowship team before appearing on the calendar."
+        }
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Details */}

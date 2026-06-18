@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, Plus, Pencil, Shield, Check, X } from "lucide-react";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Plus, Pencil, Shield, Check, X, GraduationCap, Building2 } from "lucide-react";
 
 interface InstitutionItem {
   id: string;
@@ -102,41 +104,31 @@ export default function InstitutionsPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You do not have permission to manage institutions.
-        </p>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access denied"
+        description="You do not have permission to manage institutions."
+        tone="clay"
+        className="py-20"
+      />
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/manage/settings">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Manage Institutions
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Add, edit, or deactivate student institutions
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/manage/settings"
+        icon={GraduationCap}
+        tone="clay"
+        title="Manage Institutions"
+        description="Add, edit, or deactivate student institutions"
+      />
 
       {/* Add New Institution */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Add Institution</CardTitle>
+          <SectionHeading>Add Institution</SectionHeading>
         </CardHeader>
         <CardContent>
           <div className="flex gap-3">
@@ -165,7 +157,7 @@ export default function InstitutionsPage() {
       {/* Institutions List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Institutions</CardTitle>
+          <SectionHeading>Institutions</SectionHeading>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -173,15 +165,19 @@ export default function InstitutionsPage() {
               <LoadingSpinner />
             </div>
           ) : institutions.length === 0 ? (
-            <p className="text-clay-400 text-center py-8">
-              No institutions yet. Add one above.
-            </p>
+            <EmptyState
+              icon={Building2}
+              title="No institutions yet"
+              description="Add one above to get started."
+              tone="clay"
+              className="py-8"
+            />
           ) : (
             <div className="space-y-2">
               {institutions.map((inst) => (
                 <div
                   key={inst.id}
-                  className="flex items-center justify-between rounded-lg border border-clay-200 px-4 py-3"
+                  className="flex items-center justify-between rounded-lg border border-clay-100/70 px-4 py-3"
                 >
                   {editingId === inst.id ? (
                     <div className="flex items-center gap-2 flex-1">

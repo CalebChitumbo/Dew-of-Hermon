@@ -27,6 +27,9 @@ import {
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, isToday, isYesterday, format } from "date-fns";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 // ─── Notification type configuration ───
 
@@ -203,28 +206,28 @@ export default function NotificationsPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900">
-            Notifications
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            {unreadCount > 0
-              ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
-              : "You're all caught up"}
-          </p>
-        </div>
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            onClick={markAllAsRead}
-            className="gap-2"
-          >
-            <CheckCheck className="h-4 w-4" />
-            Mark all as read
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        icon={Bell}
+        tone="gold"
+        title="Notifications"
+        description={
+          unreadCount > 0
+            ? `You have ${unreadCount} unread notification${unreadCount !== 1 ? "s" : ""}`
+            : "You're all caught up"
+        }
+        actions={
+          unreadCount > 0 ? (
+            <Button
+              variant="outline"
+              onClick={markAllAsRead}
+              className="gap-2"
+            >
+              <CheckCheck className="h-4 w-4" />
+              Mark all as read
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* Loading state */}
       {loading && (
@@ -235,29 +238,19 @@ export default function NotificationsPage() {
 
       {/* Empty state */}
       {!loading && notifications.length === 0 && (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-clay-100 flex items-center justify-center mb-4">
-              <Inbox className="h-8 w-8 text-clay-400" />
-            </div>
-            <h3 className="font-display font-semibold text-clay-700 mb-1">
-              No notifications yet
-            </h3>
-            <p className="text-sm text-clay-500 max-w-sm mx-auto">
-              When you receive reminders, assignments, or announcements, they
-              will appear here.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Inbox}
+          tone="clay"
+          title="No notifications yet"
+          description="When you receive reminders, assignments, or announcements, they will appear here."
+        />
       )}
 
       {/* Grouped notification list */}
       {!loading &&
         grouped.map((group) => (
           <div key={group.label} className="space-y-2">
-            <h2 className="text-sm font-semibold text-clay-500 uppercase tracking-wider px-1">
-              {group.label}
-            </h2>
+            <SectionHeading>{group.label}</SectionHeading>
             <div className="space-y-2">
               {group.notifications.map((notification) => {
                 const typeConfig =
@@ -268,7 +261,7 @@ export default function NotificationsPage() {
                   <Card
                     key={notification.id}
                     className={cn(
-                      "transition-colors cursor-pointer hover:shadow-md",
+                      "cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]",
                       !notification.isRead && "border-l-4 border-l-[#C8963E] bg-[#C8963E]/[0.03]"
                     )}
                     onClick={() => handleNotificationClick(notification)}

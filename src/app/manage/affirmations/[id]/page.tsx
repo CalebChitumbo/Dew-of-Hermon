@@ -27,7 +27,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, Save, Sparkles } from "lucide-react";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { Save, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 
 export default function AffirmationEditorPage() {
@@ -158,29 +160,23 @@ export default function AffirmationEditorPage() {
     <RoleProtected requiredRole="ADMIN">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/manage/affirmations">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-              {isNew ? "New Affirmation" : "Edit Affirmation"}
-            </h1>
-            <p className="text-clay-500 mt-1">
-              {isNew
-                ? "Create a new Potter's Wheel affirmation"
-                : "Update this affirmation"}
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          backHref="/manage/affirmations"
+          icon={Sparkles}
+          tone="blush"
+          title={isNew ? "New Affirmation" : "Edit Affirmation"}
+          description={
+            isNew
+              ? "Create a new Potter's Wheel affirmation"
+              : "Update this affirmation"
+          }
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Editor */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Content</CardTitle>
+              <SectionHeading>Content</SectionHeading>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

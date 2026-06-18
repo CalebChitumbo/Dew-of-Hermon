@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Department, UserRole, LifeGroup, Institution } from "@/types";
 import { roleLabels, canManageMembers, getAssignableRoles } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,10 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { ArrowLeft, Save, Shield, X } from "lucide-react";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Save, Shield, X, UserPlus } from "lucide-react";
 
 const LIFE_GROUP_LABELS: Record<LifeGroup, string> = {
   BRIDGE: "Bridge (15-20 years)",
@@ -188,42 +191,32 @@ export default function NewMemberPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You do not have permission to add members.
-        </p>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access denied"
+        description="You do not have permission to add members."
+        tone="clay"
+        className="py-20"
+      />
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/manage/members">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Add New Member
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Create a new member account
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/manage/members"
+        icon={UserPlus}
+        tone="periwinkle"
+        title="Add New Member"
+        description="Create a new member account"
+      />
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Member Details</CardTitle>
+            <SectionHeading>Member Details</SectionHeading>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Name */}
@@ -430,7 +423,7 @@ export default function NewMemberPage() {
                           className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
                             isSelected
                               ? "border-gold bg-gold/10 text-clay-700"
-                              : "border-clay-200 bg-white text-clay-600 hover:border-clay-300 hover:bg-clay-50"
+                              : "border-clay-100/70 bg-white/70 text-clay-600 hover:border-clay-300 hover:bg-clay-50"
                           }`}
                         >
                           <div

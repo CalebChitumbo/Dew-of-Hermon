@@ -21,8 +21,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StatTile } from "@/components/shared/StatTile";
 import {
-  ArrowLeft,
   Calendar,
   CheckCircle2,
   Download,
@@ -31,7 +33,10 @@ import {
   MessageSquare,
   Shield,
   User,
+  Users,
+  Target,
   XCircle,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -224,18 +229,17 @@ export default function EventReportReviewDetailPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          Only the Chairperson can review event reports.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="Only the Chairperson can review event reports."
+        className="py-20"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -249,15 +253,16 @@ export default function EventReportReviewDetailPage() {
 
   if (notFound || !report) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <XCircle className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Report not found
-        </h2>
-        <Link href="/manage/events/reports/review" className="mt-4">
-          <Button variant="outline">Back to reviews</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={XCircle}
+        title="Report not found"
+        className="py-20"
+        action={
+          <Link href="/manage/events/reports/review">
+            <Button variant="outline">Back to reviews</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -265,28 +270,23 @@ export default function EventReportReviewDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/manage/events/reports/review">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900">
-            {report.eventTitle}
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Post-event report —{" "}
-            {EVENT_TYPE_LABELS[report.eventType] ?? report.eventType}
-          </p>
-        </div>
-        <Badge
-          variant="outline"
-          className={cn("text-xs", STATUS_BADGE[report.status])}
-        >
-          {STATUS_LABEL[report.status]}
-        </Badge>
-      </div>
+      <PageHeader
+        backHref="/manage/events/reports/review"
+        icon={FileText}
+        tone="periwinkle"
+        title={report.eventTitle}
+        description={`Post-event report — ${
+          EVENT_TYPE_LABELS[report.eventType] ?? report.eventType
+        }`}
+        actions={
+          <Badge
+            variant="outline"
+            className={cn("text-xs", STATUS_BADGE[report.status])}
+          >
+            {STATUS_LABEL[report.status]}
+          </Badge>
+        }
+      />
 
       <Card>
         <CardContent className="py-5 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-clay-600">
@@ -320,33 +320,27 @@ export default function EventReportReviewDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="py-5">
-            <p className="text-xs uppercase tracking-wider text-clay-500 mb-1">
-              Attendance
-            </p>
-            <p className="text-2xl font-display font-bold text-clay-900">
-              {report.attendanceCount ?? "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-5">
-            <p className="text-xs uppercase tracking-wider text-clay-500 mb-1">
-              Objectives met
-            </p>
-            <p className="text-2xl font-display font-bold text-clay-900">
-              {report.objectivesMetRating
-                ? `${report.objectivesMetRating} / 5`
-                : "—"}
-            </p>
-            {report.objectivesMetRating && (
-              <p className="text-xs text-clay-500 mt-1">
-                {OBJECTIVES_LABELS[report.objectivesMetRating]}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <StatTile
+          icon={Users}
+          tone="periwinkle"
+          label="Attendance"
+          value={report.attendanceCount ?? "—"}
+        />
+        <StatTile
+          icon={Target}
+          tone="sage"
+          label="Objectives met"
+          value={
+            report.objectivesMetRating
+              ? `${report.objectivesMetRating} / 5`
+              : "—"
+          }
+          hint={
+            report.objectivesMetRating
+              ? OBJECTIVES_LABELS[report.objectivesMetRating]
+              : undefined
+          }
+        />
       </div>
 
       <ReadOnlySection title="Highlights — what went well">

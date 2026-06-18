@@ -11,8 +11,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   Bus,
   Shield,
   Calendar,
@@ -247,18 +248,17 @@ export default function AccountsApprovalsPage() {
 
   if (!canApproveAccounts) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          Only the Treasurer (Finance lead) can review accounts approvals.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="Only the Treasurer (Finance lead) can review accounts approvals."
+        tone="clay"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -266,33 +266,26 @@ export default function AccountsApprovalsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900 flex items-center gap-2">
-            <Banknote className="h-7 w-7 text-[#C8963E]" />
-            Accounts Approvals
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Confirm funds availability for transport and event budget requests.
-          </p>
-        </div>
-        <Badge
-          variant="outline"
-          className={cn(
-            "text-sm",
-            totalPending > 0
-              ? "bg-blue-50 text-blue-700 border-blue-200"
-              : "bg-green-50 text-green-700 border-green-200"
-          )}
-        >
-          {totalPending} pending
-        </Badge>
-      </div>
+      <PageHeader
+        backHref="/dashboard"
+        icon={Banknote}
+        tone="gold"
+        title="Accounts Approvals"
+        description="Confirm funds availability for transport and event budget requests."
+        actions={
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-sm",
+              totalPending > 0
+                ? "bg-blue-50 text-blue-700 border-blue-200"
+                : "bg-green-50 text-green-700 border-green-200"
+            )}
+          >
+            {totalPending} pending
+          </Badge>
+        }
+      />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "transport" | "budget")}>
         <TabsList className="grid w-full grid-cols-2">
@@ -319,17 +312,12 @@ export default function AccountsApprovalsPage() {
               <LoadingSpinner size="md" />
             </div>
           ) : transportRequests.length === 0 ? (
-            <Card>
-              <CardContent className="py-16 text-center">
-                <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                <h3 className="font-display font-semibold text-clay-700 text-lg">
-                  All caught up!
-                </h3>
-                <p className="text-clay-500 mt-2">
-                  No transport requests are awaiting your approval.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={CheckCircle2}
+              title="All caught up!"
+              description="No transport requests are awaiting your approval."
+              tone="sage"
+            />
           ) : (
             transportRequests.map((req) => (
               <Card key={req.id} className="overflow-hidden">
@@ -348,7 +336,7 @@ export default function AccountsApprovalsPage() {
                     </div>
                   )}
 
-                  <div className="rounded-md bg-clay-50 px-3 py-2 text-sm">
+                  <div className="rounded-md bg-cream/60 px-3 py-2 text-sm">
                     <p className="text-xs font-semibold text-clay-500 uppercase mb-1">
                       Requested Needs
                     </p>
@@ -520,17 +508,12 @@ export default function AccountsApprovalsPage() {
               <LoadingSpinner size="md" />
             </div>
           ) : budgetRequests.length === 0 ? (
-            <Card>
-              <CardContent className="py-16 text-center">
-                <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
-                <h3 className="font-display font-semibold text-clay-700 text-lg">
-                  All caught up!
-                </h3>
-                <p className="text-clay-500 mt-2">
-                  No budget requests are awaiting your approval.
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={CheckCircle2}
+              title="All caught up!"
+              description="No budget requests are awaiting your approval."
+              tone="sage"
+            />
           ) : (
             budgetRequests.map((req) => (
               <Card key={req.id} className="overflow-hidden">
@@ -562,7 +545,7 @@ export default function AccountsApprovalsPage() {
                     </p>
                   </div>
 
-                  <div className="rounded-md bg-clay-50 px-3 py-2 text-sm">
+                  <div className="rounded-md bg-cream/60 px-3 py-2 text-sm">
                     <p className="text-xs font-semibold text-clay-500 uppercase mb-1">
                       Purpose
                     </p>

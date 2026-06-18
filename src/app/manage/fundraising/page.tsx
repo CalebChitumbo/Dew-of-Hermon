@@ -7,8 +7,12 @@ import { RoleProtected } from "@/components/shared/RoleProtected";
 import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 import { useFundraisingOrdersAccess } from "@/hooks/useFundraisingOrdersAccess";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StatTile } from "@/components/shared/StatTile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,7 +87,7 @@ function BraaiCard({ event }: { event: BraaiEventRow }) {
 
   return (
     <Link href={`/manage/fundraising/braai/${event.id}`}>
-      <Card className="hover:shadow-md transition-shadow cursor-pointer border-clay-200 hover:border-clay-300">
+      <Card className="cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1 min-w-0">
@@ -250,16 +254,13 @@ function FundraisingContent() {
 
   if (!canPlanBraai && !canManageOrders) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center max-w-md">
-          <Flame className="h-12 w-12 text-clay-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-display text-clay-700">Fundraising</h2>
-          <p className="mt-2 text-clay-500">
-            The Fundraising department lead can plan braais here. Ask your chairperson
-            to add you to the Fundraising department to access this page.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={Flame}
+        title="Fundraising"
+        description="The Fundraising department lead can plan braais here. Ask your chairperson to add you to the Fundraising department to access this page."
+        tone="clay"
+        className="min-h-[60vh] justify-center"
+      />
     );
   }
 
@@ -284,74 +285,51 @@ function FundraisingContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-display font-bold text-clay-700 flex items-center gap-2">
-            <Flame className="h-7 w-7 text-gold-dark" />
-            Fundraising
-          </h1>
-          <p className="mt-1 text-clay-500">
-            Plan the Sunday fundraising braai — assign each responsibility to a
-            member of the Fundraising team and follow up on confirmations.
-          </p>
-        </div>
-        {canPlanBraai && (
-          <div className="flex gap-2">
-            <Link href="/manage/fundraising/settings">
-              <Button variant="outline" className="gap-2">
-                <Receipt className="h-4 w-4" />
-                Menu & Settings
+      <PageHeader
+        icon={Flame}
+        tone="sage"
+        title="Fundraising"
+        description="Plan the Sunday fundraising braai — assign each responsibility to a member of the Fundraising team and follow up on confirmations."
+        actions={
+          canPlanBraai ? (
+            <>
+              <Link href="/manage/fundraising/settings">
+                <Button variant="outline" className="gap-2">
+                  <Receipt className="h-4 w-4" />
+                  Menu & Settings
+                </Button>
+              </Link>
+              <Button className="gap-2" onClick={() => setDialogOpen(true)}>
+                <Plus className="h-4 w-4" />
+                New Braai
               </Button>
-            </Link>
-            <Button className="gap-2" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4" />
-              New Braai
-            </Button>
-          </div>
-        )}
-      </div>
+            </>
+          ) : undefined
+        }
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-teal/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-teal" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">{upcoming.length}</p>
-                <p className="text-sm text-clay-500">Upcoming braais</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">{openSeats}</p>
-                <p className="text-sm text-clay-500">Unassigned responsibilities</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gold/10 flex items-center justify-center">
-                <AlertCircle className="h-5 w-5 text-gold-dark" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">{unconfirmedAcross}</p>
-                <p className="text-sm text-clay-500">Awaiting confirmation</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          icon={Calendar}
+          tone="teal"
+          label="Upcoming braais"
+          value={upcoming.length}
+        />
+        <StatTile
+          icon={AlertTriangle}
+          tone="blush"
+          label="Unassigned responsibilities"
+          value={openSeats}
+          highlight={openSeats > 0}
+        />
+        <StatTile
+          icon={AlertCircle}
+          tone="gold"
+          label="Awaiting confirmation"
+          value={unconfirmedAcross}
+          highlight={unconfirmedAcross > 0}
+        />
       </div>
 
       {error && (
@@ -372,26 +350,21 @@ function FundraisingContent() {
         </div>
       ) : (
         <>
-          <section>
-            <h2 className="text-lg font-display font-semibold text-clay-700 mb-3">
-              Upcoming
-            </h2>
+          <section className="space-y-3">
+            <SectionHeading>Upcoming</SectionHeading>
             {upcoming.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Flame className="h-12 w-12 text-clay-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-display text-clay-600 mb-2">
-                    No braais planned
-                  </h3>
-                  <p className="text-sm text-clay-400 mb-4">
-                    Create a Sunday braai to start assigning responsibilities to your team.
-                  </p>
+              <EmptyState
+                icon={Flame}
+                title="No braais planned"
+                description="Create a Sunday braai to start assigning responsibilities to your team."
+                tone="clay"
+                action={
                   <Button variant="outline" className="gap-2" onClick={() => setDialogOpen(true)}>
                     <Plus className="h-4 w-4" />
                     New Braai
                   </Button>
-                </CardContent>
-              </Card>
+                }
+              />
             ) : (
               <div className="space-y-3">
                 {upcoming.map((event) => (
@@ -402,10 +375,8 @@ function FundraisingContent() {
           </section>
 
           {past.length > 0 && (
-            <section>
-              <h2 className="text-lg font-display font-semibold text-clay-700 mb-3">
-                Past braais
-              </h2>
+            <section className="space-y-3">
+              <SectionHeading>Past braais</SectionHeading>
               <div className="space-y-3">
                 {past.map((event) => (
                   <BraaiCard key={event.id} event={event} />
@@ -514,13 +485,12 @@ function FundraisingFallbackWrapper() {
   if (planLoading || orderLoading) return <PageLoader />;
   if (canPlanBraai || canManageOrders) return <FundraisingContent />;
   return (
-    <div className="flex h-[60vh] items-center justify-center">
-      <div className="text-center">
-        <h2 className="text-2xl font-display text-clay-700">Access Denied</h2>
-        <p className="mt-2 text-clay-500">
-          You don&apos;t have permission to view this page.
-        </p>
-      </div>
-    </div>
+    <EmptyState
+      icon={Flame}
+      title="Access Denied"
+      description="You don't have permission to view this page."
+      tone="clay"
+      className="min-h-[60vh] justify-center"
+    />
   );
 }

@@ -13,16 +13,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Affirmation } from "@/types";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Plus,
   Edit,
   Trash2,
   Sparkles,
-  ArrowLeft,
 } from "lucide-react";
 import {
   Dialog,
@@ -97,52 +98,41 @@ export default function ManageAffirmationsPage() {
     <RoleProtected requiredRole="ADMIN">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Link href="/affirmations">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
+        <PageHeader
+          backHref="/affirmations"
+          icon={Sparkles}
+          tone="blush"
+          title="Manage Affirmations"
+          description="Create, edit, and manage Potter's Wheel affirmations"
+          actions={
+            <Link href="/manage/affirmations/new">
+              <Button variant="gold">
+                <Plus className="mr-2 h-4 w-4" />
+                New Affirmation
               </Button>
             </Link>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-                Manage Affirmations
-              </h1>
-              <p className="text-clay-500 mt-1">
-                Create, edit, and manage Potter&apos;s Wheel affirmations
-              </p>
-            </div>
-          </div>
-          <Link href="/manage/affirmations/new">
-            <Button variant="gold">
-              <Plus className="mr-2 h-4 w-4" />
-              New Affirmation
-            </Button>
-          </Link>
-        </div>
+          }
+        />
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <LoadingSpinner size="lg" />
           </div>
         ) : affirmations.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Sparkles className="h-12 w-12 text-gold/50 mb-4" />
-              <h3 className="text-lg font-display font-semibold text-clay-600">
-                No Affirmations Yet
-              </h3>
-              <p className="text-clay-400 text-sm mt-1">
-                Create your first affirmation to share with the group.
-              </p>
-              <Link href="/manage/affirmations/new" className="mt-4">
+          <EmptyState
+            icon={Sparkles}
+            title="No Affirmations Yet"
+            description="Create your first affirmation to share with the group."
+            tone="blush"
+            action={
+              <Link href="/manage/affirmations/new">
                 <Button variant="gold">
                   <Plus className="mr-2 h-4 w-4" />
                   Create First Affirmation
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
+            }
+          />
         ) : (
           <div className="space-y-3">
             {affirmations.map((affirmation) => (
