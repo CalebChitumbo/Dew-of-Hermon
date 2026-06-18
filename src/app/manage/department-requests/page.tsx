@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { onSnapshot, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +23,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
 import { RoleProtected } from "@/components/shared/RoleProtected";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft,
   UserPlus,
   ThumbsUp,
   CheckCircle2,
@@ -239,7 +239,7 @@ function RequestCard({
 }) {
   const meta = STATUS_META[req.status];
   return (
-    <div className="rounded-lg border border-clay-200/70 bg-white/60 p-4">
+    <div className="rounded-lg border border-clay-100/70 bg-white/60 p-4">
       <div className="flex items-start gap-3">
         <Avatar className="h-10 w-10">
           <AvatarFallback className="bg-gold/20 text-gold-dark font-bold">
@@ -459,42 +459,29 @@ function DepartmentRequestsContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Department Join Requests
-          </h1>
-          <p className="text-clay-500 mt-1">
-            {isSuperAdmin
-              ? "Recommend requests for your departments and give final approval as Chairperson."
-              : "Recommend members who have requested to join your department."}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/dashboard"
+        icon={UserPlus}
+        tone="lavender"
+        title="Department Join Requests"
+        description={
+          isSuperAdmin
+            ? "Recommend requests for your departments and give final approval as Chairperson."
+            : "Recommend members who have requested to join your department."
+        }
+      />
 
       {totalActionable === 0 && decided.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Inbox className="h-12 w-12 text-clay-300 mb-4" />
-            <h3 className="text-lg font-display font-semibold text-clay-600">
-              No requests right now
-            </h3>
-            <p className="text-clay-400 text-sm mt-1 text-center max-w-sm">
-              When members ask to join a department you manage, their requests
-              will show up here for you to action.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Inbox}
+          title="No requests right now"
+          description="When members ask to join a department you manage, their requests will show up here for you to action."
+        />
       ) : (
         <>
           {/* Manager stage */}
           {managerQueue.length > 0 && (
-            <Card className="border-clay-200/70">
+            <Card className="border-clay-100/70">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <UserPlus className="h-5 w-5 text-gold-dark" />
@@ -529,7 +516,7 @@ function DepartmentRequestsContent() {
 
           {/* Chair stage */}
           {isSuperAdmin && chairQueue.length > 0 && (
-            <Card className="border-clay-200/70">
+            <Card className="border-clay-100/70">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <ThumbsUp className="h-5 w-5 text-blue-600" />
@@ -565,7 +552,7 @@ function DepartmentRequestsContent() {
 
           {/* Recently decided */}
           {decided.length > 0 && (
-            <Card className="border-clay-200/70">
+            <Card className="border-clay-100/70">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-clay-400" />
@@ -581,7 +568,7 @@ function DepartmentRequestsContent() {
           )}
 
           {totalActionable === 0 && (
-            <Card className="border-clay-200/70 bg-cream/40">
+            <Card className="border-clay-100/70 bg-cream/40">
               <CardContent className="flex items-center gap-3 py-4">
                 <Clock className="h-5 w-5 text-clay-400" />
                 <p className="text-sm text-clay-500">
