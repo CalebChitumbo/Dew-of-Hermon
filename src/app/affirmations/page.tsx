@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Sparkles,
   Plus,
@@ -114,38 +117,31 @@ export default function AffirmationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Affirmations
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Potter&apos;s Wheel words of encouragement and affirmation
-          </p>
-        </div>
-        {userData && canManageAffirmationsFlag && (
-          <Link href="/manage/affirmations">
-            <Button variant="gold">
-              <Plus className="mr-2 h-4 w-4" />
-              Create New
-            </Button>
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        icon={Sparkles}
+        tone="blush"
+        title="Affirmations"
+        description="Potter's Wheel words of encouragement and affirmation"
+        actions={
+          userData && canManageAffirmationsFlag ? (
+            <Link href="/manage/affirmations">
+              <Button variant="gold">
+                <Plus className="mr-2 h-4 w-4" />
+                Create New
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
       {/* Empty state */}
       {affirmations.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Sparkles className="h-12 w-12 text-gold/50 mb-4" />
-            <h3 className="text-lg font-display font-semibold text-clay-600">
-              No Affirmations Yet
-            </h3>
-            <p className="text-clay-400 text-sm mt-1 text-center max-w-md">
-              Affirmations will appear here as they are shared by leadership.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Sparkles}
+          tone="blush"
+          title="No Affirmations Yet"
+          description="Affirmations will appear here as they are shared by leadership."
+        />
       ) : (
         <>
           {/* Latest Affirmation - Featured */}
@@ -196,16 +192,17 @@ export default function AffirmationsPage() {
           {/* Past Affirmations */}
           {pastAffirmations.length > 0 && (
             <div>
-              <h2 className="text-lg font-display font-semibold text-clay-700 mb-4">
-                Previous Affirmations
-              </h2>
+              <SectionHeading className="mb-4">Previous Affirmations</SectionHeading>
               <div className="space-y-3">
                 {pastAffirmations.map((affirmation) => {
                   const isExpanded = expandedId === affirmation.id;
                   const svcDate = getServiceDate(affirmation.serviceId);
 
                   return (
-                    <Card key={affirmation.id} className="overflow-hidden">
+                    <Card
+                      key={affirmation.id}
+                      className="overflow-hidden transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]"
+                    >
                       <button
                         className="w-full text-left"
                         onClick={() =>

@@ -32,11 +32,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StatTile } from "@/components/shared/StatTile";
 import { useToast } from "@/hooks/use-toast";
 import { BraaiOrdersList } from "@/components/fundraising/BraaiOrdersList";
 import { useFundraisingOrdersAccess } from "@/hooks/useFundraisingOrdersAccess";
 import {
-  ArrowLeft,
   Flame,
   Calendar,
   MapPin,
@@ -306,16 +309,13 @@ function BraaiDetailContent() {
 
   if (!canPlanBraai && !canManageOrders) {
     return (
-      <div className="flex h-[60vh] items-center justify-center text-center">
-        <div>
-          <Flame className="h-12 w-12 text-clay-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-display text-clay-700">Fundraising</h2>
-          <p className="mt-2 text-clay-500">
-            You don&apos;t have access to this braai. Ask your chairperson to add
-            you to the Fundraising department.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={Flame}
+        title="Fundraising"
+        description="You don't have access to this braai. Ask your chairperson to add you to the Fundraising department."
+        tone="clay"
+        className="min-h-[60vh] justify-center"
+      />
     );
   }
 
@@ -329,16 +329,18 @@ function BraaiDetailContent() {
 
   if (error || !event) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-gold mx-auto mb-4" />
-          <h2 className="text-2xl font-display text-clay-700">Braai not found</h2>
-          <p className="mt-2 text-clay-500 mb-4">{error || "This braai may have been deleted."}</p>
+      <EmptyState
+        icon={AlertTriangle}
+        title="Braai not found"
+        description={error || "This braai may have been deleted."}
+        tone="gold"
+        className="min-h-[60vh] justify-center"
+        action={
           <Link href="/manage/fundraising">
             <Button variant="outline">Back to Fundraising</Button>
           </Link>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
@@ -352,50 +354,52 @@ function BraaiDetailContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/manage/fundraising">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-display font-bold text-clay-700 truncate">
-            {event.title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-clay-500">
-            {date && (
+      <PageHeader
+        backHref="/manage/fundraising"
+        icon={Flame}
+        tone="sage"
+        title={event.title}
+        description={
+          <>
+            <span className="flex flex-wrap items-center gap-3 text-sm text-clay-500">
+              {date && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {format(date, "EEEE, d MMMM yyyy")}
+                </span>
+              )}
+              {event.venue && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {event.venue}
+                </span>
+              )}
               <span className="flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                {format(date, "EEEE, d MMMM yyyy")}
+                <Users className="h-3.5 w-3.5" />
+                {filledCount}/{BRAAI_TOTAL_RESPONSIBILITIES} responsibilities assigned
               </span>
-            )}
-            {event.venue && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {event.venue}
-              </span>
-            )}
-            <span className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" />
-              {filledCount}/{BRAAI_TOTAL_RESPONSIBILITIES} responsibilities assigned
             </span>
-          </div>
-          {event.notes && (
-            <p className="mt-2 text-sm text-clay-600 max-w-prose">{event.notes}</p>
-          )}
-        </div>
-        {isSuperAdmin && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDeleteEventOpen(true)}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 gap-1 shrink-0"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete braai
-          </Button>
-        )}
-      </div>
+            {event.notes && (
+              <span className="mt-2 block max-w-prose text-sm text-clay-600">
+                {event.notes}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          isSuperAdmin ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDeleteEventOpen(true)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 gap-1 shrink-0"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete braai
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Tabs
         value={activeTab}
@@ -409,28 +413,32 @@ function BraaiDetailContent() {
         {canPlanBraai && (
           <TabsContent value="roster" className="space-y-6 mt-4">
             {/* Stats */}
-            <Card>
-              <CardContent className="py-6">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center sm:text-left">
-                  <div>
-                    <p className="text-2xl font-display font-bold text-green-600">{confirmed}</p>
-                    <p className="text-xs text-clay-500">Confirmed</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-display font-bold text-gold">{pending}</p>
-                    <p className="text-xs text-clay-500">Pending</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-display font-bold text-red-500">{declined}</p>
-                    <p className="text-xs text-clay-500">Declined</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-display font-bold text-clay-400">{open}</p>
-                    <p className="text-xs text-clay-500">Unassigned</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <StatTile
+                icon={CheckCircle2}
+                tone="sage"
+                label="Confirmed"
+                value={confirmed}
+              />
+              <StatTile
+                icon={AlertCircle}
+                tone="gold"
+                label="Pending"
+                value={pending}
+              />
+              <StatTile
+                icon={Trash2}
+                tone="blush"
+                label="Declined"
+                value={declined}
+              />
+              <StatTile
+                icon={Users}
+                tone="clay"
+                label="Unassigned"
+                value={open}
+              />
+            </div>
 
             {!departmentExists && (
               <Card className="border-amber-200 bg-amber-50">
@@ -557,16 +565,17 @@ function RosterSections({
           (r) => r.phase === phase
         );
         return (
-          <section key={phase}>
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-lg font-display font-semibold text-clay-700">
-                {BRAAI_PHASE_LABELS[phase]}
-              </h2>
-              <Badge variant="secondary" className="text-xs">
-                {phaseResponsibilities.filter((r) => assignmentByKey[r.key]).length}/
-                {phaseResponsibilities.length}
-              </Badge>
-            </div>
+          <section key={phase} className="space-y-3">
+            <SectionHeading
+              actions={
+                <Badge variant="secondary" className="text-xs">
+                  {phaseResponsibilities.filter((r) => assignmentByKey[r.key]).length}/
+                  {phaseResponsibilities.length}
+                </Badge>
+              }
+            >
+              {BRAAI_PHASE_LABELS[phase]}
+            </SectionHeading>
             <div className="space-y-3">
               {phaseResponsibilities.map((resp) => {
                 const a = assignmentByKey[resp.key];

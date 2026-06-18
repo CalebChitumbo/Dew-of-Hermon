@@ -17,15 +17,15 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Mail,
   Save,
   Eye,
   Edit,
   CheckCircle,
-  ArrowLeft,
   Clock,
-  CalendarDays,
 } from "lucide-react";
 
 // Placeholder tokens available in templates
@@ -143,15 +143,12 @@ export default function TemplatesPage() {
     <RoleProtected requiredRole="ADMIN">
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Email Templates
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Customize email templates for each service role. Emails are sent as
-            reminders to assigned members.
-          </p>
-        </div>
+        <PageHeader
+          icon={Mail}
+          tone="teal"
+          title="Email Templates"
+          description="Customize email templates for each service role. Emails are sent as reminders to assigned members."
+        />
 
         {/* Placeholder reference */}
         <Card>
@@ -281,7 +278,7 @@ export default function TemplatesPage() {
                         </TabsContent>
 
                         <TabsContent value="preview" className="mt-4">
-                          <Card className="bg-clay-50">
+                          <Card className="bg-cream/50">
                             <CardContent className="p-4 space-y-3">
                               <div>
                                 <p className="text-xs font-medium text-clay-400 uppercase tracking-wider">
@@ -358,17 +355,12 @@ export default function TemplatesPage() {
         </div>
 
         {roles.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Mail className="h-12 w-12 text-clay-300 mb-4" />
-              <h3 className="text-lg font-display font-semibold text-clay-600">
-                No Service Roles
-              </h3>
-              <p className="text-clay-400 text-sm mt-1">
-                Create service roles first to set up email templates.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Mail}
+            tone="clay"
+            title="No Service Roles"
+            description="Create service roles first to set up email templates."
+          />
         )}
       </div>
     </RoleProtected>

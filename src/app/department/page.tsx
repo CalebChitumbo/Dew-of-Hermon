@@ -37,6 +37,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Users,
   UserPlus,
@@ -269,66 +272,58 @@ export default function DepartmentPage() {
 
   if (leadDeptIds.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Building2 className="h-12 w-12 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-600">
-          No Department Assigned
-        </h2>
-        <p className="text-clay-400 mt-2 text-center max-w-md">
-          You are not currently leading any department. Contact an admin to be
-          assigned as a department lead.
-        </p>
-      </div>
+      <EmptyState
+        icon={Building2}
+        tone="clay"
+        title="No Department Assigned"
+        description="You are not currently leading any department. Contact an admin to be assigned as a department lead."
+        className="py-20"
+      />
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            My Department
-          </h1>
-          <div className="flex flex-wrap gap-2 mt-2">
+      <PageHeader
+        icon={Building2}
+        tone="blush"
+        title="My Department"
+        description={
+          <span className="flex flex-wrap gap-2">
             {departments.map((dept) => (
               <Badge key={dept.id} variant="gold">
                 {dept.name}
               </Badge>
             ))}
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="gold" onClick={() => setAddDialogOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add Member
-          </Button>
-          <Link href="/department/recommend">
-            <Button variant="outline">
-              <Star className="mr-2 h-4 w-4" />
-              Recommend
+          </span>
+        }
+        actions={
+          <>
+            <Button variant="gold" onClick={() => setAddDialogOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Member
             </Button>
-          </Link>
-        </div>
-      </div>
+            <Link href="/department/recommend">
+              <Button variant="outline">
+                <Star className="mr-2 h-4 w-4" />
+                Recommend
+              </Button>
+            </Link>
+          </>
+        }
+      />
 
       {/* Team Members */}
-      <div>
-        <h2 className="text-lg font-display font-semibold text-clay-700 mb-4">
-          Team Members ({members.length})
-        </h2>
+      <div className="space-y-4">
+        <SectionHeading>Team Members ({members.length})</SectionHeading>
         {members.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Users className="h-12 w-12 text-clay-300 mb-4" />
-              <h3 className="text-lg font-display font-semibold text-clay-600">
-                No Members Yet
-              </h3>
-              <p className="text-clay-400 text-sm mt-1">
-                Add members to your department to get started.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Users}
+            tone="blush"
+            title="No Members Yet"
+            description="Add members to your department to get started."
+          />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {members.map((member) => (
@@ -369,19 +364,15 @@ export default function DepartmentPage() {
       </div>
 
       {/* Upcoming Service */}
-      <div>
-        <h2 className="text-lg font-display font-semibold text-clay-700 mb-4">
-          Upcoming Department Service
-        </h2>
+      <div className="space-y-4">
+        <SectionHeading>Upcoming Department Service</SectionHeading>
         {upcomingAssignments.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-8">
-              <CalendarDays className="h-10 w-10 text-clay-300 mb-3" />
-              <p className="text-clay-500 text-sm">
-                No upcoming assignments for your department roles.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={CalendarDays}
+            tone="clay"
+            title="No upcoming service"
+            description="No upcoming assignments for your department roles."
+          />
         ) : (
           <div className="space-y-3">
             {upcomingAssignments.slice(0, 10).map((assignment) => {
@@ -419,7 +410,7 @@ export default function DepartmentPage() {
       </div>
 
       {/* Recommend Members Section */}
-      <Card className="border-gold/30 bg-gold/5">
+      <Card className="border-clay-100/70 bg-cream/40">
         <CardContent className="flex items-center justify-between p-6">
           <div>
             <h3 className="font-display font-semibold text-clay-700">

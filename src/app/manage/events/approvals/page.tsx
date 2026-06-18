@@ -15,8 +15,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { SectionHeading } from "@/components/shared/SectionHeading";
 import {
-  ArrowLeft,
   Calendar,
   MapPin,
   Clock,
@@ -31,6 +33,7 @@ import {
   Clapperboard,
   UtensilsCrossed,
   Target,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -374,68 +377,57 @@ export default function EventApprovalsPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You do not have permission to view event approvals.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="You do not have permission to view event approvals."
+        className="py-20"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/calendar">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900">
-            Event Approvals
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Dispatch stakeholder requests and move events through the approval chain
-          </p>
-        </div>
-        <Badge variant="outline" className="text-sm">
-          {events.length} pending
-        </Badge>
-      </div>
+      <PageHeader
+        backHref="/calendar"
+        icon={ClipboardCheck}
+        tone="periwinkle"
+        title="Event Approvals"
+        description="Dispatch stakeholder requests and move events through the approval chain"
+        actions={
+          <Badge variant="outline" className="text-sm">
+            {events.length} pending
+          </Badge>
+        }
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner size="lg" />
         </div>
       ) : fetchError ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <XCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-            <h3 className="font-display font-semibold text-clay-700 text-lg">
-              Failed to load pending events
-            </h3>
-            <Button variant="outline" className="mt-4" onClick={fetchPending}>
+        <EmptyState
+          icon={XCircle}
+          tone="blush"
+          title="Failed to load pending events"
+          action={
+            <Button variant="outline" onClick={fetchPending}>
               Retry
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : events.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
-            <h3 className="font-display font-semibold text-clay-700 text-lg">
-              All caught up!
-            </h3>
-            <p className="text-clay-500 mt-2">No events are currently pending.</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={CheckCircle2}
+          tone="sage"
+          title="All caught up!"
+          description="No events are currently pending."
+        />
       ) : (
         <div className="space-y-4">
           {events.map((event) => {
@@ -515,7 +507,7 @@ export default function EventApprovalsPage() {
 
                 <CardContent className="space-y-4">
                   {/* Approval-chain pipeline */}
-                  <div className="rounded-lg bg-clay-50/60 px-3 py-3">
+                  <div className="rounded-lg bg-cream/40 px-3 py-3">
                     <ApprovalPipeline status={event.approvalStatus} />
                   </div>
 
@@ -535,7 +527,7 @@ export default function EventApprovalsPage() {
                   </div>
 
                   {event.objective && (
-                    <div className="text-sm bg-clay-50 rounded-md px-3 py-2">
+                    <div className="text-sm bg-cream/40 rounded-md px-3 py-2">
                       <p className="text-xs font-semibold text-clay-500 uppercase tracking-wide flex items-center gap-1 mb-1">
                         <Target className="h-3 w-3" />
                         Objective
@@ -548,17 +540,15 @@ export default function EventApprovalsPage() {
 
                   {/* Stakeholder status */}
                   {hasResources && (
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-semibold text-clay-500 uppercase tracking-wide">
-                        Stakeholders
-                      </p>
+                    <div className="space-y-2">
+                      <SectionHeading>Stakeholders</SectionHeading>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                         {resourceRows.map((r) => {
                           const Icon = r.icon;
                           return (
                             <div
                               key={r.key}
-                              className="flex items-center justify-between text-sm rounded border border-clay-200 px-3 py-1.5"
+                              className="flex items-center justify-between text-sm rounded border border-clay-100/70 px-3 py-1.5"
                             >
                               <span className="flex items-center gap-1.5 text-clay-600">
                                 <Icon className="h-3.5 w-3.5 text-clay-400" />

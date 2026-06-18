@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { onSnapshot, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,6 +23,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
 import { RoleProtected } from "@/components/shared/RoleProtected";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Dialog,
   DialogContent,
@@ -34,12 +35,13 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft,
   UserPlus,
   ThumbsUp,
   CheckCircle2,
   Clock,
   Inbox,
+  XCircle,
+  MinusCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -73,6 +75,161 @@ const ACTION_META: Record<
   REJECT: { title: "Reject request", verb: "Reject", needsReason: true, destructive: true },
 };
 
+type StepState = "done" | "current" | "rejected" | "skipped" | "upcoming";
+
+function StepNode({ state }: { state: StepState }) {
+  if (state === "done")
+    return (
+      <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 ring-1 ring-emerald-200">
+        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+      </span>
+    );
+  if (state === "current")
+    return (
+      <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-gold text-white ring-4 ring-gold/25">
+        <Clock className="h-4 w-4" />
+      </span>
+    );
+  if (state === "rejected")
+    return (
+      <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-red-50 ring-1 ring-red-200">
+        <XCircle className="h-4 w-4 text-red-500" />
+      </span>
+    );
+  if (state === "skipped")
+    return (
+      <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-clay-100 ring-1 ring-clay-200">
+        <MinusCircle className="h-4 w-4 text-clay-400" />
+      </span>
+    );
+  return (
+    <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-clay-100 ring-1 ring-clay-200">
+      <span className="h-2 w-2 rounded-full bg-clay-300" />
+    </span>
+  );
+}
+
+/**
+ * Horizontal approval timeline (Requested → Manager → Chairperson) so the
+ * stage a request is sitting at is obvious at a glance — the current stage is
+ * highlighted, which makes it clear when a request is still with the manager
+ * and not yet the Chairperson's to approve.
+ */
+function RequestTimeline({ req }: { req: DepartmentJoinRequest }) {
+  const managerActed = !!req.managerDecidedAt;
+  const chairActed = !!req.chairDecidedAt;
+  const managerDeclined = req.status === "REJECTED" && managerActed && !chairActed;
+  const chairRejected = req.status === "REJECTED" && chairActed;
+  const skippedManager =
+    !managerActed &&
+    (req.status === "PENDING_CHAIR" || req.status === "APPROVED" || chairActed);
+
+  const managerState: StepState =
+    req.status === "PENDING_MANAGER"
+      ? "current"
+      : managerDeclined
+        ? "rejected"
+        : managerActed
+          ? "done"
+          : skippedManager
+            ? "skipped"
+            : "upcoming";
+
+  const chairState: StepState =
+    req.status === "APPROVED"
+      ? "done"
+      : chairRejected
+        ? "rejected"
+        : req.status === "PENDING_CHAIR"
+          ? "current"
+          : "upcoming";
+
+  const fmt = (d: Date | null) => (d ? format(d, "MMM d") : "");
+
+  const steps: { key: string; label: string; sub?: string; state: StepState }[] = [
+    { key: "requested", label: "Requested", sub: fmt(req.createdAt), state: "done" },
+    {
+      key: "manager",
+      label:
+        managerState === "current"
+          ? "Manager review"
+          : managerState === "done"
+            ? "Recommended"
+            : managerState === "rejected"
+              ? "Declined"
+              : managerState === "skipped"
+                ? "No manager"
+                : "Manager",
+      sub:
+        managerState === "current"
+          ? "Awaiting recommendation"
+          : managerState === "skipped"
+            ? "Routed to chair"
+            : managerActed
+              ? `${req.managerName || "Manager"} · ${fmt(req.managerDecidedAt)}`
+              : undefined,
+      state: managerState,
+    },
+    {
+      key: "chair",
+      label:
+        chairState === "done"
+          ? "Approved"
+          : chairState === "rejected"
+            ? "Not approved"
+            : "Chairperson",
+      sub:
+        chairState === "current"
+          ? "Final approval"
+          : chairActed
+            ? `${req.chairName || "Chairperson"} · ${fmt(req.chairDecidedAt)}`
+            : undefined,
+      state: chairState,
+    },
+  ];
+
+  return (
+    <ol className="flex items-start">
+      {steps.map((step, i) => {
+        const reached = step.state !== "upcoming";
+        return (
+          <li
+            key={step.key}
+            className="relative flex flex-1 flex-col items-center px-1 text-center"
+          >
+            {i > 0 && (
+              <span
+                className={`absolute left-[-50%] right-1/2 top-3.5 h-0.5 ${
+                  reached ? "bg-clay-300" : "bg-clay-200/60"
+                }`}
+              />
+            )}
+            <StepNode state={step.state} />
+            <p
+              className={`mt-1.5 text-xs font-semibold leading-tight ${
+                step.state === "current"
+                  ? "text-gold-dark"
+                  : step.state === "rejected"
+                    ? "text-red-500"
+                    : step.state === "done"
+                      ? "text-clay-700"
+                      : "text-clay-400"
+              }`}
+            >
+              {step.label}
+            </p>
+            {step.sub && (
+              <p className="mt-0.5 text-[11px] leading-tight text-clay-400">
+                {step.sub}
+              </p>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function RequestCard({
   req,
   actions,
@@ -82,7 +239,7 @@ function RequestCard({
 }) {
   const meta = STATUS_META[req.status];
   return (
-    <div className="rounded-lg border border-clay-200/70 bg-white/60 p-4">
+    <div className="rounded-lg border border-clay-100/70 bg-white/60 p-4">
       <div className="flex items-start gap-3">
         <Avatar className="h-10 w-10">
           <AvatarFallback className="bg-gold/20 text-gold-dark font-bold">
@@ -106,19 +263,34 @@ function RequestCard({
               &ldquo;{req.message}&rdquo;
             </p>
           )}
-          {req.managerName && req.managerDecidedAt && (
-            <p className="text-xs text-clay-500 mt-2">
-              Recommended by {req.managerName} on{" "}
-              {format(req.managerDecidedAt, "MMM d")}
-              {req.managerComments ? ` — "${req.managerComments}"` : ""}
-            </p>
+
+          {/* Approval timeline */}
+          <div className="mt-4 rounded-md bg-cream/60 px-2 py-3">
+            <RequestTimeline req={req} />
+          </div>
+
+          {/* Decision notes */}
+          {(req.managerComments || req.chairComments) && (
+            <div className="mt-3 space-y-1">
+              {req.managerComments && (
+                <p className="text-xs text-clay-500">
+                  <span className="font-medium text-clay-600">
+                    {req.managerName || "Manager"}:
+                  </span>{" "}
+                  &ldquo;{req.managerComments}&rdquo;
+                </p>
+              )}
+              {req.chairComments && (
+                <p className="text-xs text-clay-500">
+                  <span className="font-medium text-clay-600">
+                    {req.chairName || "Chairperson"}:
+                  </span>{" "}
+                  &ldquo;{req.chairComments}&rdquo;
+                </p>
+              )}
+            </div>
           )}
-          {req.chairName && req.chairDecidedAt && (
-            <p className="text-xs text-clay-500 mt-1">
-              Decided by {req.chairName} on {format(req.chairDecidedAt, "MMM d")}
-              {req.chairComments ? ` — "${req.chairComments}"` : ""}
-            </p>
-          )}
+
           {actions.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
               {actions.map((a) => {
@@ -287,42 +459,29 @@ function DepartmentRequestsContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon" className="shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Department Join Requests
-          </h1>
-          <p className="text-clay-500 mt-1">
-            {isSuperAdmin
-              ? "Recommend requests for your departments and give final approval as Chairperson."
-              : "Recommend members who have requested to join your department."}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/dashboard"
+        icon={UserPlus}
+        tone="lavender"
+        title="Department Join Requests"
+        description={
+          isSuperAdmin
+            ? "Recommend requests for your departments and give final approval as Chairperson."
+            : "Recommend members who have requested to join your department."
+        }
+      />
 
       {totalActionable === 0 && decided.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Inbox className="h-12 w-12 text-clay-300 mb-4" />
-            <h3 className="text-lg font-display font-semibold text-clay-600">
-              No requests right now
-            </h3>
-            <p className="text-clay-400 text-sm mt-1 text-center max-w-sm">
-              When members ask to join a department you manage, their requests
-              will show up here for you to action.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Inbox}
+          title="No requests right now"
+          description="When members ask to join a department you manage, their requests will show up here for you to action."
+        />
       ) : (
         <>
           {/* Manager stage */}
           {managerQueue.length > 0 && (
-            <Card className="border-clay-200/70">
+            <Card className="border-clay-100/70">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <UserPlus className="h-5 w-5 text-gold-dark" />
@@ -357,7 +516,7 @@ function DepartmentRequestsContent() {
 
           {/* Chair stage */}
           {isSuperAdmin && chairQueue.length > 0 && (
-            <Card className="border-clay-200/70">
+            <Card className="border-clay-100/70">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <ThumbsUp className="h-5 w-5 text-blue-600" />
@@ -393,7 +552,7 @@ function DepartmentRequestsContent() {
 
           {/* Recently decided */}
           {decided.length > 0 && (
-            <Card className="border-clay-200/70">
+            <Card className="border-clay-100/70">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-clay-400" />
@@ -409,7 +568,7 @@ function DepartmentRequestsContent() {
           )}
 
           {totalActionable === 0 && (
-            <Card className="border-clay-200/70 bg-cream/40">
+            <Card className="border-clay-100/70 bg-cream/40">
               <CardContent className="flex items-center gap-3 py-4">
                 <Clock className="h-5 w-5 text-clay-400" />
                 <p className="text-sm text-clay-500">

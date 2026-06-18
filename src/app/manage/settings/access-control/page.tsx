@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
 import {
   Card,
   CardContent,
@@ -24,7 +25,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Shield,
   Save,
-  ArrowLeft,
   RotateCcw,
   Pencil,
   Eye,
@@ -281,48 +281,38 @@ function AccessControlContent() {
   return (
     <div className="space-y-6 pb-24">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <Link
-            href="/manage/settings"
-            className="text-sm text-clay-500 hover:text-clay-700 flex items-center gap-1 mb-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Settings
-          </Link>
-          <h1 className="text-2xl font-display text-clay-700 flex items-center gap-2">
-            <Shield className="h-6 w-6" />
-            Access Control
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Manage page access, feature permissions, and department-specific
-            access rules from one place.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleReset}>
-            <RotateCcw className="h-4 w-4 mr-1" />
-            Reset to Defaults
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={saving || !hasChanges}
-          >
-            {saving ? (
-              <>
-                <LoadingSpinner />
-                <span className="ml-2">Saving...</span>
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-1" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/manage/settings"
+        icon={Shield}
+        tone="clay"
+        title="Access Control"
+        description="Manage page access, feature permissions, and department-specific access rules from one place."
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Reset to Defaults
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saving || !hasChanges}
+            >
+              {saving ? (
+                <>
+                  <LoadingSpinner />
+                  <span className="ml-2">Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-1" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          </>
+        }
+      />
 
       {/* Legend */}
       <Card>
@@ -370,7 +360,7 @@ function AccessControlContent() {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-clay-200">
+                <tr className="border-b border-clay-100 bg-cream/40">
                   <th className="text-left py-3 px-4 text-sm font-semibold text-clay-600 w-64">
                     Page
                   </th>
@@ -388,7 +378,7 @@ function AccessControlContent() {
                 {PAGE_DEFINITIONS.map((page) => (
                   <tr
                     key={page.key}
-                    className="border-b border-clay-100 hover:bg-clay-50/50 transition-colors"
+                    className="border-b border-clay-100 hover:bg-cream/50 transition-colors"
                   >
                     <td className="py-3 px-4">
                       <div className="font-medium text-sm text-clay-700">
@@ -443,7 +433,7 @@ function AccessControlContent() {
             {PAGE_DEFINITIONS.map((page) => (
               <div
                 key={page.key}
-                className="border border-clay-200 rounded-lg p-4 space-y-3"
+                className="border border-clay-100/70 rounded-lg p-4 space-y-3"
               >
                 <div>
                   <div className="font-medium text-sm text-clay-700">
@@ -570,7 +560,7 @@ function AccessControlContent() {
 
       {/* Sticky save bar */}
       {hasChanges && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-clay-200 px-6 py-3 flex items-center justify-between shadow-lg z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-clay-100/70 px-6 py-3 flex items-center justify-between shadow-lg z-50">
           <p className="text-sm text-clay-600">You have unsaved changes</p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleDiscard}>
@@ -619,9 +609,7 @@ function FeaturePermissionsTable({
     <div className="space-y-6">
       {categories.map(([category, features]) => (
         <div key={category}>
-          <h4 className="text-sm font-semibold text-clay-600 mb-3">
-            {category}
-          </h4>
+          <SectionHeading className="mb-3">{category}</SectionHeading>
           <div className="space-y-2">
             {features.map((feat) => {
               const currentMinRole =
@@ -631,7 +619,7 @@ function FeaturePermissionsTable({
               return (
                 <div
                   key={feat.key}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded-lg border border-clay-100 hover:bg-clay-50/50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-2 px-3 rounded-lg border border-clay-100 hover:bg-cream/50 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm text-clay-700">
@@ -761,9 +749,9 @@ function DepartmentRulesEditor({
         return (
           <div
             key={feat.key}
-            className="border border-clay-200 rounded-lg overflow-hidden"
+            className="border border-clay-100/70 rounded-lg overflow-hidden"
           >
-            <div className="bg-clay-50 px-4 py-3 flex items-center justify-between">
+            <div className="bg-cream/40 px-4 py-3 flex items-center justify-between">
               <div>
                 <div className="font-medium text-sm text-clay-700">
                   {feat.label}
@@ -984,7 +972,7 @@ function AddRuleForm({
   );
 
   return (
-    <div className="px-4 py-3 bg-clay-50/50">
+    <div className="px-4 py-3 bg-cream/40">
       <div className="flex flex-col sm:flex-row gap-3 items-end">
         <div className="flex-1">
           <label className="text-xs font-medium text-clay-600 block mb-1">
@@ -1234,12 +1222,12 @@ function DepartmentalManagerPermissions({
         return (
           <div
             key={deptName}
-            className="border border-clay-200 rounded-lg overflow-hidden"
+            className="border border-clay-100/70 rounded-lg overflow-hidden"
           >
             <button
               type="button"
               onClick={() => toggleExpanded(deptName)}
-              className="w-full px-4 py-3 bg-clay-50 hover:bg-clay-100 transition-colors flex items-center justify-between gap-3"
+              className="w-full px-4 py-3 bg-cream/40 hover:bg-cream/60 transition-colors flex items-center justify-between gap-3"
             >
               <div className="flex items-center gap-3 min-w-0">
                 {isExpanded ? (
@@ -1294,7 +1282,7 @@ function DepartmentalManagerPermissions({
                         return (
                           <div
                             key={feat.key}
-                            className="flex flex-col sm:flex-row sm:items-center gap-2 py-1.5 px-2 rounded hover:bg-clay-50/60"
+                            className="flex flex-col sm:flex-row sm:items-center gap-2 py-1.5 px-2 rounded hover:bg-cream/50"
                           >
                             <div className="flex-1 min-w-0">
                               <div className="text-sm text-clay-700">

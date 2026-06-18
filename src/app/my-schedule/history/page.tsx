@@ -16,7 +16,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
-import { CalendarDays, ArrowLeft, Clock, MapPin } from "lucide-react";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StatTile } from "@/components/shared/StatTile";
+import {
+  CalendarDays,
+  Clock,
+  MapPin,
+  CheckCircle2,
+  Clock3,
+  XCircle,
+} from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 
 interface EnrichedAssignment extends ServiceAssignment {
@@ -140,78 +151,54 @@ export default function ServiceHistoryPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/my-schedule">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Service History
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Your complete past service record
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/my-schedule"
+        icon={CalendarDays}
+        tone="periwinkle"
+        title="Service History"
+        description="Your complete past service record"
+      />
 
       {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-clay-700">
-              {pastAssignments.length}
-            </p>
-            <p className="text-xs text-clay-500">Total Services</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-teal">
-              {pastAssignments.filter((a) => a.status === "CONFIRMED").length}
-            </p>
-            <p className="text-xs text-clay-500">Confirmed</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-gold-dark">
-              {pastAssignments.filter((a) => a.status === "PENDING").length}
-            </p>
-            <p className="text-xs text-clay-500">Pending</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-red-500">
-              {pastAssignments.filter((a) => a.status === "DECLINED").length}
-            </p>
-            <p className="text-xs text-clay-500">Declined</p>
-          </CardContent>
-        </Card>
+        <StatTile
+          icon={CalendarDays}
+          tone="periwinkle"
+          label="Total Services"
+          value={pastAssignments.length}
+        />
+        <StatTile
+          icon={CheckCircle2}
+          tone="teal"
+          label="Confirmed"
+          value={pastAssignments.filter((a) => a.status === "CONFIRMED").length}
+        />
+        <StatTile
+          icon={Clock3}
+          tone="gold"
+          label="Pending"
+          value={pastAssignments.filter((a) => a.status === "PENDING").length}
+        />
+        <StatTile
+          icon={XCircle}
+          tone="blush"
+          label="Declined"
+          value={pastAssignments.filter((a) => a.status === "DECLINED").length}
+        />
       </div>
 
       {/* Past assignments grouped by month */}
       {pastAssignments.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <CalendarDays className="h-12 w-12 text-clay-300 mb-4" />
-            <h3 className="text-lg font-display font-semibold text-clay-600">
-              No Past Services
-            </h3>
-            <p className="text-clay-400 text-sm mt-1">
-              Your service history will appear here after your first completed
-              assignment.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={CalendarDays}
+          tone="clay"
+          title="No Past Services"
+          description="Your service history will appear here after your first completed assignment."
+        />
       ) : (
         Object.entries(groupedByMonth).map(([month, monthAssignments]) => (
           <div key={month}>
-            <h2 className="text-sm font-semibold text-clay-500 uppercase tracking-wider mb-3">
-              {month}
-            </h2>
+            <SectionHeading className="mb-3">{month}</SectionHeading>
             <div className="space-y-3">
               {monthAssignments.map((assignment) => (
                 <Card key={assignment.id}>

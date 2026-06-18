@@ -8,8 +8,10 @@ import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Service, AppEvent } from "@/types";
 
 interface ServiceOption {
@@ -155,32 +157,21 @@ function CreateAffirmationForm() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/manage/affirmations">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            New Affirmation
-          </h1>
-          <p className="mt-1 text-clay-500">
-            Share words of encouragement with the youth
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/manage/affirmations"
+        icon={Sparkles}
+        tone="blush"
+        title="New Affirmation"
+        description="Share words of encouragement with the youth"
+      />
 
       <form onSubmit={handleSubmit}>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-gold" />
-              Affirmation Details
-            </CardTitle>
-            <CardDescription>
+          <CardHeader className="space-y-1.5">
+            <SectionHeading>Affirmation Details</SectionHeading>
+            <p className="text-sm text-clay-500">
               Write an affirmation to share with the Potter&apos;s Wheel community.
-            </CardDescription>
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Title */}

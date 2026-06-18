@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   UtensilsCrossed,
   Calendar,
   CheckCircle2,
@@ -173,57 +174,46 @@ export default function FoodRequestsPage() {
 
   if (!canConfirmFood) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You do not have permission to view food requests.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="You do not have permission to view food requests."
+        tone="clay"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/calendar">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900 flex items-center gap-2">
-            <UtensilsCrossed className="h-6 w-6 text-[#C8963E]" />
-            Food Requests
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Plan catering and confirm food provision for upcoming events
-          </p>
-        </div>
-        <Badge variant="outline" className="text-sm">
-          {requests.length} pending
-        </Badge>
-      </div>
+      <PageHeader
+        backHref="/calendar"
+        icon={UtensilsCrossed}
+        tone="blush"
+        title="Food Requests"
+        description="Plan catering and confirm food provision for upcoming events"
+        actions={
+          <Badge variant="outline" className="text-sm">
+            {requests.length} pending
+          </Badge>
+        }
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner size="lg" />
         </div>
       ) : requests.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
-            <h3 className="font-display font-semibold text-clay-700 text-lg">
-              All caught up!
-            </h3>
-            <p className="text-clay-500 mt-2">No food requests are pending.</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={CheckCircle2}
+          title="All caught up!"
+          description="No food requests are pending."
+          tone="sage"
+        />
       ) : (
         <div className="space-y-4">
           {requests.map((req) => {
@@ -245,7 +235,7 @@ export default function FoodRequestsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {req.needsDescription && (
-                    <div className="text-sm bg-clay-50 rounded-md px-3 py-2">
+                    <div className="text-sm bg-cream/60 rounded-md px-3 py-2">
                       <p className="text-xs font-semibold text-clay-500 uppercase tracking-wide mb-1">
                         Food needs
                       </p>
@@ -283,7 +273,7 @@ export default function FoodRequestsPage() {
                   </div>
 
                   {/* Funds request to Finance */}
-                  <div className="rounded-md border border-clay-200 p-3 space-y-3">
+                  <div className="rounded-md border border-clay-100/70 p-3 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"

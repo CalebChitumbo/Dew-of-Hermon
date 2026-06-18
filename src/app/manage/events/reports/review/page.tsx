@@ -19,8 +19,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   Bell,
   Calendar,
   CheckCircle2,
@@ -30,6 +31,7 @@ import {
   Shield,
   User,
   XCircle,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EventReportStatus, EventType } from "@/types";
@@ -287,49 +289,42 @@ export default function EventReportsReviewPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          Only the Chairperson can review event reports.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="Only the Chairperson can review event reports."
+        className="py-20"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/manage/events/reports">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900">
-            Event Report Reviews
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Review post-event reports submitted by event initiators.
-          </p>
-        </div>
-        <Badge
-          variant="outline"
-          className={cn(
-            "text-sm",
-            counts.SUBMITTED > 0
-              ? "bg-amber-50 text-amber-700 border-amber-200"
-              : "bg-green-50 text-green-700 border-green-200"
-          )}
-        >
-          {counts.SUBMITTED} pending
-        </Badge>
-      </div>
+      <PageHeader
+        backHref="/manage/events/reports"
+        icon={ClipboardCheck}
+        tone="periwinkle"
+        title="Event Report Reviews"
+        description="Review post-event reports submitted by event initiators."
+        actions={
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-sm",
+              counts.SUBMITTED > 0
+                ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-green-50 text-green-700 border-green-200"
+            )}
+          >
+            {counts.SUBMITTED} pending
+          </Badge>
+        }
+      />
 
       {/* Bulk reminder action bar */}
       <Card
@@ -337,7 +332,7 @@ export default function EventReportsReviewPage() {
           "border",
           overdueTotal > 0
             ? "border-amber-200 bg-amber-50"
-            : "border-clay-200 bg-cream/40"
+            : "border-clay-100/70 bg-cream/40"
         )}
       >
         <CardContent className="py-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -421,6 +416,8 @@ export default function EventReportsReviewPage() {
           ) : tab === "NOT_STARTED" ? (
             filteredOverdue.length === 0 ? (
               <EmptyState
+                icon={CheckCircle2}
+                tone="sage"
                 title="Nothing here"
                 description="No past events are missing a report right now."
               />
@@ -443,6 +440,7 @@ export default function EventReportsReviewPage() {
             )
           ) : filteredReports.length === 0 ? (
             <EmptyState
+              icon={Inbox}
               title="Nothing here"
               description="No reports in this status right now."
             />
@@ -518,26 +516,6 @@ export default function EventReportsReviewPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="py-16 text-center">
-        <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
-        <h3 className="font-display font-semibold text-clay-700 text-lg">
-          {title}
-        </h3>
-        <p className="text-clay-500 mt-2">{description}</p>
-      </CardContent>
-    </Card>
   );
 }
 

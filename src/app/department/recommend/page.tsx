@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   query,
   where,
@@ -26,12 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
 import {
-  ArrowLeft,
   Star,
   Send,
   CheckCircle,
-  CalendarDays,
 } from "lucide-react";
 import { format, isFuture, isToday } from "date-fns";
 
@@ -200,24 +198,16 @@ export default function RecommendPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/department">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Recommend Members
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Suggest members from your department for upcoming service roles
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/department"
+        icon={Star}
+        tone="teal"
+        title="Recommend Members"
+        description="Suggest members from your department for upcoming service roles"
+      />
 
       {submitted && (
-        <Card className="border-teal bg-teal/5">
+        <Card className="border-teal/30 bg-teal/5">
           <CardContent className="flex items-center gap-3 p-4">
             <CheckCircle className="h-5 w-5 text-teal" />
             <p className="text-sm font-medium text-teal-dark">

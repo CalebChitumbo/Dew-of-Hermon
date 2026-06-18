@@ -6,13 +6,14 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Calendar, MapPin, Clock, Sparkles } from "lucide-react";
+import { Calendar, MapPin, Clock, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 
 function CreateServiceForm() {
@@ -101,21 +102,13 @@ function CreateServiceForm() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/manage/services">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-display font-bold text-clay-700">
-            Create Service
-          </h1>
-          <p className="mt-1 text-clay-500">
-            Set up a new service and start assigning roles
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/manage/services"
+        icon={Sparkles}
+        tone="sage"
+        title="Create Service"
+        description="Set up a new service and start assigning roles"
+      />
 
       <form onSubmit={handleSubmit}>
         <Card>
@@ -207,7 +200,7 @@ function CreateServiceForm() {
 
             {/* Preview */}
             {date && venue && (
-              <div className="rounded-lg border border-clay-200 bg-cream/50 p-4">
+              <div className="rounded-lg border border-clay-100/70 bg-cream/50 p-4">
                 <p className="text-sm font-medium text-clay-600 mb-2">Preview</p>
                 <div className="space-y-1">
                   <p className="text-lg font-display text-clay-700">

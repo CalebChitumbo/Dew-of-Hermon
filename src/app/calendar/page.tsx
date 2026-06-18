@@ -41,6 +41,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 
 // ─── Life Group badge configuration ───
 
@@ -237,24 +239,22 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900">
-            Calendar
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            View upcoming events and services
-          </p>
-        </div>
-        {canCreate && (
-          <Link href="/manage/events/new">
-            <Button className="bg-[#C8963E] hover:bg-[#B8862E] text-white">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Event
-            </Button>
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        icon={CalendarDays}
+        tone="blue"
+        title="Calendar"
+        description="View upcoming events and services"
+        actions={
+          canCreate ? (
+            <Link href="/manage/events/new">
+              <Button className="bg-[#C8963E] hover:bg-[#B8862E] text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Event
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
       {/* Month navigation */}
       <Card>
@@ -318,12 +318,12 @@ export default function CalendarPage() {
                       }}
                       className={cn(
                         "relative border-r border-b border-clay-100 p-1 md:p-2 min-h-[3rem] md:min-h-[5rem] text-left transition-colors",
-                        !inCurrentMonth && "bg-clay-50/50",
-                        inCurrentMonth && "bg-white",
+                        !inCurrentMonth && "bg-cream/40",
+                        inCurrentMonth && "bg-white/70",
                         today && "bg-[#C8963E]/5",
                         isSelected && "bg-[#C8963E]/10 ring-2 ring-inset ring-[#C8963E]",
                         (dayEvents.length > 0 || (canCreate && inCurrentMonth)) &&
-                          "cursor-pointer hover:bg-clay-50"
+                          "cursor-pointer hover:bg-cream/50"
                       )}
                     >
                       <span
@@ -465,14 +465,12 @@ export default function CalendarPage() {
 
       {/* Selected day with no events */}
       {selectedDate && selectedDayEvents.length === 0 && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <CalendarDays className="h-10 w-10 text-clay-300 mx-auto mb-3" />
-            <p className="text-clay-500">
-              No events on {format(selectedDate, "EEEE, d MMMM yyyy")}
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={CalendarDays}
+          tone="clay"
+          title="No events"
+          description={`No events on ${format(selectedDate, "EEEE, d MMMM yyyy")}`}
+        />
       )}
 
     </div>

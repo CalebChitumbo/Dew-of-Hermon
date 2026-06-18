@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   Bus,
   Shield,
   Calendar,
@@ -205,31 +205,30 @@ export default function TransportRequestDetailPage() {
 
   if (!canManageTransport) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          Only the Transport & Logistics lead can manage transport requests.
-        </p>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="Only the Transport & Logistics lead can manage transport requests."
+        tone="clay"
+      />
     );
   }
 
   if (!request) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <AlertCircle className="h-16 w-16 text-clay-300 mb-4" />
-        <p className="text-clay-500">Transport request not found.</p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => router.push("/manage/transport/requests")}
-        >
-          Back to Requests
-        </Button>
-      </div>
+      <EmptyState
+        icon={AlertCircle}
+        title="Transport request not found"
+        tone="clay"
+        action={
+          <Button
+            variant="outline"
+            onClick={() => router.push("/manage/transport/requests")}
+          >
+            Back to Requests
+          </Button>
+        }
+      />
     );
   }
 
@@ -237,28 +236,21 @@ export default function TransportRequestDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/manage/transport/requests">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-display font-bold text-clay-900 flex items-center gap-2">
-            <Bus className="h-6 w-6 text-[#C8963E]" />
-            {request.eventTitle}
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Transport Request · routed by {request.routedByName ?? "Events Coordinator"}
-          </p>
-        </div>
-        <Badge
-          variant="outline"
-          className={cn("text-sm", STATUS_COLOR[request.status])}
-        >
-          {STATUS_LABEL[request.status]}
-        </Badge>
-      </div>
+      <PageHeader
+        backHref="/manage/transport/requests"
+        icon={Bus}
+        tone="teal"
+        title={request.eventTitle}
+        description={`Transport Request · routed by ${request.routedByName ?? "Events Coordinator"}`}
+        actions={
+          <Badge
+            variant="outline"
+            className={cn("text-sm", STATUS_COLOR[request.status])}
+          >
+            {STATUS_LABEL[request.status]}
+          </Badge>
+        }
+      />
 
       {/* Event context */}
       {event && (
@@ -278,7 +270,7 @@ export default function TransportRequestDetailPage() {
               {event.venue}
             </div>
             {event.description && (
-              <p className="bg-clay-50 rounded-md px-3 py-2">{event.description}</p>
+              <p className="bg-cream/60 rounded-md px-3 py-2">{event.description}</p>
             )}
           </CardContent>
         </Card>
@@ -442,7 +434,7 @@ export default function TransportRequestDetailPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="bg-[#C8963E] hover:bg-[#B8862E] text-white"
+                variant="gold"
               >
                 {submitting && <LoadingSpinner size="sm" className="mr-2" />}
                 Send to Treasurer

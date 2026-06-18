@@ -8,13 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   Bus,
   Shield,
   ChevronRight,
   Calendar,
   MapPin,
+  Inbox,
 } from "lucide-react";
 import { useTransportAccess } from "@/hooks/useTransportAccess";
 import { useToast } from "@/hooks/use-toast";
@@ -103,18 +105,17 @@ export default function TransportRequestsPage() {
 
   if (!canManageTransport) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          Only the Transport & Logistics lead can view transport requests.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="Only the Transport & Logistics lead can view transport requests."
+        tone="clay"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -125,22 +126,13 @@ export default function TransportRequestsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900 flex items-center gap-2">
-            <Bus className="h-7 w-7 text-[#C8963E]" />
-            Transport Requests
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Cost and schedule transport for events that need it.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/dashboard"
+        icon={Bus}
+        tone="teal"
+        title="Transport Requests"
+        description="Cost and schedule transport for events that need it."
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
@@ -163,11 +155,12 @@ export default function TransportRequestsPage() {
                   <LoadingSpinner size="md" />
                 </div>
               ) : filtered.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center text-clay-500">
-                    No requests in this group.
-                  </CardContent>
-                </Card>
+                <EmptyState
+                  icon={Inbox}
+                  title="Nothing here yet"
+                  description="No requests in this group."
+                  tone="clay"
+                />
               ) : (
                 filtered.map((req) => (
                   <Link
@@ -175,7 +168,7 @@ export default function TransportRequestsPage() {
                     href={`/manage/transport/requests/${req.id}`}
                     className="block"
                   >
-                    <Card className="hover:border-[#C8963E]/40 transition-colors">
+                    <Card className="transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]">
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between gap-3">
                           <div>

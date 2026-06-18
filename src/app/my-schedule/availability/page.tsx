@@ -17,8 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   CalendarOff,
   CalendarCheck,
   Trash2,
@@ -116,21 +117,13 @@ export default function AvailabilityPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/my-schedule">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Set Availability
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Mark dates when you cannot serve so leads can plan accordingly
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        backHref="/my-schedule"
+        icon={CalendarOff}
+        tone="gold"
+        title="Set Availability"
+        description="Mark dates when you cannot serve so leads can plan accordingly"
+      />
 
       {/* Add unavailable dates form */}
       <Card>
@@ -198,13 +191,13 @@ export default function AvailabilityPage() {
         </CardHeader>
         <CardContent>
           {futureUnavailable.length === 0 ? (
-            <div className="flex flex-col items-center py-8">
-              <CalendarCheck className="h-10 w-10 text-teal mb-3" />
-              <p className="text-clay-500 text-sm">
-                You have no upcoming unavailable dates. You are available for
-                all upcoming services.
-              </p>
-            </div>
+            <EmptyState
+              icon={CalendarCheck}
+              tone="teal"
+              title="All clear"
+              description="You have no upcoming unavailable dates. You are available for all upcoming services."
+              className="py-8"
+            />
           ) : (
             <div className="space-y-2">
               {futureUnavailable.map((item) => (

@@ -10,13 +10,13 @@ import type { UserRole, AssignmentStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { StatTile } from "@/components/shared/StatTile";
 import {
-  BarChart3,
   Users,
   CheckCircle2,
-  Clock,
   XCircle,
-  AlertTriangle,
   Shield,
   Building2,
   ClipboardList,
@@ -169,15 +169,13 @@ export default function ReportsPage() {
 
   if (!userData || !isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You do not have permission to view reports.
-        </p>
-      </div>
+      <EmptyState
+        icon={Shield}
+        tone="clay"
+        title="Access Denied"
+        description="You do not have permission to view reports."
+        className="py-20"
+      />
     );
   }
 
@@ -192,77 +190,39 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-          Reports
-        </h1>
-        <p className="text-clay-500 mt-1">
-          Overview of membership and service statistics
-        </p>
-      </div>
+      <PageHeader
+        icon={TrendingUp}
+        tone="lavender"
+        title="Reports"
+        description="Overview of membership and service statistics"
+      />
 
       {/* Member Overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">
-                  {memberSummary.total}
-                </p>
-                <p className="text-xs text-clay-400">Total Members</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal/10 text-teal">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">
-                  {memberSummary.active}
-                </p>
-                <p className="text-xs text-clay-400">Active</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-500">
-                <XCircle className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">
-                  {memberSummary.inactive}
-                </p>
-                <p className="text-xs text-clay-400">Inactive</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gold/10 text-gold-dark">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-display font-bold text-clay-700">
-                  {confirmationRate}%
-                </p>
-                <p className="text-xs text-clay-400">Confirmation Rate</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile
+          icon={Users}
+          tone="blue"
+          label="Total Members"
+          value={memberSummary.total}
+        />
+        <StatTile
+          icon={CheckCircle2}
+          tone="teal"
+          label="Active"
+          value={memberSummary.active}
+        />
+        <StatTile
+          icon={XCircle}
+          tone="blush"
+          label="Inactive"
+          value={memberSummary.inactive}
+        />
+        <StatTile
+          icon={TrendingUp}
+          tone="gold"
+          label="Confirmation Rate"
+          value={`${confirmationRate}%`}
+        />
       </div>
 
       {/* Members by Role + Departments */}

@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Users,
   Plus,
@@ -450,36 +453,31 @@ export default function LifeGroupsPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Users className="h-12 w-12 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-600">
-          Access Restricted
-        </h2>
-        <p className="text-clay-400 mt-2 text-center max-w-md">
-          This page is only accessible to Life Group leaders (Department Lead or
-          Youth Leader in Life Groups department).
-        </p>
-      </div>
+      <EmptyState
+        icon={Users}
+        tone="clay"
+        title="Access Restricted"
+        description="This page is only accessible to Life Group leaders (Department Lead or Youth Leader in Life Groups department)."
+        className="py-20"
+      />
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Life Groups Follow-Up
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Submit follow-up leads for people encountered in Life Groups
-          </p>
-        </div>
-        <Button variant="gold" onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Submit Follow-Up Lead
-        </Button>
-      </div>
+      <PageHeader
+        icon={Users}
+        tone="teal"
+        title="Life Groups Follow-Up"
+        description="Submit follow-up leads for people encountered in Life Groups"
+        actions={
+          <Button variant="gold" onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Submit Follow-Up Lead
+          </Button>
+        }
+      />
 
       <Tabs defaultValue="devotional" className="space-y-4">
         <TabsList>
@@ -489,38 +487,35 @@ export default function LifeGroupsPage() {
 
         {/* Devotional Focus Tab */}
         <TabsContent value="devotional" className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-display font-semibold text-clay-700 flex items-center gap-2">
-                <BookOpen className="h-5 w-5 text-gold-dark" />
-                Weekly Devotional Focus
-              </h2>
-              <p className="text-sm text-clay-500">
-                Posted by the Life Groups coordinator for every life group.
-              </p>
-            </div>
-            {canManageDevotionals && (
-              <Button variant="gold" onClick={() => openDevotionalDialog()}>
-                <Plus className="mr-2 h-4 w-4" />
-                Post Devotional
-              </Button>
-            )}
+          <div className="space-y-1">
+            <SectionHeading
+              actions={
+                canManageDevotionals ? (
+                  <Button variant="gold" onClick={() => openDevotionalDialog()}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Post Devotional
+                  </Button>
+                ) : undefined
+              }
+            >
+              Weekly Devotional Focus
+            </SectionHeading>
+            <p className="text-sm text-clay-500">
+              Posted by the Life Groups coordinator for every life group.
+            </p>
           </div>
 
           {devotionals.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <BookOpen className="h-12 w-12 text-clay-300 mb-4" />
-                <h3 className="text-lg font-display font-semibold text-clay-600">
-                  No Devotionals Posted Yet
-                </h3>
-                <p className="text-clay-400 text-sm mt-1 text-center max-w-md">
-                  {canManageDevotionals
-                    ? "Post the first devotional focus to share with every life group this week."
-                    : "Check back soon — your coordinator will post this week's focus here."}
-                </p>
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={BookOpen}
+              tone="teal"
+              title="No Devotionals Posted Yet"
+              description={
+                canManageDevotionals
+                  ? "Post the first devotional focus to share with every life group this week."
+                  : "Check back soon — your coordinator will post this week's focus here."
+              }
+            />
           ) : (
             <div className="space-y-4">
               {devotionals.map((dev, idx) => (
@@ -588,26 +583,18 @@ export default function LifeGroupsPage() {
         {/* My Leads Tab */}
         <TabsContent value="leads" className="space-y-4">
           {myCards.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <FileText className="h-12 w-12 text-clay-300 mb-4" />
-                <h3 className="text-lg font-display font-semibold text-clay-600">
-                  No Follow-Up Leads Submitted
-                </h3>
-                <p className="text-clay-400 text-sm mt-1 text-center max-w-md">
-                  Submit follow-up leads for new visitors or members needing support
-                  in your Life Group.
-                </p>
-                <Button
-                  variant="gold"
-                  className="mt-4"
-                  onClick={() => setDialogOpen(true)}
-                >
+            <EmptyState
+              icon={FileText}
+              tone="teal"
+              title="No Follow-Up Leads Submitted"
+              description="Submit follow-up leads for new visitors or members needing support in your Life Group."
+              action={
+                <Button variant="gold" onClick={() => setDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Submit First Lead
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {myCards.map((card) => (

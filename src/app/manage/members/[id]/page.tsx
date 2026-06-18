@@ -17,7 +17,7 @@ import {
   getAssignableRoles,
 } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,14 +40,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   Save,
   Trash2,
   Shield,
   UserX,
   UserCheck,
   X,
+  UserCog,
 } from "lucide-react";
 
 // Roles are now filtered dynamically based on caller via getAssignableRoles
@@ -321,62 +324,51 @@ export default function EditMemberPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You do not have permission to edit members.
-        </p>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access denied"
+        description="You do not have permission to edit members."
+        tone="clay"
+        className="py-20"
+      />
     );
   }
 
   if (!member) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Member Not Found
-        </h2>
-        <p className="text-clay-500 mt-2">
-          The requested member could not be found.
-        </p>
-        <Link href="/manage/members" className="mt-4">
-          <Button variant="outline">Back to Members</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={UserCog}
+        title="Member not found"
+        description="The requested member could not be found."
+        tone="clay"
+        className="py-20"
+        action={
+          <Link href="/manage/members">
+            <Button variant="outline">Back to Members</Button>
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/manage/members">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-              Edit Member
-            </h1>
-            <p className="text-clay-500 mt-1">
-              Update {member.name}&apos;s profile
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        backHref="/manage/members"
+        icon={UserCog}
+        tone="periwinkle"
+        title="Edit Member"
+        description={`Update ${member.name}'s profile`}
+        actions={
           <Badge
             variant={isActive ? "success" : "destructive"}
             className="text-sm"
           >
             {isActive ? "Active" : "Inactive"}
           </Badge>
-        </div>
-      </div>
+        }
+      />
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
@@ -384,7 +376,7 @@ export default function EditMemberPage() {
           {/* Basic Details */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Basic Details</CardTitle>
+              <SectionHeading>Basic Details</SectionHeading>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Name */}
@@ -455,7 +447,7 @@ export default function EditMemberPage() {
           {/* Role & Status */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Role & Status</CardTitle>
+              <SectionHeading>Role &amp; Status</SectionHeading>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Role */}
@@ -527,7 +519,7 @@ export default function EditMemberPage() {
           {/* Life Group & Student Info */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Life Group &amp; Student Info</CardTitle>
+              <SectionHeading>Life Group &amp; Student Info</SectionHeading>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Life Group */}
@@ -605,7 +597,7 @@ export default function EditMemberPage() {
           {/* Departments */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Departments</CardTitle>
+              <SectionHeading>Departments</SectionHeading>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-clay-500">
@@ -651,7 +643,7 @@ export default function EditMemberPage() {
                         className={`rounded-lg border px-4 py-3 transition-colors ${
                           isSelected
                             ? "border-gold bg-gold/10"
-                            : "border-clay-200 bg-white hover:border-clay-300 hover:bg-clay-50"
+                            : "border-clay-100/70 bg-white/70 hover:border-clay-300 hover:bg-clay-50"
                         }`}
                       >
                         <div className="flex items-center justify-between">

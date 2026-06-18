@@ -20,6 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Search,
   Plus,
@@ -140,15 +142,12 @@ export default function MembersPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You do not have permission to manage members.
-        </p>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access denied"
+        description="You do not have permission to manage members."
+        className="py-20"
+      />
     );
   }
 
@@ -163,24 +162,22 @@ export default function MembersPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            Members
-          </h1>
-          <p className="text-clay-500 mt-1">
-            Manage church members and their roles
-          </p>
-        </div>
-        {isFullAdmin && (
-          <Link href="/manage/members/new">
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Member
-            </Button>
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        title="Members"
+        description="Manage church members and their roles"
+        icon={Users}
+        tone="periwinkle"
+        actions={
+          isFullAdmin ? (
+            <Link href="/manage/members/new">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Member
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
       {/* Filters */}
       <Card>
@@ -247,7 +244,7 @@ export default function MembersPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-clay-200 bg-clay-50/50">
+                <tr className="border-b border-clay-100 bg-cream/40">
                   <th className="text-left px-6 py-3 text-xs font-semibold text-clay-500 uppercase tracking-wider">
                     Name
                   </th>
@@ -272,7 +269,7 @@ export default function MembersPage() {
                 {filteredMembers.map((member) => (
                   <tr
                     key={member.id}
-                    className="hover:bg-clay-50/50 transition-colors"
+                    className="hover:bg-cream/50 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -353,7 +350,7 @@ export default function MembersPage() {
       <div className="md:hidden space-y-3">
         {filteredMembers.map((member) => (
           <Link key={member.id} href={`/manage/members/${member.id}`}>
-            <Card className="hover:shadow-md transition-shadow mb-3">
+            <Card className="mb-3 transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 min-w-0 flex-1">

@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   Calendar,
   ClipboardCheck,
   MapPin,
@@ -145,76 +146,63 @@ export default function MyEventReportsPage() {
 
   if (!hasAccess) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          You do not have permission to submit event reports.
-        </p>
-        <Link href="/calendar" className="mt-4">
-          <Button variant="outline">Back to Calendar</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="You do not have permission to submit event reports."
+        className="py-20"
+        action={
+          <Link href="/calendar">
+            <Button variant="outline">Back to Calendar</Button>
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/calendar">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900">
-            My Event Reports
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            Submit post-event reports for the events you initiated.
-          </p>
-        </div>
-        {canReview && (
-          <Link href="/manage/events/reports/review">
-            <Button variant="outline" className="gap-2">
-              <ShieldCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Review submissions</span>
-              <span className="sm:hidden">Reviews</span>
-            </Button>
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        backHref="/calendar"
+        icon={ClipboardList}
+        tone="periwinkle"
+        title="My Event Reports"
+        description="Submit post-event reports for the events you initiated."
+        actions={
+          canReview ? (
+            <Link href="/manage/events/reports/review">
+              <Button variant="outline" className="gap-2">
+                <ShieldCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">Review submissions</span>
+                <span className="sm:hidden">Reviews</span>
+              </Button>
+            </Link>
+          ) : undefined
+        }
+      />
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <LoadingSpinner size="lg" />
         </div>
       ) : error ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
-            <h3 className="font-display font-semibold text-clay-700 text-lg">
-              Failed to load events
-            </h3>
-            <Button variant="outline" className="mt-4" onClick={fetchEvents}>
+        <EmptyState
+          icon={AlertCircle}
+          tone="blush"
+          title="Failed to load events"
+          action={
+            <Button variant="outline" onClick={fetchEvents}>
               Retry
             </Button>
-          </CardContent>
-        </Card>
+          }
+        />
       ) : events.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
-            <h3 className="font-display font-semibold text-clay-700 text-lg">
-              All caught up
-            </h3>
-            <p className="text-clay-500 mt-2">
-              You don&apos;t have any events awaiting a report right now.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={CheckCircle2}
+          tone="sage"
+          title="All caught up"
+          description="You don't have any events awaiting a report right now."
+        />
       ) : (
         <div className="space-y-4">
           {events.map((event) => {

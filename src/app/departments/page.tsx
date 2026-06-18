@@ -7,13 +7,14 @@ import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasMinRole } from "@/lib/permissions";
 import { Department, User } from "@/types";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { RoleProtected } from "@/components/shared/RoleProtected";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
   Dialog,
   DialogContent,
@@ -30,10 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ArrowLeft,
   Building2,
   Users,
-  ChevronRight,
   Search,
   Plus,
   UserCog,
@@ -168,37 +167,31 @@ function DepartmentsContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="icon" className="mt-1">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-              Departments
-            </h1>
-            <p className="text-clay-500 mt-1">
-              {isAdmin
-                ? "Manage all youth ministry departments"
-                : "Your departments"}
-            </p>
-          </div>
-        </div>
-        {isAdmin && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setAssignLeadOpen(true)}>
-              <UserCog className="mr-2 h-4 w-4" />
-              Assign Lead
-            </Button>
-            <Button variant="gold" onClick={() => setCreateDeptOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Department
-            </Button>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        backHref="/dashboard"
+        icon={Building2}
+        tone="sage"
+        title="Departments"
+        description={
+          isAdmin
+            ? "Manage all youth ministry departments"
+            : "Your departments"
+        }
+        actions={
+          isAdmin ? (
+            <>
+              <Button variant="outline" onClick={() => setAssignLeadOpen(true)}>
+                <UserCog className="mr-2 h-4 w-4" />
+                Assign Lead
+              </Button>
+              <Button variant="gold" onClick={() => setCreateDeptOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Department
+              </Button>
+            </>
+          ) : undefined
+        }
+      />
 
       {/* Search */}
       <div className="relative max-w-md">
@@ -213,19 +206,16 @@ function DepartmentsContent() {
 
       {/* Department Grid */}
       {filteredDepartments.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Building2 className="h-12 w-12 text-clay-300 mb-4" />
-            <h3 className="text-lg font-display font-semibold text-clay-600">
-              No Departments Found
-            </h3>
-            <p className="text-clay-400 text-sm mt-1">
-              {searchQuery
-                ? "No departments match your search"
-                : "No departments have been created yet"}
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Building2}
+          tone="clay"
+          title="No Departments Found"
+          description={
+            searchQuery
+              ? "No departments match your search"
+              : "No departments have been created yet"
+          }
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filteredDepartments.map((dept) => {
@@ -233,47 +223,38 @@ function DepartmentsContent() {
             const leads = getLeads(dept.id);
 
             return (
-              <Link key={dept.id} href={`/departments/${dept.id}`}>
-                <Card className="h-full hover:shadow-md transition-shadow cursor-pointer border-clay-200 hover:border-gold/40">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{dept.icon}</span>
-                        <div>
-                          <h3 className="font-display font-semibold text-clay-700">
-                            {dept.name}
-                          </h3>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-clay-300 flex-shrink-0" />
-                    </div>
-
-                    {dept.description && (
-                      <p className="text-sm text-clay-500 mb-3 line-clamp-2">
-                        {dept.description}
-                      </p>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-sm text-clay-500">
-                        <Users className="h-4 w-4" />
-                        <span>
-                          {memberCount} member{memberCount !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      {leads.length > 0 ? (
-                        <Badge variant="outline" className="text-xs">
-                          <Shield className="mr-1 h-3 w-3" />
-                          {leads.map((l) => l.name.split(" ")[0]).join(", ")}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">
-                          No Lead
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+              <Link
+                key={dept.id}
+                href={`/departments/${dept.id}`}
+                className="group block rounded-2xl border border-clay-100/70 bg-white/70 p-5 transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E6EDE4] text-xl">
+                    {dept.icon || <Building2 className="h-5 w-5 text-[#6E8A6C]" />}
+                  </span>
+                  {leads.length > 0 ? (
+                    <Badge variant="outline" className="text-xs">
+                      <Shield className="mr-1 h-3 w-3" />
+                      {leads.map((l) => l.name.split(" ")[0]).join(", ")}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs">
+                      No Lead
+                    </Badge>
+                  )}
+                </div>
+                <h3 className="mt-4 font-display font-semibold text-clay-700">
+                  {dept.name}
+                </h3>
+                {dept.description && (
+                  <p className="mt-1 text-sm text-clay-500 line-clamp-2">
+                    {dept.description}
+                  </p>
+                )}
+                <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-clay-500 group-hover:text-gold-dark transition-colors">
+                  <Users className="h-4 w-4" />
+                  {memberCount} member{memberCount !== 1 ? "s" : ""}
+                </p>
               </Link>
             );
           })}

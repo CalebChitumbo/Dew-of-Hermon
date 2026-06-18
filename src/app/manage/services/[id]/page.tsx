@@ -16,6 +16,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +33,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft,
   Bell,
   Calendar,
   MapPin,
@@ -132,7 +134,7 @@ const departmentColors: Record<string, string> = {
   Ministry: "border-l-green-400 bg-green-50/30",
   Hospitality: "border-l-orange-400 bg-orange-50/30",
   Admin: "border-l-clay-400 bg-clay-50/30",
-  default: "border-l-clay-300 bg-white",
+  default: "border-l-clay-300 bg-white/70",
 };
 
 function getDeptColor(deptName: string): string {
@@ -315,7 +317,7 @@ function RoleCard({ role, onAssign, onRemove, isRemoving, canDelete }: RoleCardP
 
   return (
     <div
-      className={`rounded-lg border-l-4 border border-clay-200 p-4 transition-colors ${getDeptColor(
+      className={`rounded-lg border-l-4 border border-clay-100/70 p-4 transition-colors ${getDeptColor(
         role.departmentName
       )}`}
     >
@@ -877,20 +879,18 @@ function AssignmentBoardContent() {
 
   if (!service) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-gold mx-auto mb-4" />
-          <h2 className="text-2xl font-display text-clay-700">
-            Service Not Found
-          </h2>
-          <p className="mt-2 text-clay-500 mb-4">
-            This service may have been deleted or the link is invalid.
-          </p>
+      <EmptyState
+        icon={AlertTriangle}
+        tone="clay"
+        title="Service Not Found"
+        description="This service may have been deleted or the link is invalid."
+        action={
           <Link href="/manage/services">
             <Button variant="outline">Back to Services</Button>
           </Link>
-        </div>
-      </div>
+        }
+        className="min-h-[60vh] justify-center"
+      />
     );
   }
 
@@ -905,17 +905,13 @@ function AssignmentBoardContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link href="/manage/services">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-display font-bold text-clay-700">
-            {service.theme || "Service"}
-          </h1>
-          <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-clay-500">
+      <PageHeader
+        backHref="/manage/services"
+        icon={Calendar}
+        tone="sage"
+        title={service.theme || "Service"}
+        description={
+          <span className="flex flex-wrap items-center gap-3">
             {eventDate && (
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
@@ -932,32 +928,34 @@ function AssignmentBoardContent() {
               <Clock className="h-3.5 w-3.5" />
               {service.serviceTime}
             </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => setReminderConfirmOpen(true)}
-            disabled={sendingReminder || assignments.length === 0}
-          >
-            {sendingReminder ? (
-              <LoadingSpinner size="sm" />
-            ) : (
-              <Bell className="h-4 w-4" />
-            )}
-            <span className="hidden sm:inline">
-              {sendingReminder ? "Sending..." : "Remind"}
-            </span>
-          </Button>
-          <Link href={`/manage/services/${serviceId}/checklist`}>
-            <Button variant="outline" className="gap-2">
-              <ClipboardList className="h-4 w-4" />
-              <span className="hidden sm:inline">Checklist</span>
+          </span>
+        }
+        actions={
+          <>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setReminderConfirmOpen(true)}
+              disabled={sendingReminder || assignments.length === 0}
+            >
+              {sendingReminder ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <Bell className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">
+                {sendingReminder ? "Sending..." : "Remind"}
+              </span>
             </Button>
-          </Link>
-        </div>
-      </div>
+            <Link href={`/manage/services/${serviceId}/checklist`}>
+              <Button variant="outline" className="gap-2">
+                <ClipboardList className="h-4 w-4" />
+                <span className="hidden sm:inline">Checklist</span>
+              </Button>
+            </Link>
+          </>
+        }
+      />
 
       {/* Readiness Ring + Stats */}
       <Card>
@@ -996,32 +994,27 @@ function AssignmentBoardContent() {
 
       {/* Roles by Department */}
       {roles.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Shield className="h-12 w-12 text-clay-300 mx-auto mb-4" />
-            <h3 className="text-lg font-display text-clay-600 mb-2">
-              No Roles Defined
-            </h3>
-            <p className="text-sm text-clay-400 max-w-md mx-auto">
-              Service roles have not been set up yet. Please contact an
-              administrator to configure the 13 service roles in the system
-              settings.
-            </p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Shield}
+          tone="clay"
+          title="No Roles Defined"
+          description="Service roles have not been set up yet. Please contact an administrator to configure the 13 service roles in the system settings."
+        />
       ) : (
         <div className="space-y-6">
           {Object.entries(rolesByDepartment).map(([deptName, deptRoles]) => (
             <div key={deptName}>
-              <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-lg font-display font-semibold text-clay-700">
-                  {deptName}
-                </h3>
-                <Badge variant="secondary" className="text-xs">
-                  {deptRoles.filter((r) => r.assignment).length}/
-                  {deptRoles.length}
-                </Badge>
-              </div>
+              <SectionHeading
+                className="mb-3"
+                actions={
+                  <Badge variant="secondary" className="text-xs">
+                    {deptRoles.filter((r) => r.assignment).length}/
+                    {deptRoles.length}
+                  </Badge>
+                }
+              >
+                {deptName}
+              </SectionHeading>
               <div className="grid gap-3 sm:grid-cols-2">
                 {deptRoles.map((role) => (
                   <RoleCard

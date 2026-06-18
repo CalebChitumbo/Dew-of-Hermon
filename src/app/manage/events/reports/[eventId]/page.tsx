@@ -29,8 +29,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  ArrowLeft,
   Calendar,
   MapPin,
   ClipboardList,
@@ -331,60 +332,54 @@ export default function EventReportFormPage() {
 
   if (notFound) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <AlertTriangle className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Event not found
-        </h2>
-        <Link href="/manage/events/reports" className="mt-4">
-          <Button variant="outline">Back to My Reports</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={AlertTriangle}
+        title="Event not found"
+        className="py-20"
+        action={
+          <Link href="/manage/events/reports">
+            <Button variant="outline">Back to My Reports</Button>
+          </Link>
+        }
+      />
     );
   }
 
   if (accessDenied || (!isOwner && !isAdmin)) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Shield className="h-16 w-16 text-clay-300 mb-4" />
-        <h2 className="text-xl font-display font-semibold text-clay-700">
-          Access Denied
-        </h2>
-        <p className="text-clay-500 mt-2">
-          Only the event initiator can submit a report for this event.
-        </p>
-        <Link href="/manage/events/reports" className="mt-4">
-          <Button variant="outline">Back to My Reports</Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={Shield}
+        title="Access Denied"
+        description="Only the event initiator can submit a report for this event."
+        className="py-20"
+        action={
+          <Link href="/manage/events/reports">
+            <Button variant="outline">Back to My Reports</Button>
+          </Link>
+        }
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/manage/events/reports">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-900">
-            Post-Event Report
-          </h1>
-          <p className="text-sm text-clay-500 mt-1">
-            {eventMeta?.title ?? "—"}
-          </p>
-        </div>
-        {report && (
-          <Badge
-            variant="outline"
-            className={cn("text-xs", STATUS_BADGE[report.status])}
-          >
-            {STATUS_LABEL[report.status]}
-          </Badge>
-        )}
-      </div>
+      <PageHeader
+        backHref="/manage/events/reports"
+        icon={ClipboardList}
+        tone="periwinkle"
+        title="Post-Event Report"
+        description={eventMeta?.title ?? "—"}
+        actions={
+          report ? (
+            <Badge
+              variant="outline"
+              className={cn("text-xs", STATUS_BADGE[report.status])}
+            >
+              {STATUS_LABEL[report.status]}
+            </Badge>
+          ) : undefined
+        }
+      />
 
       {eventMeta && (
         <Card>

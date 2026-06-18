@@ -22,6 +22,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { SectionHeading } from "@/components/shared/SectionHeading";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { useToast } from "@/hooks/use-toast";
 import {
   CalendarDays,
@@ -303,61 +306,46 @@ export default function MySchedulePage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-display font-bold text-clay-700">
-            My Schedule
-          </h1>
-          <p className="text-clay-500 mt-1">
-            View your upcoming assignments and manage availability
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/my-schedule/availability">
-            <Button variant="outline" size="sm">
-              <CalendarOff className="mr-2 h-4 w-4" />
-              Availability
-            </Button>
-          </Link>
-          <Link href="/my-schedule/history">
-            <Button variant="outline" size="sm">
-              <History className="mr-2 h-4 w-4" />
-              History
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        icon={CalendarDays}
+        tone="periwinkle"
+        title="My Schedule"
+        description="View your upcoming assignments and manage availability"
+        actions={
+          <>
+            <Link href="/my-schedule/availability">
+              <Button variant="outline" size="sm">
+                <CalendarOff className="mr-2 h-4 w-4" />
+                Availability
+              </Button>
+            </Link>
+            <Link href="/my-schedule/history">
+              <Button variant="outline" size="sm">
+                <History className="mr-2 h-4 w-4" />
+                History
+              </Button>
+            </Link>
+          </>
+        }
+      />
 
       {/* Upcoming Assignments */}
       <div>
-        <h2 className="text-lg font-display font-semibold text-clay-700 mb-4">
-          Upcoming Assignments
-        </h2>
+        <SectionHeading className="mb-4">Upcoming Assignments</SectionHeading>
         {queryError ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
-              <h3 className="text-lg font-display font-semibold text-clay-600">
-                Unable to Load Assignments
-              </h3>
-              <p className="text-clay-400 text-sm mt-1 text-center max-w-md">
-                There was a problem loading your assignments. Please try refreshing the page.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={AlertCircle}
+            tone="blush"
+            title="Unable to Load Assignments"
+            description="There was a problem loading your assignments. Please try refreshing the page."
+          />
         ) : upcomingAssignments.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <CalendarDays className="h-12 w-12 text-clay-300 mb-4" />
-              <h3 className="text-lg font-display font-semibold text-clay-600">
-                No Upcoming Assignments
-              </h3>
-              <p className="text-clay-400 text-sm mt-1 text-center max-w-md">
-                You have no upcoming service assignments. When you are assigned
-                to a role, it will appear here.
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={CalendarDays}
+            tone="clay"
+            title="No Upcoming Assignments"
+            description="You have no upcoming service assignments. When you are assigned to a role, it will appear here."
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {upcomingAssignments.map((assignment) => (
@@ -542,20 +530,22 @@ export default function MySchedulePage() {
       {/* Past Assignments */}
       {pastAssignments.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-display font-semibold text-clay-700">
-              Recent Past Assignments
-            </h2>
-            <Link href="/my-schedule/history">
-              <Button variant="ghost" size="sm">
-                View All
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
+          <SectionHeading
+            className="mb-4"
+            actions={
+              <Link href="/my-schedule/history">
+                <Button variant="ghost" size="sm">
+                  View All
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+            }
+          >
+            Recent Past Assignments
+          </SectionHeading>
           <div className="space-y-3">
             {pastAssignments.map((assignment) => (
-              <Card key={assignment.id} className="bg-clay-50/50">
+              <Card key={assignment.id} className="bg-cream/40">
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-4">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-clay-100">
