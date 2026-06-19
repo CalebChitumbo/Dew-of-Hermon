@@ -16,7 +16,6 @@ import {
   SegmentedTabsList,
   SegmentedTab,
   SoftWaves,
-  DecorImage,
   luxSurface,
 } from "@/components/shared/lux";
 import { ApprovalScene } from "@/components/shared/illustrations";
@@ -365,10 +364,6 @@ export default function AccountsApprovalsPage() {
           ) : transportRequests.length === 0 ? (
             <div className={cn("relative overflow-hidden", luxSurface)}>
               <SoftWaves className="absolute inset-x-0 bottom-0 h-24 w-full text-gold/10" />
-              <DecorImage
-                src="/images/dashboard/asset-soft-waves.png"
-                className="absolute inset-x-0 bottom-0 h-28 w-full object-cover opacity-30"
-              />
               <EmptyStateLux
                 illustration={<ApprovalScene />}
                 tone="emerald"
@@ -530,10 +525,6 @@ export default function AccountsApprovalsPage() {
           ) : budgetRequests.length === 0 ? (
             <div className={cn("relative overflow-hidden", luxSurface)}>
               <SoftWaves className="absolute inset-x-0 bottom-0 h-24 w-full text-gold/10" />
-              <DecorImage
-                src="/images/dashboard/asset-soft-waves.png"
-                className="absolute inset-x-0 bottom-0 h-28 w-full object-cover opacity-30"
-              />
               <EmptyStateLux
                 illustration={<ApprovalScene />}
                 tone="emerald"

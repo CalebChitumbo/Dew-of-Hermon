@@ -12,7 +12,6 @@ import {
   EmptyStateLux,
   SegmentedTabsList,
   SegmentedTab,
-  DecorImage,
   SoftWaves,
   luxSurface,
   luxSurfaceHover,
@@ -169,10 +168,6 @@ export default function TransportRequestsPage() {
               ) : filtered.length === 0 ? (
                 <div className={cn("relative overflow-hidden", luxSurface)}>
                   <SoftWaves className="absolute inset-x-0 bottom-0 h-24 w-full text-teal/10" />
-                  <DecorImage
-                    src="/images/dashboard/asset-soft-waves.png"
-                    className="absolute inset-x-0 bottom-0 h-28 w-full object-cover opacity-40"
-                  />
                   <EmptyStateLux
                     illustration={<TransportScene />}
                     tone="teal"

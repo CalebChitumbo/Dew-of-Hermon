@@ -24,11 +24,7 @@ import {
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
-import {
-  luxSurface,
-  BotanicalCorner,
-  DecorImage,
-} from "@/components/shared/lux";
+import { luxSurface, BotanicalCorner } from "@/components/shared/lux";
 import { iconTones, type IconTone } from "@/lib/icon-tones";
 import {
   CalendarPlus,
@@ -1015,10 +1011,6 @@ export default function NewEventPage() {
             <div className={cn("relative overflow-hidden p-6", luxSurface)}>
               {/* botanical ornament */}
               <BotanicalCorner className="pointer-events-none absolute -right-2 -top-2 h-24 w-24 text-[#8FAE8B]/40" />
-              <DecorImage
-                src="/images/dashboard/asset-botanical-corner.png"
-                className="absolute right-0 top-0 h-24 w-24 object-contain opacity-50"
-              />
 
               <div className="relative flex items-center gap-2.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/15 text-gold-dark">

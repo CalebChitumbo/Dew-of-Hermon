@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { EmptyStateLux, SoftWaves, DecorImage, luxSurface } from "@/components/shared/lux";
+import { EmptyStateLux, SoftWaves, luxSurface } from "@/components/shared/lux";
 import { MediaScene } from "@/components/shared/illustrations";
 import {
   Clapperboard,
@@ -242,10 +242,6 @@ export default function MediaRequestsPage() {
       ) : requests.length === 0 ? (
         <div className={cn("relative overflow-hidden", luxSurface)}>
           <SoftWaves className="absolute inset-x-0 bottom-0 h-28 w-full text-[#6E74B8]/10" />
-          <DecorImage
-            src="/images/dashboard/asset-soft-waves.png"
-            className="absolute inset-x-0 bottom-0 h-28 w-full object-cover opacity-30"
-          />
           <EmptyStateLux
             illustration={<MediaScene />}
             tone="periwinkle"

@@ -15,7 +15,6 @@ import {
   EmptyStateLux,
   SegmentedTabsList,
   SegmentedTab,
-  DecorImage,
   SoftWaves,
   luxSurface,
   luxSurfaceHover,
@@ -114,15 +113,6 @@ function FeaturedServiceCard({ service }: { service: ServiceWithEvent }) {
           <span className="absolute inset-0 flex items-center justify-center text-gold/40">
             <Church className="h-16 w-16" />
           </span>
-          <DecorImage
-            src="/images/dashboard/asset-chapel-minimal.png"
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <span
-            aria-hidden
-            className="absolute inset-0 bg-gradient-to-t from-clay-900/15 to-transparent"
-          />
           {/* curve connecting image into the content */}
           <SoftWaves className="absolute -right-px bottom-0 hidden h-20 w-24 text-white/85 md:block" />
           <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gold-dark shadow-sm backdrop-blur">

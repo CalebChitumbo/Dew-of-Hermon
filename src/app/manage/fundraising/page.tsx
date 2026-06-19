@@ -83,20 +83,9 @@ function readinessColor(count: number, total: number): string {
   return "bg-red-500";
 }
 
-/** Braai grill illustration: tries the PNG asset, falls back to a vector grill. */
+/** Braai grill illustration drawn in code (warm, on-brand, no photo needed). */
 function BraaiIllustration() {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <BraaiGrillArt size={208} />;
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/images/dashboard/asset-braai-grill-illustration.png"
-      alt=""
-      aria-hidden
-      className="relative max-h-52 w-auto object-contain drop-shadow-[0_18px_30px_-20px_rgba(91,58,41,0.4)]"
-      onError={() => setFailed(true)}
-    />
-  );
+  return <BraaiGrillArt size={208} />;
 }
 
 /** Evening braai photo thumbnail with a warm gradient fallback. */
