@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAccessControl } from "@/contexts/AccessControlContext";
 import { canAccessPage } from "@/lib/access-control";
+import { hasMinRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -59,9 +60,10 @@ export function MobileNav() {
   const role = userData.role;
 
   const getItems = (): MobileNavItem[] => {
-    // Pick a priority list based on role tier
+    // Pick a priority list based on role tier. Uses the shared role hierarchy so
+    // every admin-level role (incl. Vice-Chairperson) gets the admin bar.
     let candidates: MobileNavItem[];
-    if (role === "SUPER_ADMIN" || role === "ADMIN") {
+    if (hasMinRole(role, "ADMIN")) {
       candidates = adminPriority;
     } else if (role === "DEPARTMENT_LEAD") {
       candidates = leadPriority;
@@ -79,22 +81,46 @@ export function MobileNav() {
   const items = getItems();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-clay-200 lg:hidden">
-      <div className="flex items-center justify-around py-2">
+    <nav
+      aria-label="Primary"
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 lg:hidden",
+        "border-t border-clay-100/80 bg-white/90 backdrop-blur-md",
+        "shadow-[0_-12px_30px_-24px_rgba(91,58,41,0.45)]"
+      )}
+      // Lift the bar above the home indicator on notched devices.
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="flex items-stretch justify-around px-2 py-1.5">
         {items.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                "flex flex-col items-center gap-1 px-3 py-1 min-w-[64px]",
-                isActive ? "text-gold-dark" : "text-clay-400"
-              )}
+              aria-current={isActive ? "page" : undefined}
+              className="group flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1 outline-none focus-visible:ring-2 focus-visible:ring-gold/40"
             >
-              <item.icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span
+                className={cn(
+                  "flex h-9 w-9 items-center justify-center rounded-2xl transition-all duration-200",
+                  isActive
+                    ? "bg-gold/15 text-gold-dark shadow-[0_8px_18px_-12px_rgba(154,114,48,0.85)] ring-1 ring-inset ring-gold/20"
+                    : "text-clay-400 group-hover:bg-clay-50 group-hover:text-clay-600 group-active:bg-clay-50"
+                )}
+              >
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
+              <span
+                className={cn(
+                  "max-w-full truncate text-[10px] font-medium leading-none transition-colors",
+                  isActive ? "text-clay-700" : "text-clay-400"
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}
