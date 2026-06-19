@@ -8,10 +8,17 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { StatTile } from "@/components/shared/StatTile";
+import {
+  StatCardLux,
+  EmptyStateLux,
+  SegmentedTabsList,
+  SegmentedTab,
+  SoftWaves,
+  luxSurface,
+  luxSurfaceHover,
+} from "@/components/shared/lux";
 import {
   Plus,
   Calendar,
@@ -21,7 +28,11 @@ import {
   CheckCircle2,
   AlertCircle,
   Users,
+  ClipboardList,
+  ArrowRight,
+  Church,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format, isPast, isToday, isTomorrow, formatDistanceToNow } from "date-fns";
 
 interface ServiceEvent {
@@ -77,82 +88,181 @@ function getDateLabel(date: Date): { label: string; className: string } {
   return { label: formatDistanceToNow(date, { addSuffix: true }), className: "bg-cream text-clay-600 border-clay-200" };
 }
 
-function ServiceCard({ service }: { service: ServiceWithEvent }) {
-  const eventDate = service.event?.startDate
-    ? new Date(service.event.startDate)
-    : null;
+/** Capitalise the first letter (e.g. "in 2 days" → "In 2 days"). */
+function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
+// ─── Featured (next upcoming) service — the page hero ─────────────────────────
+
+function FeaturedServiceCard({ service }: { service: ServiceWithEvent }) {
+  const eventDate = service.event?.startDate ? new Date(service.event.startDate) : null;
+  const dateLabel = eventDate ? getDateLabel(eventDate) : null;
+  const filled = Math.min(service.assignmentCount, TOTAL_ROLES);
+  const pct = Math.min((service.assignmentCount / TOTAL_ROLES) * 100, 100);
+  const isFull = service.assignmentCount >= TOTAL_ROLES;
+
+  return (
+    <Link
+      href={`/manage/services/${service.id}`}
+      className={cn("group block overflow-hidden", luxSurface, luxSurfaceHover)}
+    >
+      <div className="grid md:grid-cols-[minmax(0,260px)_1fr]">
+        {/* Decorative image panel */}
+        <div className="relative min-h-[160px] overflow-hidden bg-gradient-to-br from-gold/25 via-clay-100 to-cream md:min-h-full">
+          <span className="absolute inset-0 flex items-center justify-center text-gold/40">
+            <Church className="h-16 w-16" />
+          </span>
+          {/* curve connecting image into the content */}
+          <SoftWaves className="absolute -right-px bottom-0 hidden h-20 w-24 text-white/85 md:block" />
+          <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gold-dark shadow-sm backdrop-blur">
+            <ClipboardList className="h-3.5 w-3.5" />
+            Next service
+          </span>
+        </div>
+
+        {/* Content */}
+        <div className="relative p-6 md:p-7">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="font-display text-xl font-bold text-clay-700 md:text-2xl">
+                {service.theme || "Potter's Wheel Youth Service"}
+              </h3>
+              {eventDate && (
+                <p className="mt-1 text-sm text-clay-500">
+                  {format(eventDate, "EEEE, d MMMM yyyy")}
+                </p>
+              )}
+            </div>
+            {dateLabel && (
+              <Badge className={cn("shrink-0 border text-xs font-medium", dateLabel.className)}>
+                {cap(dateLabel.label)}
+              </Badge>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-clay-500">
+            {service.event?.venue && (
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-clay-400" />
+                {service.event.venue}
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-clay-400" />
+              {service.serviceTime}
+            </span>
+          </div>
+
+          {/* Staffing progress */}
+          <div className="mt-6 rounded-2xl border border-clay-100/80 bg-cream/50 p-4">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-clay-600">
+                {isFull ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Users className="h-4 w-4 text-clay-400" />
+                )}
+                Staffing
+              </span>
+              <span className={cn("font-display text-lg font-bold", getReadinessTextColor(service.assignmentCount))}>
+                {filled}/{TOTAL_ROLES}
+              </span>
+            </div>
+            <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-clay-100">
+              <div
+                className={cn("h-full rounded-full transition-all duration-700", getReadinessColor(service.assignmentCount))}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs text-clay-400">
+              {isFull
+                ? "Fully staffed and ready to serve."
+                : `${TOTAL_ROLES - filled} role${TOTAL_ROLES - filled === 1 ? "" : "s"} still to assign.`}
+            </p>
+          </div>
+
+          {/* Arrow action */}
+          <div className="mt-5 flex items-center justify-between">
+            <span className="text-sm font-medium text-clay-500 transition-colors group-hover:text-gold-dark">
+              Open rota board
+            </span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-clay-700 text-cream shadow-sm transition-all duration-300 group-hover:bg-clay-600 group-hover:shadow-md">
+              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// ─── Regular service row card ────────────────────────────────────────────────
+
+function ServiceCard({ service }: { service: ServiceWithEvent }) {
+  const eventDate = service.event?.startDate ? new Date(service.event.startDate) : null;
   const dateLabel = eventDate ? getDateLabel(eventDate) : null;
   const readinessColor = getReadinessColor(service.assignmentCount);
   const readinessText = getReadinessTextColor(service.assignmentCount);
   const isFull = service.assignmentCount >= TOTAL_ROLES;
 
   return (
-    <Link href={`/manage/services/${service.id}`}>
-      <Card className="cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-lg font-display text-clay-700">
-                {service.theme || "Untitled Service"}
-              </CardTitle>
-              {eventDate && (
-                <div className="flex items-center gap-2 text-sm text-clay-500">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>{format(eventDate, "EEEE, d MMMM yyyy")}</span>
-                </div>
-              )}
+    <Link
+      href={`/manage/services/${service.id}`}
+      className={cn("group block p-5", luxSurface, luxSurfaceHover)}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <h3 className="truncate font-display text-lg font-semibold text-clay-700">
+            {service.theme || "Untitled Service"}
+          </h3>
+          {eventDate && (
+            <div className="flex items-center gap-2 text-sm text-clay-500">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>{format(eventDate, "EEEE, d MMMM yyyy")}</span>
             </div>
-            {dateLabel && (
-              <Badge
-                className={`${dateLabel.className} border text-xs font-medium`}
-              >
-                {dateLabel.label}
-              </Badge>
+          )}
+        </div>
+        {dateLabel && (
+          <Badge className={cn("shrink-0 border text-xs font-medium", dateLabel.className)}>
+            {cap(dateLabel.label)}
+          </Badge>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-clay-500">
+          {service.event?.venue && (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5" />
+              {service.event.venue}
+            </span>
+          )}
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" />
+            {service.serviceTime}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            {isFull ? (
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+            ) : (
+              <Users className="h-4 w-4 text-clay-400" />
             )}
+            <span className={cn("text-sm font-semibold", readinessText)}>
+              {Math.min(service.assignmentCount, TOTAL_ROLES)}/{TOTAL_ROLES}
+            </span>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm text-clay-500">
-              {service.event?.venue && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span>{service.event.venue}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{service.serviceTime}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Readiness indicator */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  {isFull ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Users className="h-4 w-4 text-clay-400" />
-                  )}
-                  <span className={`text-sm font-semibold ${readinessText}`}>
-                    {service.assignmentCount}/{TOTAL_ROLES}
-                  </span>
-                </div>
-                <div className="w-16 h-2 bg-clay-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${readinessColor}`}
-                    style={{
-                      width: `${Math.min((service.assignmentCount / TOTAL_ROLES) * 100, 100)}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-clay-400" />
-            </div>
+          <div className="h-2 w-16 overflow-hidden rounded-full bg-clay-100">
+            <div
+              className={cn("h-full rounded-full transition-all", readinessColor)}
+              style={{ width: `${Math.min((service.assignmentCount / TOTAL_ROLES) * 100, 100)}%` }}
+            />
           </div>
-        </CardContent>
-      </Card>
+          <ChevronRight className="h-4 w-4 text-clay-300 transition-all group-hover:translate-x-0.5 group-hover:text-gold" />
+        </div>
+      </div>
     </Link>
   );
 }
@@ -177,7 +287,6 @@ function ServicesListContent() {
       }
       const servicesData: ServiceWithEvent[] = data.services || [];
 
-      // Sort by event date, splitting into upcoming and past
       const upcoming: ServiceWithEvent[] = [];
       const past: ServiceWithEvent[] = [];
 
@@ -190,14 +299,12 @@ function ServicesListContent() {
         }
       });
 
-      // Sort upcoming by date ascending (nearest first)
       upcoming.sort((a, b) => {
         const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
         const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
         return dateA - dateB;
       });
 
-      // Sort past by date descending (most recent first)
       past.sort((a, b) => {
         const dateA = a.event?.startDate ? new Date(a.event.startDate).getTime() : 0;
         const dateB = b.event?.startDate ? new Date(b.event.startDate).getTime() : 0;
@@ -230,9 +337,9 @@ function ServicesListContent() {
 
   if (error) {
     return (
-      <EmptyState
+      <EmptyStateLux
         icon={AlertCircle}
-        tone="clay"
+        tone="rose"
         title="Something went wrong"
         description={error}
         action={
@@ -244,17 +351,20 @@ function ServicesListContent() {
     );
   }
 
+  const needAssignments = upcomingServices.filter((s) => s.assignmentCount < TOTAL_ROLES).length;
+  const fullyStaffed = upcomingServices.filter((s) => s.assignmentCount >= TOTAL_ROLES).length;
+  const [featured, ...restUpcoming] = upcomingServices;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-7">
       <PageHeader
         title="Services"
         description="Manage service schedules and rota assignments"
-        icon={Calendar}
+        icon={ClipboardList}
         tone="sage"
         actions={
           <Link href="/manage/services/new">
-            <Button className="gap-2">
+            <Button className="gap-2 rounded-xl shadow-sm">
               <Plus className="h-4 w-4" />
               Create Service
             </Button>
@@ -262,77 +372,84 @@ function ServicesListContent() {
         }
       />
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatTile
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCardLux
           icon={Calendar}
           tone="teal"
           label="Upcoming"
           value={upcomingServices.length}
+          hint="services scheduled"
+          accent="bg-teal"
+          art={<Calendar className="h-24 w-24" strokeWidth={1} />}
         />
-        <StatTile
+        <StatCardLux
           icon={AlertCircle}
-          tone="gold"
+          tone="amber"
           label="Need Assignments"
-          value={
-            upcomingServices.filter((s) => s.assignmentCount < TOTAL_ROLES).length
-          }
+          value={needAssignments}
+          hint="still need a full rota"
+          accent="bg-gold"
+          highlight={needAssignments > 0}
+          art={<Users className="h-24 w-24" strokeWidth={1} />}
         />
-        <StatTile
+        <StatCardLux
           icon={CheckCircle2}
-          tone="sage"
+          tone="emerald"
           label="Fully Staffed"
-          value={
-            upcomingServices.filter((s) => s.assignmentCount >= TOTAL_ROLES).length
-          }
+          value={fullyStaffed}
+          hint="ready to serve"
+          accent="bg-green-500"
+          art={<CheckCircle2 className="h-24 w-24" strokeWidth={1} />}
         />
       </div>
 
-      {/* Services tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="upcoming" className="gap-1.5">
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
+        <SegmentedTabsList className="sm:max-w-md">
+          <SegmentedTab value="upcoming" icon={Calendar} count={upcomingServices.length}>
             Upcoming
-            <Badge variant="secondary" className="ml-1 text-xs">
-              {upcomingServices.length}
-            </Badge>
-          </TabsTrigger>
-          <TabsTrigger value="past" className="gap-1.5">
+          </SegmentedTab>
+          <SegmentedTab value="past" icon={Clock} count={pastServices.length}>
             Past
-            <Badge variant="secondary" className="ml-1 text-xs">
-              {pastServices.length}
-            </Badge>
-          </TabsTrigger>
-        </TabsList>
+          </SegmentedTab>
+        </SegmentedTabsList>
 
-        <TabsContent value="upcoming">
+        <TabsContent value="upcoming" className="mt-0 space-y-4">
           {upcomingServices.length === 0 ? (
-            <EmptyState
-              icon={Calendar}
-              tone="clay"
-              title="No upcoming services"
-              description="Create a new service to get started with rota assignments."
-              action={
-                <Link href="/manage/services/new">
-                  <Button variant="outline" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Create Service
-                  </Button>
-                </Link>
-              }
-            />
+            <Card className={cn("border-0 bg-transparent shadow-none")}>
+              <EmptyStateLux
+                icon={Calendar}
+                tone="sage"
+                title="No upcoming services"
+                description="Create a new service to get started with rota assignments."
+                action={
+                  <Link href="/manage/services/new">
+                    <Button className="gap-2 rounded-xl">
+                      <Plus className="h-4 w-4" />
+                      Create Service
+                    </Button>
+                  </Link>
+                }
+              />
+            </Card>
           ) : (
-            <div className="space-y-3">
-              {upcomingServices.map((service) => (
-                <ServiceCard key={service.id} service={service} />
-              ))}
-            </div>
+            <>
+              {featured && <FeaturedServiceCard service={featured} />}
+              {restUpcoming.length > 0 && (
+                <div className="space-y-3">
+                  {restUpcoming.map((service) => (
+                    <ServiceCard key={service.id} service={service} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
-        <TabsContent value="past">
+        <TabsContent value="past" className="mt-0">
           {pastServices.length === 0 ? (
-            <EmptyState
+            <EmptyStateLux
               icon={Clock}
               tone="clay"
               title="No past services"
@@ -354,11 +471,7 @@ function ServicesListContent() {
 export default function ServicesPage() {
   return (
     <RoleProtected requiredRole="DEPARTMENT_LEAD">
-      <div className="min-h-screen bg-cream">
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <ServicesListContent />
-        </div>
-      </div>
+      <ServicesListContent />
     </RoleProtected>
   );
 }

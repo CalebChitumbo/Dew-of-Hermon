@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { CAMPS, DEFAULT_CAMP_ID } from "@/lib/camps";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -8,9 +9,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 import { PageLoader } from "@/components/shared/LoadingSpinner";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { StatTile } from "@/components/shared/StatTile";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  StatCardLux,
+  EmptyStateLux,
+  DecorImage,
+  luxSurface,
+} from "@/components/shared/lux";
+import { TentScene } from "@/components/shared/illustrations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +47,9 @@ import {
   DollarSign,
   Trash2,
   RefreshCw,
+  UserPlus,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { CampPaymentStatus } from "@/types";
 
 interface RegistrationRow {
@@ -85,7 +92,7 @@ export default function RopsCampAdminPage() {
   if (loading) return <PageLoader />;
   if (!canManage) {
     return (
-      <EmptyState
+      <EmptyStateLux
         icon={Tent}
         tone="clay"
         title="Access Denied"
@@ -210,7 +217,7 @@ function RopsCampAdminInner() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <PageHeader
         icon={Tent}
         tone="gold"
@@ -225,7 +232,7 @@ function RopsCampAdminInner() {
           <>
             {CAMPS.length > 1 && (
               <Select value={campId} onValueChange={setCampId}>
-                <SelectTrigger className="w-[220px]">
+                <SelectTrigger className="w-[220px] rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,119 +244,167 @@ function RopsCampAdminInner() {
                 </SelectContent>
               </Select>
             )}
-            <Button variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            <Button variant="outline" className="rounded-xl" onClick={load} disabled={loading}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </>
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatTile
+      {/* Scenic camp banner — fades softly into the cream background */}
+      <div className={cn("relative h-32 overflow-hidden sm:h-44", luxSurface)}>
+        <div className="absolute inset-0 bg-gradient-to-br from-teal/25 via-[#E6EDE4] to-cream" />
+        <DecorImage
+          src="/images/dashboard/asset-camp-landscape-wide.png"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-cream via-cream/45 to-transparent" />
+        <span aria-hidden className="absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-cream/60 to-transparent" />
+        <div className="relative flex h-full flex-col justify-end p-5 sm:p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gold-dark">Camp season</p>
+          <p className="font-display text-2xl font-bold text-clay-700 drop-shadow-sm sm:text-3xl">
+            {camp.name}
+          </p>
+        </div>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        <StatCardLux
           icon={Users}
           tone="teal"
           label="Registered"
           value={stats.total}
+          hint="campers signed up"
+          accent="bg-teal"
+          art={<Users className="h-24 w-24" strokeWidth={1} />}
         />
-        <StatTile
+        <StatCardLux
           icon={CheckCircle2}
-          tone="sage"
+          tone="emerald"
           label="Paid"
           value={stats.paid}
+          hint="payments received"
+          accent="bg-green-500"
+          art={<CheckCircle2 className="h-24 w-24" strokeWidth={1} />}
         />
-        <StatTile
+        <StatCardLux
           icon={Clock}
-          tone="gold"
+          tone="amber"
           label="Unpaid"
           value={stats.unpaid}
+          hint="awaiting payment"
+          accent="bg-gold"
+          highlight={stats.unpaid > 0}
+          art={<Clock className="h-24 w-24" strokeWidth={1} />}
         />
-        <StatTile
+        <StatCardLux
           icon={DollarSign}
-          tone="clay"
+          tone="gold"
           label="Revenue"
           value={`${camp.currency} ${stats.revenue.toLocaleString()}`}
+          hint="collected so far"
+          accent="bg-gold"
+          art={<DollarSign className="h-24 w-24" strokeWidth={1} />}
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <CardTitle>Registrations</CardTitle>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-clay-400" />
-                <Input
-                  placeholder="Search name, phone, church..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 w-[260px]"
-                />
-              </div>
-              <Select
-                value={statusFilter}
-                onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
-              >
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="PAID">Paid</SelectItem>
-                  <SelectItem value="UNPAID">Unpaid</SelectItem>
-                  <SelectItem value="REFUNDED">Refunded</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Registrations panel */}
+      <div className={cn(luxSurface)}>
+        <div className="flex flex-col gap-3 border-b border-clay-100/80 p-5 sm:p-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gold/15 text-gold-dark">
+              <Users className="h-5 w-5" />
+            </span>
+            <h2 className="font-display text-lg font-semibold text-clay-700">Registrations</h2>
           </div>
-        </CardHeader>
-        <CardContent>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-clay-400" />
+              <Input
+                placeholder="Search name, phone, church..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-11 w-[200px] rounded-xl pl-9 sm:w-[260px]"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+              <SelectTrigger className="h-11 w-[150px] rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="PAID">Paid</SelectItem>
+                <SelectItem value="UNPAID">Unpaid</SelectItem>
+                <SelectItem value="REFUNDED">Refunded</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="p-3 sm:p-5">
           {loading ? (
-            <div className="py-12 flex justify-center">
+            <div className="flex justify-center py-12">
               <LoadingSpinner />
             </div>
           ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={Tent}
-              tone="clay"
-              title={rows.length === 0 ? "No registrations yet" : "No matches"}
-              description={
-                rows.length === 0
-                  ? "Registrations will appear here once campers sign up."
-                  : "No registrations match your filters."
-              }
-            />
+            <div
+              className={cn(
+                "rounded-2xl",
+                rows.length === 0 && "border-2 border-dashed border-clay-200/80 bg-cream/30"
+              )}
+            >
+              <EmptyStateLux
+                illustration={rows.length === 0 ? <TentScene /> : undefined}
+                icon={rows.length === 0 ? undefined : Search}
+                tone="teal"
+                title={rows.length === 0 ? "No registrations yet" : "No matches"}
+                description={
+                  rows.length === 0
+                    ? "Registrations will appear here once campers sign up."
+                    : "No registrations match your filters."
+                }
+                action={
+                  rows.length === 0 ? (
+                    <Link href="/rops-camp">
+                      <Button variant="gold" className="gap-2 rounded-xl">
+                        <UserPlus className="h-4 w-4" />
+                        Register camper
+                      </Button>
+                    </Link>
+                  ) : undefined
+                }
+              />
+            </div>
           ) : (
-            <div className="overflow-x-auto -mx-2">
+            <div className="-mx-2 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wider text-clay-500 border-b border-clay-100">
+                  <tr className="border-b border-clay-100 text-left text-xs uppercase tracking-wider text-clay-500">
                     <th className="px-2 py-3 font-medium">Camper</th>
                     <th className="px-2 py-3 font-medium">Contact</th>
                     <th className="px-2 py-3 font-medium">Parent / guardian</th>
                     <th className="px-2 py-3 font-medium">Drop-off</th>
                     <th className="px-2 py-3 font-medium">Status</th>
                     <th className="px-2 py-3 font-medium">Registered</th>
-                    <th className="px-2 py-3 font-medium text-right">Actions</th>
+                    <th className="px-2 py-3 text-right font-medium">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-clay-100">
                   {filtered.map((row) => (
-                    <tr key={row.id} className="hover:bg-cream/50">
+                    <tr key={row.id} className="transition-colors hover:bg-cream/50">
                       <td className="px-2 py-3">
                         <div className="font-medium text-clay-800">
                           {row.firstName} {row.lastName}
                         </div>
                         <div className="text-xs text-clay-500">
-                          {row.gender === "MALE" ? "Male" : "Female"} · DOB{" "}
-                          {row.dateOfBirth}
+                          {row.gender === "MALE" ? "Male" : "Female"} · DOB {row.dateOfBirth}
                         </div>
                       </td>
                       <td className="px-2 py-3">
                         <div className="text-clay-700">{row.phone}</div>
-                        {row.email && (
-                          <div className="text-xs text-clay-500">{row.email}</div>
-                        )}
+                        {row.email && <div className="text-xs text-clay-500">{row.email}</div>}
                       </td>
                       <td className="px-2 py-3">
                         <div className="text-clay-700">{row.parentName ?? "—"}</div>
@@ -358,7 +413,7 @@ function RopsCampAdminInner() {
                           {row.parentAltPhone ? ` · ${row.parentAltPhone}` : ""}
                         </div>
                       </td>
-                      <td className="px-2 py-3 text-clay-700 text-xs">
+                      <td className="px-2 py-3 text-xs text-clay-700">
                         {row.dropoffLocation === "CHURCH"
                           ? "Church"
                           : row.dropoffLocation === "CAMPSITE"
@@ -368,13 +423,13 @@ function RopsCampAdminInner() {
                       <td className="px-2 py-3">
                         <PaymentBadge status={row.paymentStatus} />
                         {row.paymentMarkedAt && row.paymentStatus !== "UNPAID" && (
-                          <div className="text-[11px] text-clay-500 mt-1">
+                          <div className="mt-1 text-[11px] text-clay-500">
                             by {row.paymentMarkedByName ?? "admin"} ·{" "}
                             {format(new Date(row.paymentMarkedAt), "MMM d")}
                           </div>
                         )}
                       </td>
-                      <td className="px-2 py-3 text-clay-600 text-xs">
+                      <td className="px-2 py-3 text-xs text-clay-600">
                         {format(new Date(row.createdAt), "MMM d, yyyy")}
                       </td>
                       <td className="px-2 py-3">
@@ -382,6 +437,7 @@ function RopsCampAdminInner() {
                           <Button
                             size="sm"
                             variant={row.paymentStatus === "PAID" ? "outline" : "default"}
+                            className="rounded-lg"
                             onClick={() => quickToggle(row)}
                           >
                             {row.paymentStatus === "PAID" ? "Mark unpaid" : "Mark paid"}
@@ -408,8 +464,8 @@ function RopsCampAdminInner() {
               </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {editing && (
         <RegistrationDialog
@@ -424,10 +480,7 @@ function RopsCampAdminInner() {
       )}
 
       {deleting && (
-        <Dialog
-          open
-          onOpenChange={(open) => !open && !deleteBusy && setDeleting(null)}
-        >
+        <Dialog open onOpenChange={(open) => !open && !deleteBusy && setDeleting(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Delete registration?</DialogTitle>
@@ -436,23 +489,15 @@ function RopsCampAdminInner() {
                 <span className="font-medium text-clay-800">
                   {deleting.firstName} {deleting.lastName}
                 </span>
-                &rsquo;s registration and can&rsquo;t be undone. Use this to
-                clear duplicate entries or campers who have cancelled.
+                &rsquo;s registration and can&rsquo;t be undone. Use this to clear duplicate entries
+                or campers who have cancelled.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setDeleting(null)}
-                disabled={deleteBusy}
-              >
+              <Button variant="outline" onClick={() => setDeleting(null)} disabled={deleteBusy}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleteBusy}
-              >
+              <Button variant="destructive" onClick={handleDelete} disabled={deleteBusy}>
                 {deleteBusy ? "Deleting..." : "Delete registration"}
               </Button>
             </DialogFooter>
@@ -558,34 +603,22 @@ function RegistrationDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-5">
+        <div className="max-h-[60vh] space-y-5 overflow-y-auto pr-1">
           <Section title="Camper">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <Info label="Date of birth" value={row.dateOfBirth} />
-              <Info
-                label="Gender"
-                value={row.gender === "MALE" ? "Male" : "Female"}
-              />
+              <Info label="Gender" value={row.gender === "MALE" ? "Male" : "Female"} />
               <Info label="T-shirt size" value={row.tshirtSize || "—"} />
-              <Info
-                label="Dietary"
-                value={row.dietaryPreference ?? "No restrictions"}
-              />
+              <Info label="Dietary" value={row.dietaryPreference ?? "No restrictions"} />
             </div>
           </Section>
 
           <Section title="Parent / guardian">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <Info label="Name" value={row.parentName ?? "—"} />
-              <Info
-                label="Relationship"
-                value={row.parentRelationship ?? "—"}
-              />
+              <Info label="Relationship" value={row.parentRelationship ?? "—"} />
               <Info label="Primary phone" value={row.phone} />
-              <Info
-                label="Alternative phone"
-                value={row.parentAltPhone ?? "—"}
-              />
+              <Info label="Alternative phone" value={row.parentAltPhone ?? "—"} />
               <Info label="Email" value={row.parentEmail ?? row.email ?? "—"} full />
               <Info label="Home address" value={row.address ?? "—"} full />
             </div>
@@ -594,30 +627,16 @@ function RegistrationDialog({
           <Section title="Emergency contact">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <Info label="Name" value={row.emergencyContactName} />
-              <Info
-                label="Relationship"
-                value={row.emergencyContactRelationship ?? "—"}
-              />
-              <Info
-                label="Phone"
-                value={row.emergencyContactPhone}
-                full
-              />
+              <Info label="Relationship" value={row.emergencyContactRelationship ?? "—"} />
+              <Info label="Phone" value={row.emergencyContactPhone} full />
             </div>
           </Section>
 
           <Section title="Health">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <Info label="Allergies" value={row.allergies ?? "None reported"} />
-              <Info
-                label="Medications"
-                value={row.medications ?? "None reported"}
-              />
-              <Info
-                label="Medical notes"
-                value={row.medicalNotes ?? "None reported"}
-                full
-              />
+              <Info label="Medications" value={row.medications ?? "None reported"} />
+              <Info label="Medical notes" value={row.medicalNotes ?? "None reported"} full />
             </div>
           </Section>
 
@@ -633,19 +652,14 @@ function RegistrationDialog({
                     : "—"
                 }
               />
-              <Info
-                label="Consent given"
-                value={row.consentGiven ? "Yes" : "No"}
-              />
+              <Info label="Consent given" value={row.consentGiven ? "Yes" : "No"} />
               <Info label="Notes" value={row.notes ?? "—"} full />
             </div>
           </Section>
         </div>
 
-        <div className="border-t border-clay-200 pt-4 space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-clay-500">
-            Payment
-          </h3>
+        <div className="space-y-4 border-t border-clay-200 pt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-clay-500">Payment</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="mb-1.5 block">Status</Label>
@@ -692,9 +706,7 @@ function RegistrationDialog({
         <DialogFooter className="gap-2 sm:gap-2">
           {confirmDelete ? (
             <>
-              <span className="text-sm text-red-600 mr-auto self-center">
-                Delete this registration?
-              </span>
+              <span className="mr-auto self-center text-sm text-red-600">Delete this registration?</span>
               <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={saving}>
                 Cancel
               </Button>
@@ -711,7 +723,7 @@ function RegistrationDialog({
                   onClick={() => setConfirmDelete(true)}
                   disabled={saving}
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
+                  <Trash2 className="mr-1 h-4 w-4" />
                   Delete
                 </Button>
               )}
@@ -733,25 +745,15 @@ function Info({ label, value, full }: { label: string; value: string; full?: boo
   return (
     <div className={full ? "col-span-2" : ""}>
       <div className="text-xs uppercase tracking-wider text-clay-500">{label}</div>
-      <div className="text-clay-800 mt-0.5 whitespace-pre-wrap break-words">
-        {value}
-      </div>
+      <div className="mt-0.5 whitespace-pre-wrap break-words text-clay-800">{value}</div>
     </div>
   );
 }
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="border-t border-clay-200 pt-4 first:border-t-0 first:pt-0">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-clay-500 mb-3">
-        {title}
-      </h3>
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-clay-500">{title}</h3>
       {children}
     </div>
   );
