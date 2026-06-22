@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { onSnapshot, Timestamp } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,13 +9,6 @@ import {
   DepartmentJoinRequest,
   DepartmentJoinRequestStatus,
 } from "@/types";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +18,7 @@ import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { SectionHeading } from "@/components/shared/SectionHeading";
 import {
   Dialog,
   DialogContent,
@@ -332,8 +326,14 @@ function DepartmentRequestsContent() {
   const [comments, setComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const isAdmin = userData ? hasMinRole(userData.role, "ADMIN") : false;
-  const isSuperAdmin = userData?.role === "SUPER_ADMIN";
+  const role = userData?.role;
+  const isChair = role === "SUPER_ADMIN";
+  // Admin/Vice can stand in as the manager for any department — a fallback so a
+  // request never stalls when a department has no active lead.
+  const isManagerLevel = role === "ADMIN" || role === "VICE_CHAIRPERSON";
+  // Only Secretary/Admin and up get the read-only oversight of the other stage;
+  // a department manager sees just their own queue.
+  const canSeeOversight = role ? hasMinRole(role, "ADMIN") : false;
   const leadsDeptIds = useMemo(
     () => new Set(userData?.leadsDepartmentIds || []),
     [userData]
@@ -380,21 +380,47 @@ function DepartmentRequestsContent() {
     return () => unsub();
   }, [userData]);
 
-  // Manager stage: requests I lead the department for (admins see all).
-  const managerQueue = useMemo(
-    () =>
-      requests.filter(
-        (r) =>
-          r.status === "PENDING_MANAGER" &&
-          (isAdmin || leadsDeptIds.has(r.departmentId))
-      ),
-    [requests, isAdmin, leadsDeptIds]
+  // A manager-stage request is actionable by the department's own manager, or by
+  // an Admin/Vice acting as the manager fallback. The Chairperson oversees this
+  // stage but only acts on departments they personally lead.
+  const canRecommend = useCallback(
+    (req: DepartmentJoinRequest) =>
+      leadsDeptIds.has(req.departmentId) || isManagerLevel,
+    [leadsDeptIds, isManagerLevel]
   );
 
-  // Chair stage: final approvals — Chairperson only.
+  // ── Your queue — the requests waiting on you right now ──
+  // Final-approval queue: Chairperson only.
   const chairQueue = useMemo(
-    () => (isSuperAdmin ? requests.filter((r) => r.status === "PENDING_CHAIR") : []),
-    [requests, isSuperAdmin]
+    () => (isChair ? requests.filter((r) => r.status === "PENDING_CHAIR") : []),
+    [requests, isChair]
+  );
+  // Manager-stage requests this user can recommend right now.
+  const myManagerQueue = useMemo(
+    () =>
+      requests.filter((r) => r.status === "PENDING_MANAGER" && canRecommend(r)),
+    [requests, canRecommend]
+  );
+
+  // ── Oversight — read-only view of what's still with someone else ──
+  // Manager-stage requests waiting on another manager (shown to the Chairperson
+  // so they can see what's still with the managers).
+  const managerOversight = useMemo(
+    () =>
+      canSeeOversight
+        ? requests.filter(
+            (r) => r.status === "PENDING_MANAGER" && !canRecommend(r)
+          )
+        : [],
+    [requests, canSeeOversight, canRecommend]
+  );
+  // Requests now with the Chairperson, shown read-only to Admin/Vice.
+  const chairOversight = useMemo(
+    () =>
+      canSeeOversight && !isChair
+        ? requests.filter((r) => r.status === "PENDING_CHAIR")
+        : [],
+    [requests, canSeeOversight, isChair]
   );
 
   // Recently decided, scoped to what this user oversees.
@@ -406,10 +432,10 @@ function DepartmentRequestsContent() {
             (r.status === "APPROVED" ||
               r.status === "REJECTED" ||
               r.status === "CANCELLED") &&
-            (isAdmin || leadsDeptIds.has(r.departmentId))
+            (canSeeOversight || leadsDeptIds.has(r.departmentId))
         )
         .slice(0, 15),
-    [requests, isAdmin, leadsDeptIds]
+    [requests, canSeeOversight, leadsDeptIds]
   );
 
   const openDecision = (req: DepartmentJoinRequest, action: DecisionAction) => {
@@ -454,10 +480,13 @@ function DepartmentRequestsContent() {
   if (!userData || loading) return <PageLoader />;
 
   const actionMeta = pending ? ACTION_META[pending.action] : null;
-  const totalActionable = managerQueue.length + chairQueue.length;
+  const totalActionable = chairQueue.length + myManagerQueue.length;
+  const totalOversight = managerOversight.length + chairOversight.length;
+  const nothingToShow =
+    totalActionable === 0 && totalOversight === 0 && decided.length === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <PageHeader
         backHref="/dashboard"
@@ -465,13 +494,13 @@ function DepartmentRequestsContent() {
         tone="lavender"
         title="Department Join Requests"
         description={
-          isSuperAdmin
-            ? "Recommend requests for your departments and give final approval as Chairperson."
+          isChair
+            ? "Give final approval on recommended requests, and keep an eye on what's still with the managers."
             : "Recommend members who have requested to join your department."
         }
       />
 
-      {totalActionable === 0 && decided.length === 0 ? (
+      {nothingToShow ? (
         <EmptyState
           icon={Inbox}
           title="No requests right now"
@@ -479,103 +508,130 @@ function DepartmentRequestsContent() {
         />
       ) : (
         <>
-          {/* Manager stage */}
-          {managerQueue.length > 0 && (
-            <Card className="border-clay-100/70">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <UserPlus className="h-5 w-5 text-gold-dark" />
-                  Awaiting your recommendation ({managerQueue.length})
-                </CardTitle>
-                <CardDescription>
-                  Recommend a request to pass it to the Chairperson, or decline it.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {managerQueue.map((req) => (
-                  <RequestCard
-                    key={req.id}
-                    req={req}
-                    actions={[
-                      {
-                        action: "RECOMMEND",
-                        busy: false,
-                        onClick: () => openDecision(req, "RECOMMEND"),
-                      },
-                      {
-                        action: "DECLINE",
-                        busy: false,
-                        onClick: () => openDecision(req, "DECLINE"),
-                      },
-                    ]}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          )}
+          {/* Your queue */}
+          <section className="space-y-4">
+            <SectionHeading>
+              Needs your approval{totalActionable > 0 ? ` (${totalActionable})` : ""}
+            </SectionHeading>
 
-          {/* Chair stage */}
-          {isSuperAdmin && chairQueue.length > 0 && (
-            <Card className="border-clay-100/70">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <ThumbsUp className="h-5 w-5 text-blue-600" />
-                  Awaiting your final approval ({chairQueue.length})
-                </CardTitle>
-                <CardDescription>
-                  Recommended by a manager — approve to add the member to the
-                  department.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {chairQueue.map((req) => (
-                  <RequestCard
-                    key={req.id}
-                    req={req}
-                    actions={[
-                      {
-                        action: "APPROVE",
-                        busy: false,
-                        onClick: () => openDecision(req, "APPROVE"),
-                      },
-                      {
-                        action: "REJECT",
-                        busy: false,
-                        onClick: () => openDecision(req, "REJECT"),
-                      },
-                    ]}
-                  />
-                ))}
-              </CardContent>
-            </Card>
+            {totalActionable === 0 ? (
+              <div className="rounded-lg bg-cream/40 px-4 py-3 text-sm text-clay-500">
+                Nothing is waiting on you right now.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Chairperson's final approvals */}
+                {chairQueue.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="flex items-center gap-2 text-sm font-medium text-clay-600">
+                      <ThumbsUp className="h-4 w-4 text-blue-600" />
+                      Awaiting your final approval ({chairQueue.length})
+                    </p>
+                    <p className="text-xs text-clay-400">
+                      Recommended by a manager — approve to add the member to the
+                      department.
+                    </p>
+                    {chairQueue.map((req) => (
+                      <RequestCard
+                        key={req.id}
+                        req={req}
+                        actions={[
+                          {
+                            action: "APPROVE",
+                            busy: false,
+                            onClick: () => openDecision(req, "APPROVE"),
+                          },
+                          {
+                            action: "REJECT",
+                            busy: false,
+                            onClick: () => openDecision(req, "REJECT"),
+                          },
+                        ]}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Manager recommendations */}
+                {myManagerQueue.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="flex items-center gap-2 text-sm font-medium text-clay-600">
+                      <UserPlus className="h-4 w-4 text-gold-dark" />
+                      Awaiting your recommendation ({myManagerQueue.length})
+                    </p>
+                    <p className="text-xs text-clay-400">
+                      Recommend a request to pass it to the Chairperson, or
+                      decline it.
+                    </p>
+                    {myManagerQueue.map((req) => (
+                      <RequestCard
+                        key={req.id}
+                        req={req}
+                        actions={[
+                          {
+                            action: "RECOMMEND",
+                            busy: false,
+                            onClick: () => openDecision(req, "RECOMMEND"),
+                          },
+                          {
+                            action: "DECLINE",
+                            busy: false,
+                            onClick: () => openDecision(req, "DECLINE"),
+                          },
+                        ]}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Read-only oversight of what's still with someone else */}
+          {totalOversight > 0 && (
+            <div className="space-y-6">
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-clay-400">
+                Still with the managers / earlier approvers
+              </p>
+
+              {managerOversight.length > 0 && (
+                <section className="space-y-3">
+                  <SectionHeading>
+                    {`Still with the managers (${managerOversight.length})`}
+                  </SectionHeading>
+                  <p className="text-xs text-clay-400">
+                    Waiting on the department manager to recommend or decline.
+                  </p>
+                  {managerOversight.map((req) => (
+                    <RequestCard key={req.id} req={req} actions={[]} />
+                  ))}
+                </section>
+              )}
+
+              {chairOversight.length > 0 && (
+                <section className="space-y-3">
+                  <SectionHeading>
+                    {`Awaiting the Chairperson (${chairOversight.length})`}
+                  </SectionHeading>
+                  <p className="text-xs text-clay-400">
+                    Recommended — now with the Chairperson for final approval.
+                  </p>
+                  {chairOversight.map((req) => (
+                    <RequestCard key={req.id} req={req} actions={[]} />
+                  ))}
+                </section>
+              )}
+            </div>
           )}
 
           {/* Recently decided */}
           {decided.length > 0 && (
-            <Card className="border-clay-100/70">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-clay-400" />
-                  Recently decided
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {decided.map((req) => (
-                  <RequestCard key={req.id} req={req} actions={[]} />
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {totalActionable === 0 && (
-            <Card className="border-clay-100/70 bg-cream/40">
-              <CardContent className="flex items-center gap-3 py-4">
-                <Clock className="h-5 w-5 text-clay-400" />
-                <p className="text-sm text-clay-500">
-                  Nothing is waiting on you right now.
-                </p>
-              </CardContent>
-            </Card>
+            <section className="space-y-3">
+              <SectionHeading>Recently decided</SectionHeading>
+              {decided.map((req) => (
+                <RequestCard key={req.id} req={req} actions={[]} />
+              ))}
+            </section>
           )}
         </>
       )}
