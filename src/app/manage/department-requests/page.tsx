@@ -18,7 +18,7 @@ import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { SectionHeading } from "@/components/shared/SectionHeading";
+import { CollapsibleSection } from "@/components/shared/CollapsibleSection";
 import {
   Dialog,
   DialogContent,
@@ -325,6 +325,10 @@ function DepartmentRequestsContent() {
   } | null>(null);
   const [comments, setComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Which group is expanded — one at a time; all collapsed on first load.
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const toggleSection = (key: string) =>
+    setOpenSection((prev) => (prev === key ? null : key));
 
   const role = userData?.role;
   const isChair = role === "SUPER_ADMIN";
@@ -507,13 +511,14 @@ function DepartmentRequestsContent() {
           description="When members ask to join a department you manage, their requests will show up here for you to action."
         />
       ) : (
-        <>
-          {/* Your queue */}
-          <section className="space-y-4">
-            <SectionHeading>
-              Needs your approval{totalActionable > 0 ? ` (${totalActionable})` : ""}
-            </SectionHeading>
-
+        <div className="space-y-3">
+          {/* Your queue — collapsed by default; click the header to open. */}
+          <CollapsibleSection
+            title="Needs your approval"
+            count={totalActionable}
+            open={openSection === "yours"}
+            onToggle={() => toggleSection("yours")}
+          >
             {totalActionable === 0 ? (
               <div className="rounded-lg bg-cream/40 px-4 py-3 text-sm text-clay-500">
                 Nothing is waiting on you right now.
@@ -585,55 +590,69 @@ function DepartmentRequestsContent() {
                 )}
               </div>
             )}
-          </section>
+          </CollapsibleSection>
 
           {/* Read-only oversight of what's still with someone else */}
           {totalOversight > 0 && (
-            <div className="space-y-6">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-clay-400">
+            <>
+              <p className="px-1 pt-5 text-xs font-medium uppercase tracking-[0.16em] text-clay-400">
                 Still with the managers / earlier approvers
               </p>
 
               {managerOversight.length > 0 && (
-                <section className="space-y-3">
-                  <SectionHeading>
-                    {`Still with the managers (${managerOversight.length})`}
-                  </SectionHeading>
-                  <p className="text-xs text-clay-400">
+                <CollapsibleSection
+                  title="Still with the managers"
+                  count={managerOversight.length}
+                  open={openSection === "mgr_oversight"}
+                  onToggle={() => toggleSection("mgr_oversight")}
+                >
+                  <p className="mb-3 text-xs text-clay-400">
                     Waiting on the department manager to recommend or decline.
                   </p>
-                  {managerOversight.map((req) => (
-                    <RequestCard key={req.id} req={req} actions={[]} />
-                  ))}
-                </section>
+                  <div className="space-y-3">
+                    {managerOversight.map((req) => (
+                      <RequestCard key={req.id} req={req} actions={[]} />
+                    ))}
+                  </div>
+                </CollapsibleSection>
               )}
 
               {chairOversight.length > 0 && (
-                <section className="space-y-3">
-                  <SectionHeading>
-                    {`Awaiting the Chairperson (${chairOversight.length})`}
-                  </SectionHeading>
-                  <p className="text-xs text-clay-400">
+                <CollapsibleSection
+                  title="Awaiting the Chairperson"
+                  count={chairOversight.length}
+                  open={openSection === "chair_oversight"}
+                  onToggle={() => toggleSection("chair_oversight")}
+                >
+                  <p className="mb-3 text-xs text-clay-400">
                     Recommended — now with the Chairperson for final approval.
                   </p>
-                  {chairOversight.map((req) => (
-                    <RequestCard key={req.id} req={req} actions={[]} />
-                  ))}
-                </section>
+                  <div className="space-y-3">
+                    {chairOversight.map((req) => (
+                      <RequestCard key={req.id} req={req} actions={[]} />
+                    ))}
+                  </div>
+                </CollapsibleSection>
               )}
-            </div>
+            </>
           )}
 
           {/* Recently decided */}
           {decided.length > 0 && (
-            <section className="space-y-3">
-              <SectionHeading>Recently decided</SectionHeading>
-              {decided.map((req) => (
-                <RequestCard key={req.id} req={req} actions={[]} />
-              ))}
-            </section>
+            <CollapsibleSection
+              title="Recently decided"
+              count={decided.length}
+              open={openSection === "decided"}
+              onToggle={() => toggleSection("decided")}
+            >
+              <div className="space-y-3">
+                {decided.map((req) => (
+                  <RequestCard key={req.id} req={req} actions={[]} />
+                ))}
+              </div>
+            </CollapsibleSection>
           )}
-        </>
+        </div>
       )}
 
       {/* Decision dialog */}

@@ -19,6 +19,7 @@ import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { SectionHeading } from "@/components/shared/SectionHeading";
+import { CollapsibleSection } from "@/components/shared/CollapsibleSection";
 import {
   Calendar,
   MapPin,
@@ -212,6 +213,10 @@ export default function EventApprovalsPage() {
   const [comments, setComments] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
+  // Which group is expanded — one at a time; all collapsed on first load.
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const toggleSection = (key: string) =>
+    setOpenSection((prev) => (prev === key ? null : key));
 
   const hasAccess = userData ? canAccessPage("events_approvals") : false;
 
@@ -724,12 +729,14 @@ export default function EventApprovalsPage() {
           description="No events are currently pending."
         />
       ) : (
-        <div className="space-y-10">
-          {/* Your own queue — the events at the stage you're responsible for. */}
-          <section className="space-y-4">
-            <SectionHeading>
-              Needs your approval{yourQueue.length > 0 ? ` (${yourQueue.length})` : ""}
-            </SectionHeading>
+        <div className="space-y-3">
+          {/* Your own queue — collapsed by default; click the header to open. */}
+          <CollapsibleSection
+            title="Needs your approval"
+            count={yourQueue.length}
+            open={openSection === "yours"}
+            onToggle={() => toggleSection("yours")}
+          >
             {yourQueue.length === 0 ? (
               <div className="rounded-lg bg-cream/40 px-4 py-3 text-sm text-clay-500">
                 Nothing is waiting on you right now.
@@ -739,25 +746,28 @@ export default function EventApprovalsPage() {
                 {yourQueue.map((event) => renderEventCard(event, true))}
               </div>
             )}
-          </section>
+          </CollapsibleSection>
 
           {/* Read-only oversight of the stages still with earlier approvers. */}
           {oversightStages.length > 0 && (
-            <div className="space-y-6">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-clay-400">
+            <>
+              <p className="px-1 pt-5 text-xs font-medium uppercase tracking-[0.16em] text-clay-400">
                 Still with the managers / earlier approvers
               </p>
               {oversightStages.map((s) => (
-                <section key={s} className="space-y-3">
-                  <SectionHeading>
-                    {`With the ${STAGE_OWNER_LABEL[s]} (${byStage[s].length})`}
-                  </SectionHeading>
+                <CollapsibleSection
+                  key={s}
+                  title={`With the ${STAGE_OWNER_LABEL[s]}`}
+                  count={byStage[s].length}
+                  open={openSection === s}
+                  onToggle={() => toggleSection(s)}
+                >
                   <div className="space-y-4">
                     {byStage[s].map((event) => renderEventCard(event, false))}
                   </div>
-                </section>
+                </CollapsibleSection>
               ))}
-            </div>
+            </>
           )}
         </div>
       )}
