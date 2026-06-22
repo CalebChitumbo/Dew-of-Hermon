@@ -8,6 +8,7 @@ import {
   orderBy,
   limit,
   onSnapshot,
+  getDocs,
   Timestamp,
 } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
@@ -495,6 +496,14 @@ export default function DashboardPage() {
 
   // Admin/leader pulses
   const [pendingApprovalCount, setPendingApprovalCount] = useState(0);
+  // Events the signed-in user personally submitted that are still in the
+  // approval chain — lets an initiator track their own event from the dashboard.
+  const [myPendingEventCount, setMyPendingEventCount] = useState(0);
+  // Department name → id map, so tiles can be gated to the actual team a stat
+  // belongs to (not just "anyone who is in any department").
+  const [deptNameToId, setDeptNameToId] = useState<Record<string, string> | null>(
+    null
+  );
   const [activeMemberCount, setActiveMemberCount] = useState(0);
   const [memberTrend, setMemberTrend] = useState<number[]>([]);
   const [followUps, setFollowUps] = useState<FollowUpCard[]>([]);
@@ -907,10 +916,43 @@ export default function DashboardPage() {
     return unsub;
   }, [userData]);
 
-  // Pending event approvals (admins only) — counts events anywhere in the
-  // approval chain (awaiting dispatch, stakeholders, Vice Chair, or Chair).
+  // Department name → id map, used to gate tiles to the team each stat concerns.
   useEffect(() => {
-    if (!userData || !hasMinRole(userData.role, "ADMIN")) return;
+    if (!userData) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDocs(safeCollection("departments"));
+        if (cancelled) return;
+        const map: Record<string, string> = {};
+        snap.docs.forEach((d) => {
+          const name = d.data().name as string | undefined;
+          if (name) map[name] = d.id;
+        });
+        setDeptNameToId(map);
+      } catch {
+        if (!cancelled) setDeptNameToId({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userData]);
+
+  // Pending event approvals — counts events anywhere in the approval chain
+  // (awaiting dispatch, stakeholders, Vice Chair, or Chair). Visible to the
+  // admin staff and to the Events & Fellowship team who shepherd approvals.
+  useEffect(() => {
+    if (!userData) return;
+    const isAdminRole = hasMinRole(userData.role, "ADMIN");
+    const eventsDeptId = deptNameToId?.["Events & Fellowship"];
+    const leadsEventsDept =
+      !!eventsDeptId &&
+      (userData.leadsDepartmentIds ?? []).includes(eventsDeptId);
+    if (!isAdminRole && !leadsEventsDept) {
+      setPendingApprovalCount(0);
+      return;
+    }
     const q = query(
       safeCollection("events"),
       where("approvalStatus", "in", [
@@ -924,6 +966,34 @@ export default function DashboardPage() {
       q,
       (snap) => setPendingApprovalCount(snap.size),
       (err) => console.error("dashboard: approvals listener", err)
+    );
+    return unsub;
+  }, [userData, deptNameToId]);
+
+  // Events the signed-in user submitted that are still pending — so an event's
+  // initiator can track it from their dashboard, whatever their department.
+  useEffect(() => {
+    if (!userData) return;
+    const q = query(
+      safeCollection("events"),
+      where("createdBy", "==", userData.id)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const pendingStatuses = [
+          "PENDING_DISPATCH",
+          "PENDING_STAKEHOLDERS",
+          "PENDING_VICE_CHAIR",
+          "PENDING_CHAIR",
+        ];
+        setMyPendingEventCount(
+          snap.docs.filter((d) =>
+            pendingStatuses.includes(d.data().approvalStatus)
+          ).length
+        );
+      },
+      (err) => console.error("dashboard: my-events listener", err)
     );
     return unsub;
   }, [userData]);
@@ -1222,7 +1292,6 @@ export default function DashboardPage() {
 
   const isAdmin = userData ? hasMinRole(userData.role, "ADMIN") : false;
   const isDeptLead = userData?.role === "DEPARTMENT_LEAD";
-  const isYouthLeader = userData?.role === "YOUTH_LEADER";
   const isManagerOrChair = userData
     ? hasMinRole(userData.role, "DEPARTMENT_LEAD")
     : false;
@@ -1288,25 +1357,55 @@ export default function DashboardPage() {
   );
 
   // ─── Department-flavour gating (by name match) ─────────────────────────
-  // We don't have department docs loaded here, so gate by the names that the
-  // access-control config uses by convention. Anything more involved should
-  // live behind usePermissions/checkFeatureAccess.
+  // Departments the user belongs to or leads, so a tile can be shown only to the
+  // team its stat concerns. Admin staff (Chair / Vice / Secretary) always
+  // qualify; until the department map has loaded we hold tiles back rather than
+  // briefly over-expose them.
   const inDept = (names: string[]) => {
     if (!userData) return false;
     if (isAdmin) return true;
-    // Without a name->id map we conservatively expose tiles to anyone who
-    // leads OR belongs to any department; the linked page enforces real ACLs.
-    return (
-      userData.leadsDepartmentIds.length > 0 ||
-      userData.departmentIds.length > 0
-    );
+    if (!deptNameToId) return false;
+    return names.some((name) => {
+      const id = deptNameToId[name];
+      return (
+        !!id &&
+        ((userData.departmentIds ?? []).includes(id) ||
+          (userData.leadsDepartmentIds ?? []).includes(id))
+      );
+    });
   };
-  const showFollowUpsTile = inDept([
-    "Discipleship & Follow-Up",
-    "Campus Ministry",
-    "Life Groups",
-  ]);
-  const showLatreouTile = isAdmin || inDept(["Worship & Music"]);
+
+  // Departments that actually serve in the upcoming service own the rota roles.
+  // "Service readiness" is only relevant to people on one of those teams, plus
+  // the admin staff who coordinate the whole service.
+  const serviceDeptIds = new Set(
+    allRoles.map((r) => r.departmentId).filter(Boolean)
+  );
+  const mineForService = [
+    ...(userData?.departmentIds ?? []),
+    ...(userData?.leadsDepartmentIds ?? []),
+  ];
+  const onServiceTeam =
+    isAdmin || mineForService.some((id) => serviceDeptIds.has(id));
+  const leadsServiceDept =
+    isAdmin ||
+    (userData?.leadsDepartmentIds ?? []).some((id) => serviceDeptIds.has(id));
+
+  // Each stat is shown to its own team (inDept already includes admin staff).
+  const showFollowUpsTile = inDept(["Discipleship & Follow-Up"]);
+  const showLatreouTile = inDept(["Worship & Music"]);
+  // Approvals are actioned by the Events & Fellowship lead (plus admin staff);
+  // a regular team member can't open the approvals page, so gate to the lead.
+  const leadsDept = (name: string) => {
+    if (!userData) return false;
+    if (isAdmin) return true;
+    const id = deptNameToId?.[name];
+    return !!id && (userData.leadsDepartmentIds ?? []).includes(id);
+  };
+  const showApprovalsTile = leadsDept("Events & Fellowship");
+  // A pure initiator (not the events lead / not admin) still tracks their own
+  // submitted event's status.
+  const showMyEventTile = !showApprovalsTile && myPendingEventCount > 0;
 
   // ─── "What matters now" headline ──────────────────────────────────────
 
@@ -1353,7 +1452,7 @@ export default function DashboardPage() {
   // ─── Ministry Pulse stat strip (role-aware) ────────────────────────────
 
   const statItems: StatItemData[] = [];
-  if (isAdmin || isDeptLead || isYouthLeader) {
+  if (onServiceTeam) {
     statItems.push({
       href: "/manage/services",
       icon: ClipboardList,
@@ -1369,15 +1468,29 @@ export default function DashboardPage() {
       highlight: scopedTotal > 0 && scopedFilled < scopedTotal * 0.5,
     });
   }
-  if (isAdmin) {
+  if (showApprovalsTile) {
     statItems.push({
       href: "/manage/events/approvals",
       icon: ClipboardCheck,
       iconTone: "bg-[#E6E8F6] text-[#6E74B8]",
       label: "Pending approvals",
       value: pendingApprovalCount,
-      hint: pendingApprovalCount > 0 ? "Events awaiting you" : "Nothing waiting",
+      hint:
+        pendingApprovalCount > 0 ? "Events awaiting the team" : "Nothing waiting",
       highlight: pendingApprovalCount > 0,
+    });
+  } else if (showMyEventTile) {
+    statItems.push({
+      href: "/calendar",
+      icon: ClipboardCheck,
+      iconTone: "bg-[#E6E8F6] text-[#6E74B8]",
+      label: "Your event",
+      value: myPendingEventCount,
+      hint:
+        myPendingEventCount === 1
+          ? "Submitted — in review"
+          : `${myPendingEventCount} submitted — in review`,
+      highlight: false,
     });
   }
   if (isManagerOrChair) {
@@ -2017,8 +2130,8 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* ── Service-readiness deep panel (admins/leads only) ───────── */}
-      {(isAdmin || isDeptLead) && nextEvent && (
+      {/* ── Service-readiness deep panel (admins + service-dept leads) ─ */}
+      {leadsServiceDept && nextEvent && (
         <section>
           <Card
             className="relative overflow-hidden border-clay-100/70 shadow-none"

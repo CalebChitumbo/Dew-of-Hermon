@@ -195,19 +195,26 @@ export async function POST(
       const newStatus: DepartmentJoinRequestStatus =
         action === "APPROVE" ? "APPROVED" : "REJECTED";
 
-      // On approval, add the member to the department.
+      // On approval, add the member to the department and — for a plain member
+      // — lift them to Youth Leader, since belonging to a team grants the
+      // department-level access that role carries. Higher roles are left as-is.
+      let roleUpgraded = false;
       if (action === "APPROVE") {
         const userDoc = await adminDb.collection("users").doc(requesterId).get();
         if (userDoc.exists) {
-          const currentDepts = (userDoc.data()!.departmentIds || []) as string[];
+          const memberData = userDoc.data()!;
+          const currentDepts = (memberData.departmentIds || []) as string[];
+          const updates: Record<string, unknown> = {};
           if (!currentDepts.includes(departmentId)) {
-            await adminDb
-              .collection("users")
-              .doc(requesterId)
-              .update({
-                departmentIds: [...currentDepts, departmentId],
-                updatedAt: now,
-              });
+            updates.departmentIds = [...currentDepts, departmentId];
+          }
+          if ((memberData.role as UserRole) === "MEMBER") {
+            updates.role = "YOUTH_LEADER";
+            roleUpgraded = true;
+          }
+          if (Object.keys(updates).length > 0) {
+            updates.updatedAt = now;
+            await adminDb.collection("users").doc(requesterId).update(updates);
           }
         }
       }
@@ -240,7 +247,11 @@ export async function POST(
             : "Join Request Not Approved",
         message:
           action === "APPROVE"
-            ? `Your request to join ${departmentName} has been approved by ${caller.name}. You're now part of the team.`
+            ? `Your request to join ${departmentName} has been approved by ${caller.name}. You're now part of the team.${
+                roleUpgraded
+                  ? " You've been upgraded to Youth Leader and now have access to your department's tools."
+                  : ""
+              }`
             : `Your request to join ${departmentName} was not approved.${
                 comments ? ` Reason: ${comments}` : ""
               }`,
