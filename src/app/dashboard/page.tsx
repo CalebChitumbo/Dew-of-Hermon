@@ -1222,7 +1222,6 @@ export default function DashboardPage() {
 
   const isAdmin = userData ? hasMinRole(userData.role, "ADMIN") : false;
   const isDeptLead = userData?.role === "DEPARTMENT_LEAD";
-  const isYouthLeader = userData?.role === "YOUTH_LEADER";
   const isManagerOrChair = userData
     ? hasMinRole(userData.role, "DEPARTMENT_LEAD")
     : false;
@@ -1353,7 +1352,7 @@ export default function DashboardPage() {
   // ─── Ministry Pulse stat strip (role-aware) ────────────────────────────
 
   const statItems: StatItemData[] = [];
-  if (isAdmin || isDeptLead || isYouthLeader) {
+  if (isAdmin || isDeptLead) {
     statItems.push({
       href: "/manage/services",
       icon: ClipboardList,
