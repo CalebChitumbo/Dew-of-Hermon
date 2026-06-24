@@ -57,6 +57,7 @@ import {
   XCircle,
   ClipboardCheck,
   Pencil,
+  ChevronRight,
 } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -457,6 +458,30 @@ export default function CampusMinistryPage() {
     for (const inst of institutions) m[inst.id] = inst.name;
     return m;
   }, [institutions]);
+
+  // Collapsible student register: which institution cards are expanded.
+  // Default is all collapsed so the register reads as a tidy list of campuses.
+  const [openInstitutions, setOpenInstitutions] = useState<Set<string>>(
+    new Set()
+  );
+  const institutionIds = useMemo(
+    () => Object.keys(studentsByInstitution),
+    [studentsByInstitution]
+  );
+  const toggleInstitution = (id: string) =>
+    setOpenInstitutions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allInstitutionsOpen =
+    institutionIds.length > 0 &&
+    institutionIds.every((id) => openInstitutions.has(id));
+  const toggleAllInstitutions = () =>
+    setOpenInstitutions(
+      allInstitutionsOpen ? new Set() : new Set(institutionIds)
+    );
 
   const handleSubmit = async () => {
     if (!formName || !formPhone || !formInstitution) return;
@@ -1018,7 +1043,30 @@ export default function CampusMinistryPage() {
               description="No members are currently registered as students."
             />
           ) : (
-            Object.entries(studentsByInstitution)
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-clay-500">
+                  {studentMembers.length} student
+                  {studentMembers.length !== 1 ? "s" : ""} across{" "}
+                  {institutionIds.length} campus
+                  {institutionIds.length !== 1 ? "es" : ""}
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleAllInstitutions}
+                  className="gap-1 text-xs text-clay-500"
+                >
+                  <ChevronRight
+                    className={`h-3.5 w-3.5 transition-transform ${
+                      allInstitutionsOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                  {allInstitutionsOpen ? "Collapse all" : "Expand all"}
+                </Button>
+              </div>
+              {Object.entries(studentsByInstitution)
               .sort(([a], [b]) => {
                 // Push "unknown" to the bottom so the coordinator sees real
                 // campuses first.
@@ -1030,9 +1078,21 @@ export default function CampusMinistryPage() {
               })
               .map(([instId, students]) => {
                 const isUnknown = instId === "unknown" || !institutionMap[instId];
+                const isOpen = openInstitutions.has(instId);
                 return (
                   <Card key={instId} className={isUnknown ? "border-amber-300" : ""}>
-                    <CardHeader>
+                    <CardHeader
+                      className="cursor-pointer select-none"
+                      onClick={() => toggleInstitution(instId)}
+                      aria-expanded={isOpen}
+                    >
+                      <div className="flex items-start gap-3">
+                        <ChevronRight
+                          className={`mt-0.5 h-5 w-5 shrink-0 text-clay-400 transition-transform ${
+                            isOpen ? "rotate-90" : ""
+                          }`}
+                        />
+                        <div className="min-w-0 flex-1">
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <GraduationCap className="h-5 w-5 text-gold-dark" />
                         {isUnknown
@@ -1053,7 +1113,10 @@ export default function CampusMinistryPage() {
                           </span>
                         )}
                       </CardDescription>
+                        </div>
+                      </div>
                     </CardHeader>
+                    {isOpen && (
                     <CardContent>
                       <div className="space-y-3">
                         {students.map((student) => {
@@ -1138,9 +1201,11 @@ export default function CampusMinistryPage() {
                         })}
                       </div>
                     </CardContent>
+                    )}
                   </Card>
                 );
-              })
+              })}
+            </>
           )}
         </TabsContent>
       </Tabs>
