@@ -292,6 +292,22 @@ export default function DiscipleshipPipelinePage() {
     });
   }, [cards, sourceFilter, assigneeFilter, canManage, canViewAssigned, userData?.id]);
 
+  // Collapsible pipeline: which status columns are expanded. Default is all
+  // collapsed so the board reads as a compact row of headers with counts.
+  const [openStatuses, setOpenStatuses] = useState<Set<PipelineStatus>>(
+    new Set()
+  );
+  const toggleStatus = (s: PipelineStatus) =>
+    setOpenStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  const allStatusesOpen = openStatuses.size === STATUS_ORDER.length;
+  const toggleAllStatuses = () =>
+    setOpenStatuses(allStatusesOpen ? new Set() : new Set(STATUS_ORDER));
+
   // Group cards by status for Kanban
   const cardsByStatus = useMemo(() => {
     const grouped: Record<PipelineStatus, FollowUpCard[]> = {
@@ -614,30 +630,56 @@ export default function DiscipleshipPipelinePage() {
               </SelectContent>
               </Select>
             )}
-            <Badge variant="secondary" className="ml-auto">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={toggleAllStatuses}
+              className="ml-auto gap-1 text-xs text-clay-500"
+            >
+              <ChevronRight
+                className={`h-3.5 w-3.5 transition-transform ${
+                  allStatusesOpen ? "rotate-90" : ""
+                }`}
+              />
+              {allStatusesOpen ? "Collapse all" : "Expand all"}
+            </Button>
+            <Badge variant="secondary">
               {filteredCards.length} contact{filteredCards.length !== 1 ? "s" : ""}
             </Badge>
           </div>
 
           {/* Kanban Board */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-start">
             {STATUS_ORDER.map((status) => {
               const columnCards = cardsByStatus[status] || [];
+              const isOpen = openStatuses.has(status);
               return (
               <div key={status} className="space-y-3">
-                <div
-                  className={`rounded-lg border-2 p-3 ${STATUS_COLORS[status]}`}
+                <button
+                  type="button"
+                  onClick={() => toggleStatus(status)}
+                  aria-expanded={isOpen}
+                  className={`w-full rounded-lg border-2 p-3 text-left transition-colors ${STATUS_COLORS[status]}`}
                 >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-clay-700">
-                      {STATUS_LABELS[status]}
-                    </h3>
-                    <Badge variant="outline" className="text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ChevronRight
+                        className={`h-4 w-4 shrink-0 text-clay-500 transition-transform ${
+                          isOpen ? "rotate-90" : ""
+                        }`}
+                      />
+                      <h3 className="truncate text-sm font-semibold text-clay-700">
+                        {STATUS_LABELS[status]}
+                      </h3>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 text-xs">
                       {columnCards.length}
                     </Badge>
                   </div>
-                </div>
+                </button>
 
+                {isOpen && (
                 <div className="space-y-2 min-h-[100px]">
                   {columnCards.length === 0 ? (
                     <div className="text-center py-6 text-xs text-clay-400">
@@ -741,6 +783,7 @@ export default function DiscipleshipPipelinePage() {
                     ))
                   )}
                 </div>
+                )}
               </div>
               );
             })}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { serverHasFeatureMinRole } from "@/lib/feature-permissions-server";
+import { ensureServiceForDate, maybeNotifyRotaOpen } from "@/lib/service-provisioning";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
@@ -93,6 +94,7 @@ export async function GET(request: Request) {
         programNotes: data.programNotes || null,
         attendanceCount: data.attendanceCount || null,
         isArchived: data.isArchived || false,
+        autoProvisioned: data.autoProvisioned || false,
         createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         event: eventsMap[data.eventId] || null,
@@ -145,84 +147,53 @@ export async function POST(request: Request) {
       );
     }
 
-    const now = new Date();
     const serviceDate = new Date(date);
 
-    // Create the linked event document first
-    const eventData = {
-      title: theme ? `Potter's Wheel: ${theme}` : "Potter's Wheel Service",
-      description: null,
-      type: "POTTERS_WHEEL_SERVICE",
-      startDate: serviceDate,
-      endDate: null,
-      venue,
-      isRecurring: false,
-      createdBy: callerId || "",
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const eventRef = await adminDb.collection("events").add(eventData);
-
-    // Create the service document linked to the event
-    const serviceData = {
-      eventId: eventRef.id,
-      theme: theme || null,
+    // Provision (idempotently) the service for this date. If a Potter's Wheel
+    // service already exists for the day — e.g. it was auto-prepared ahead of
+    // time — this returns the existing one instead of creating a duplicate.
+    const ensured = await ensureServiceForDate(serviceDate, {
+      venue: venue.trim(),
       serviceTime,
-      programNotes: null,
-      attendanceCount: null,
-      isArchived: false,
-      createdAt: now,
-      updatedAt: now,
-    };
+      theme: theme?.trim() || null,
+      createdBy: callerId || "",
+      autoProvisioned: false,
+    });
 
-    const serviceRef = await adminDb.collection("services").add(serviceData);
+    // Notify department heads the rota is open (no-op if already notified, or
+    // if this service was already provisioned earlier).
+    maybeNotifyRotaOpen(ensured).catch((err) =>
+      console.error("Failed to notify heads of opened rota:", err)
+    );
 
-    // Create default checklist items for the service
-    const defaultChecklist = [
-      { task: "Sound system setup and test", category: "Technical", order: 1 },
-      { task: "Projector and slides ready", category: "Technical", order: 2 },
-      { task: "Musical instruments tuned", category: "Technical", order: 3 },
-      { task: "Worship song list finalized", category: "Worship", order: 4 },
-      { task: "Worship team rehearsal complete", category: "Worship", order: 5 },
-      { task: "Sermon notes / message prepared", category: "Ministry", order: 6 },
-      { task: "Welcome team briefed", category: "Hospitality", order: 7 },
-      { task: "Venue cleaned and arranged", category: "Hospitality", order: 8 },
-      { task: "Refreshments organized", category: "Hospitality", order: 9 },
-      { task: "Attendance register ready", category: "Admin", order: 10 },
-      { task: "Offering baskets prepared", category: "Admin", order: 11 },
-      { task: "All role assignments confirmed", category: "Admin", order: 12 },
-    ];
-
-    const batch = adminDb.batch();
-    for (const item of defaultChecklist) {
-      const ref = adminDb.collection("checklistItems").doc();
-      batch.set(ref, {
-        serviceId: serviceRef.id,
-        task: item.task,
-        category: item.category,
-        isCompleted: false,
-        completedBy: null,
-        order: item.order,
-        updatedAt: now,
-      });
+    if (!ensured.created) {
+      return NextResponse.json(
+        {
+          service: { id: ensured.serviceId, eventId: ensured.eventId },
+          event: { id: ensured.eventId },
+          alreadyExisted: true,
+          message:
+            "A service for this date already exists — opening the existing rota.",
+        },
+        { status: 200 }
+      );
     }
-    await batch.commit();
 
     return NextResponse.json(
       {
         service: {
-          id: serviceRef.id,
-          ...serviceData,
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
+          id: ensured.serviceId,
+          eventId: ensured.eventId,
+          theme: ensured.theme,
+          serviceTime: ensured.serviceTime,
+          programNotes: null,
+          attendanceCount: null,
+          isArchived: false,
         },
         event: {
-          id: eventRef.id,
-          ...eventData,
-          startDate: serviceDate.toISOString(),
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
+          id: ensured.eventId,
+          startDate: ensured.date,
+          venue: ensured.venue,
         },
       },
       { status: 201 }

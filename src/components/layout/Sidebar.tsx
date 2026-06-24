@@ -14,6 +14,7 @@ import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 import { useTransportAccess } from "@/hooks/useTransportAccess";
 import { useMediaAccess } from "@/hooks/useMediaAccess";
 import { useFoodAccess } from "@/hooks/useFoodAccess";
+import { usePendingCounts } from "@/hooks/usePendingCounts";
 
 export function Sidebar() {
   const { userData, signOut } = useAuth();
@@ -23,6 +24,7 @@ export function Sidebar() {
   const { canManageTransport, canApproveAccounts } = useTransportAccess();
   const { canManageMedia } = useMediaAccess();
   const { canConfirmFood } = useFoodAccess();
+  const { counts } = usePendingCounts();
 
   if (!userData) return null;
 
@@ -57,7 +59,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <SidebarNav entries={navEntries} />
+        <SidebarNav entries={navEntries} counts={counts} />
       </nav>
 
       <Separator />

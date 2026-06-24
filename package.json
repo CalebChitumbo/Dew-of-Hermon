@@ -10,7 +10,8 @@
     "seed": "ts-node scripts/seed.ts",
     "seed:managers": "ts-node scripts/seed-departmental-managers.ts",
     "merge:media": "ts-node scripts/merge-media-department.ts",
-    "migrate:events": "ts-node scripts/migrate-event-statuses.ts"
+    "migrate:events": "ts-node scripts/migrate-event-statuses.ts",
+    "delete:compass-ministry": "ts-node scripts/delete-compass-ministry.ts"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",

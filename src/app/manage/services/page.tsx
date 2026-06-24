@@ -57,6 +57,7 @@ interface ServiceWithEvent {
   programNotes: string | null;
   attendanceCount: number | null;
   isArchived: boolean;
+  autoProvisioned?: boolean;
   createdAt: string;
   updatedAt: string;
   event: ServiceEvent | null;
@@ -153,6 +154,13 @@ function FeaturedServiceCard({ service }: { service: ServiceWithEvent }) {
               {service.serviceTime}
             </span>
           </div>
+
+          {service.autoProvisioned && (
+            <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-teal/10 px-3 py-1 text-xs font-medium text-teal-dark">
+              <ClipboardList className="h-3.5 w-3.5" />
+              Auto-prepared — department heads can start assigning
+            </p>
+          )}
 
           {/* Staffing progress */}
           <div className="mt-6 rounded-2xl border border-clay-100/80 bg-cream/50 p-4">
@@ -322,10 +330,28 @@ function ServicesListContent() {
     }
   }, []);
 
+  // Make sure the coming Sunday(s) are already provisioned before listing, so
+  // department heads always find a rota waiting instead of an empty page. This
+  // is idempotent and best-effort — never let it block the list.
+  const ensureUpcoming = useCallback(async () => {
+    try {
+      await fetch("/api/services/ensure-upcoming", { method: "POST" });
+    } catch {
+      // ignore — the weekly cron is the backstop
+    }
+  }, []);
+
   useEffect(() => {
     if (!userData) return;
-    fetchServices();
-  }, [userData, fetchServices]);
+    let cancelled = false;
+    (async () => {
+      await ensureUpcoming();
+      if (!cancelled) await fetchServices();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userData, ensureUpcoming, fetchServices]);
 
   if (loading) {
     return (

@@ -361,6 +361,10 @@ export interface Service {
   programNotes: string | null;
   attendanceCount: number | null;
   isArchived: boolean;
+  /** True when the rota was opened automatically ahead of the Sunday. */
+  autoProvisioned?: boolean;
+  /** Set once department heads have been notified the rota is open. */
+  rotaOpenNotifiedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
