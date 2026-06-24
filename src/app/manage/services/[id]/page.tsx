@@ -45,8 +45,10 @@ import {
   AlertTriangle,
   Users,
   Shield,
+  Lock,
 } from "lucide-react";
 import { format } from "date-fns";
+import { canAssignAnyRole } from "@/lib/permissions";
 import {
   Service,
   AppEvent,
@@ -307,9 +309,10 @@ interface RoleCardProps {
   onRemove: (assignmentId: string) => void;
   isRemoving: string | null;
   canDelete: boolean;
+  canAssign: boolean;
 }
 
-function RoleCard({ role, onAssign, onRemove, isRemoving, canDelete }: RoleCardProps) {
+function RoleCard({ role, onAssign, onRemove, isRemoving, canDelete, canAssign }: RoleCardProps) {
   const assignment = role.assignment;
   const status: AssignmentStatus | "UNASSIGNED" = assignment
     ? assignment.status
@@ -371,7 +374,7 @@ function RoleCard({ role, onAssign, onRemove, isRemoving, canDelete }: RoleCardP
                 Remove
               </Button>
             ) : null
-          ) : (
+          ) : canAssign ? (
             <Button
               variant="teal"
               size="sm"
@@ -381,6 +384,14 @@ function RoleCard({ role, onAssign, onRemove, isRemoving, canDelete }: RoleCardP
               <UserPlus className="h-3 w-3" />
               Assign
             </Button>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] text-clay-400"
+              title={`Only the ${role.departmentName} head or an admin can assign this role.`}
+            >
+              <Lock className="h-3 w-3" />
+              {role.departmentName} head
+            </span>
           )}
         </div>
       </div>
@@ -395,6 +406,13 @@ function AssignmentBoardContent() {
   const serviceId = params.id as string;
   const { userData } = useAuth();
   const isSuperAdmin = userData?.role === "SUPER_ADMIN";
+  // ADMIN+ can staff any role; a department head only staffs the departments
+  // they lead. Mirrors the server-side scoping on the assignment API.
+  const isAdminAssigner = userData ? canAssignAnyRole(userData.role) : false;
+  const myLeadDeptIds = useMemo(
+    () => new Set(userData?.leadsDepartmentIds || []),
+    [userData]
+  );
   const { toast } = useToast();
 
   // State
@@ -699,16 +717,42 @@ function AssignmentBoardContent() {
     }));
   }, [roles, departmentMap, assignmentsByRoleId]);
 
-  // Group roles by department
-  const rolesByDepartment = useMemo(() => {
-    const grouped: Record<string, RoleWithAssignment[]> = {};
+  // Group roles by department, surfacing the departments this head leads first
+  // so they land straight on the roles they're responsible for.
+  const departmentGroups = useMemo(() => {
+    const groups: {
+      deptId: string;
+      deptName: string;
+      roles: RoleWithAssignment[];
+      isMine: boolean;
+    }[] = [];
+    const indexByDept: Record<string, number> = {};
     rolesWithAssignments.forEach((role) => {
-      const dept = role.departmentName;
-      if (!grouped[dept]) grouped[dept] = [];
-      grouped[dept].push(role);
+      if (indexByDept[role.departmentId] === undefined) {
+        indexByDept[role.departmentId] = groups.length;
+        groups.push({
+          deptId: role.departmentId,
+          deptName: role.departmentName,
+          roles: [],
+          isMine: !isAdminAssigner && myLeadDeptIds.has(role.departmentId),
+        });
+      }
+      groups[indexByDept[role.departmentId]].roles.push(role);
     });
-    return grouped;
-  }, [rolesWithAssignments]);
+    // Stable sort keeps the original order within each tier.
+    return groups.sort((a, b) =>
+      a.isMine === b.isMine ? 0 : a.isMine ? -1 : 1
+    );
+  }, [rolesWithAssignments, isAdminAssigner, myLeadDeptIds]);
+
+  // The role names this head is responsible for (for the orientation banner).
+  const myRoleNames = useMemo(
+    () =>
+      departmentGroups
+        .filter((g) => g.isMine)
+        .flatMap((g) => g.roles.map((r) => r.name)),
+    [departmentGroups]
+  );
 
   const filledCount = assignments.length;
   const totalRoles = roles.length || 13;
@@ -992,6 +1036,20 @@ function AssignmentBoardContent() {
         </CardContent>
       </Card>
 
+      {/* Department-head orientation */}
+      {!isAdminAssigner && myRoleNames.length > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-teal/30 bg-teal/[0.06] p-4">
+          <Users className="mt-0.5 h-5 w-5 shrink-0 text-teal-dark" />
+          <p className="text-sm text-clay-600">
+            You&apos;re assigning for{" "}
+            <span className="font-semibold text-clay-700">
+              {myRoleNames.join(", ")}
+            </span>
+            . Other departments are filled by their own heads.
+          </p>
+        </div>
+      )}
+
       {/* Roles by Department */}
       {roles.length === 0 ? (
         <EmptyState
@@ -1002,21 +1060,35 @@ function AssignmentBoardContent() {
         />
       ) : (
         <div className="space-y-6">
-          {Object.entries(rolesByDepartment).map(([deptName, deptRoles]) => (
-            <div key={deptName}>
+          {departmentGroups.map((group) => (
+            <div
+              key={group.deptId}
+              className={
+                group.isMine
+                  ? "rounded-2xl border border-teal/30 bg-teal/[0.04] p-4"
+                  : undefined
+              }
+            >
               <SectionHeading
                 className="mb-3"
                 actions={
-                  <Badge variant="secondary" className="text-xs">
-                    {deptRoles.filter((r) => r.assignment).length}/
-                    {deptRoles.length}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {group.isMine && (
+                      <Badge className="border border-teal/30 bg-teal/10 text-[10px] font-medium text-teal-dark">
+                        Your department
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" className="text-xs">
+                      {group.roles.filter((r) => r.assignment).length}/
+                      {group.roles.length}
+                    </Badge>
+                  </div>
                 }
               >
-                {deptName}
+                {group.deptName}
               </SectionHeading>
               <div className="grid gap-3 sm:grid-cols-2">
-                {deptRoles.map((role) => (
+                {group.roles.map((role) => (
                   <RoleCard
                     key={role.id}
                     role={role}
@@ -1024,6 +1096,7 @@ function AssignmentBoardContent() {
                     onRemove={handleRemoveAssignment}
                     isRemoving={removingId}
                     canDelete={isSuperAdmin}
+                    canAssign={isAdminAssigner || myLeadDeptIds.has(role.departmentId)}
                   />
                 ))}
               </div>

@@ -3,6 +3,10 @@ import { adminDb } from "@/lib/firebase-admin";
 import { validateEmailConfig } from "@/lib/email";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import {
+  ensureUpcomingServices,
+  maybeNotifyRotaOpen,
+} from "@/lib/service-provisioning";
+import {
   ReminderDay,
   ServiceRole,
   ServiceAssignment,
@@ -262,6 +266,18 @@ export async function GET(request: NextRequest) {
 
     if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Self-heal: make sure the coming Sunday(s) already have a rota and that
+    // department heads have been pinged to assign their teams. Never let this
+    // block the reminder run — it is idempotent and best-effort.
+    try {
+      const { services } = await ensureUpcomingServices();
+      for (const ensured of services) {
+        await maybeNotifyRotaOpen(ensured);
+      }
+    } catch (provisionErr) {
+      console.error("Service auto-provisioning (in reminders cron) failed:", provisionErr);
     }
 
     // Pre-flight check: validate email configuration

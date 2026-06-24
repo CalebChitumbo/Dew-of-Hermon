@@ -1,10 +1,38 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { cookies } from "next/headers";
+import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { canAssignAnyRole, canAssignOwnDeptRole } from "@/lib/permissions";
 import { createNotificationWithEmail } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 import { UserRole } from "@/types";
+
+/**
+ * Resolve the caller from their session cookie. Gives us a trustworthy role and
+ * the departments they lead, which the body cannot be trusted to supply.
+ */
+async function getSessionCaller(): Promise<{
+  uid: string;
+  role: UserRole;
+  leadsDepartmentIds: string[];
+} | null> {
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get("session");
+    if (!session?.value) return null;
+    const decoded = await adminAuth.verifySessionCookie(session.value);
+    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
+    if (!userDoc.exists) return null;
+    const data = userDoc.data()!;
+    return {
+      uid: decoded.uid,
+      role: data.role as UserRole,
+      leadsDepartmentIds: data.leadsDepartmentIds || [],
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(
   request: Request,
@@ -58,16 +86,20 @@ export async function POST(
     const body = await request.json();
     const { roleId, userId, callerRole } = body;
 
-    // Permission check
-    if (!callerRole) {
+    // Prefer the verified session for the role; fall back to the body so older
+    // clients keep working.
+    const caller = await getSessionCaller();
+    const effectiveRole: UserRole | undefined =
+      caller?.role || (callerRole as UserRole | undefined);
+
+    if (!effectiveRole) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
       );
     }
 
-    const role = callerRole as UserRole;
-    if (!canAssignAnyRole(role) && !canAssignOwnDeptRole(role)) {
+    if (!canAssignAnyRole(effectiveRole) && !canAssignOwnDeptRole(effectiveRole)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -79,6 +111,30 @@ export async function POST(
         { error: "Role ID and User ID are required" },
         { status: 400 }
       );
+    }
+
+    // Department scoping: ADMIN+ can assign any role, but a department head may
+    // only assign roles within a department they lead (so the Media head staffs
+    // Media, Hospitality staffs Hospitality, etc.). Only enforced when we have a
+    // verified session — legacy callers without one keep the prior behaviour.
+    if (caller && !canAssignAnyRole(caller.role)) {
+      const roleSnap = await adminDb.collection("serviceRoles").doc(roleId).get();
+      if (!roleSnap.exists) {
+        return NextResponse.json(
+          { error: "Service role not found" },
+          { status: 404 }
+        );
+      }
+      const roleDeptId = roleSnap.data()!.departmentId;
+      if (!caller.leadsDepartmentIds.includes(roleDeptId)) {
+        return NextResponse.json(
+          {
+            error:
+              "You can only assign roles for departments you lead. Ask the Potter's Wheel manager or an admin for other roles.",
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Verify the service exists
