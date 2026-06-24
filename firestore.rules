@@ -293,5 +293,15 @@ service cloud.firestore {
       allow update: if isDeptLead();
       allow delete: if isSuperAdmin();
     }
+
+    // ─── Bible Bookmarks & Highlights ───
+    // Private to each user: saved/highlighted verses in the Bible reader. A
+    // user may only read and write their own bookmarks, and every document
+    // must be stamped with their own uid.
+    match /bibleBookmarks/{bookmarkId} {
+      allow read, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create, update: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid;
+    }
   }
 }
