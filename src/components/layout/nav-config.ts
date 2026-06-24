@@ -67,11 +67,11 @@ const TOP_ITEMS: NavItem[] = [
 /** Everything to do with running the weekly church service. */
 const POTTERS_WILL: NavGroup = {
   id: "potters-will",
-  label: "Potter's Will",
+  label: "Potter's Wheel",
   icon: Church,
   items: [
     { label: "Services & Rotas", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
-    { label: "Latreou", href: "/latreou", icon: Music, pageKey: "latreou" },
+    { label: "Latreuo", href: "/latreou", icon: Music, pageKey: "latreou" },
   ],
 };
 

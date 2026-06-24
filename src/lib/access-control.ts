@@ -135,7 +135,7 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
   },
   {
     key: "latreou",
-    label: "Latreou",
+    label: "Latreuo",
     description: "Worship cycle planner — songs, uniforms, rehearsals, and PDF export",
     route: "/latreou",
     lockedRoles: { SUPER_ADMIN: "edit" },
@@ -654,9 +654,9 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
   },
   {
     key: "latreou_access",
-    label: "Use Latreou Planner",
+    label: "Use Latreuo Planner",
     description:
-      "Plan worship cycles and export the team document via the Latreou tab",
+      "Plan worship cycles and export the team document via the Latreuo tab",
     category: "Worship",
     supportsDepartmentRules: true,
   },

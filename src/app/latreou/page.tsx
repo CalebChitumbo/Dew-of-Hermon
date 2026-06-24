@@ -144,7 +144,7 @@ export default function LatreouPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-clay-500">
-            Latreou is the worship cycle planner — it&apos;s only available to
+            Latreuo is the worship cycle planner — it&apos;s only available to
             members of the {WORSHIP_DEPT_NAME} department. If you should have
             access, ask an admin to add you to the department.
           </p>
@@ -314,7 +314,7 @@ export default function LatreouPage() {
       <PageHeader
         icon={Music}
         tone="teal"
-        title="Latreou"
+        title="Latreuo"
         description={
           <>
             Suggest songs for the team and{isLead ? " " : " — leads "}

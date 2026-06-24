@@ -1781,7 +1781,7 @@ export default function DashboardPage() {
               href="/latreou"
               icon={Music}
               iconTone="bg-amber-50 text-amber-600"
-              label="Latreou planner"
+              label="Latreuo planner"
               cta="View plan"
             >
               <div className="flex items-center gap-3 mt-1">

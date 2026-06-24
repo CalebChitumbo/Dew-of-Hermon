@@ -44,7 +44,7 @@ function drawCover(doc: jsPDF, cur: Cursor, cycle: LatreouCycle): void {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(40);
   doc.setTextColor(...HEADING_COLOR);
-  doc.text("LATREOU", PAGE_MARGIN, cur.y);
+  doc.text("LATREUO", PAGE_MARGIN, cur.y);
   cur.y += 18;
 
   doc.setDrawColor(...ACCENT);

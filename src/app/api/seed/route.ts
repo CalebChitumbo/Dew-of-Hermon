@@ -26,7 +26,6 @@ const ministryDepartments = [
   { name: "Transport & Logistics", icon: "🚐", order: 13, description: "Coordinating transport logistics for services, events, and outreach" },
   { name: "Youth Ablaze", icon: "🔥", order: 14, description: "Intercession and prayer warfare for youth events" },
   { name: "Potter's Wheel", icon: "🏺", order: 15, description: "Youth service organization, scheduling, and role assignment for Sunday services" },
-  { name: "Compass Ministry", icon: "🧭", order: 16, description: "Guiding and mentoring young people in their spiritual journey and life direction" },
   { name: "Fundraising", icon: "💰", order: 17, description: "Organizing fundraising initiatives, campaigns, and financial drives for the ministry" },
   { name: "Food & Catering", icon: "🍽️", order: 18, description: "Coordinating meals, catering, and refreshments for ministry events and services" },
   { name: "Media & Communication", icon: "📱", order: 19, description: "Managing social media, ministry communications, content creation, and publicity" },
