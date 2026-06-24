@@ -13,6 +13,25 @@ interface SidebarNavProps {
   entries: NavEntry[];
   /** Called after a link is clicked — used by the mobile drawer to close itself. */
   onNavigate?: () => void;
+  /** pageKey → number of items awaiting the user's attention in that area. */
+  counts?: Record<string, number>;
+}
+
+/** Pending-attention count for a nav item (0 when none / no pageKey). */
+function countFor(item: NavItem, counts: Record<string, number>): number {
+  return item.pageKey ? counts[item.pageKey] ?? 0 : 0;
+}
+
+/** A small red pill showing how many items need attention. */
+function NavBadge({ count }: { count: number }) {
+  return (
+    <span
+      aria-label={`${count} pending`}
+      className="inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-none text-white"
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
 }
 
 /**
@@ -21,8 +40,9 @@ interface SidebarNavProps {
  * - The group containing the current page auto-expands and stays open.
  * - Manual open/close choices are remembered across navigations (localStorage).
  * - Standalone items render as plain links.
+ * - A red badge marks any item (and any collapsed group) with pending items.
  */
-export function SidebarNav({ entries, onNavigate }: SidebarNavProps) {
+export function SidebarNav({ entries, onNavigate, counts = {} }: SidebarNavProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -89,6 +109,7 @@ export function SidebarNav({ entries, onNavigate }: SidebarNavProps) {
               item={entry.item}
               active={isActive(entry.item.href)}
               onNavigate={onNavigate}
+              count={countFor(entry.item, counts)}
             />
           );
         }
@@ -96,6 +117,10 @@ export function SidebarNav({ entries, onNavigate }: SidebarNavProps) {
         const { group } = entry;
         const open = !!openGroups[group.id];
         const hasActiveChild = group.items.some((item) => isActive(item.href));
+        const groupCount = group.items.reduce(
+          (sum, item) => sum + countFor(item, counts),
+          0
+        );
 
         return (
           <div key={group.id}>
@@ -113,6 +138,9 @@ export function SidebarNav({ entries, onNavigate }: SidebarNavProps) {
             >
               <group.icon className="h-5 w-5 flex-shrink-0" />
               <span className="flex-1 text-left">{group.label}</span>
+              {/* When collapsed, roll the children's pending counts up to the
+                  header so nothing is missed behind a closed group. */}
+              {!open && groupCount > 0 && <NavBadge count={groupCount} />}
               <ChevronDown
                 className={cn(
                   "h-4 w-4 flex-shrink-0 text-clay-400 transition-transform duration-200",
@@ -129,6 +157,7 @@ export function SidebarNav({ entries, onNavigate }: SidebarNavProps) {
                     item={item}
                     active={isActive(item.href)}
                     onNavigate={onNavigate}
+                    count={countFor(item, counts)}
                     nested
                   />
                 ))}
@@ -146,11 +175,13 @@ function NavLink({
   active,
   onNavigate,
   nested,
+  count = 0,
 }: {
   item: NavItem;
   active: boolean;
   onNavigate?: () => void;
   nested?: boolean;
+  count?: number;
 }) {
   const Icon = item.icon;
   return (
@@ -165,7 +196,8 @@ function NavLink({
       )}
     >
       <Icon className={cn("flex-shrink-0", nested ? "h-[18px] w-[18px]" : "h-5 w-5")} />
-      <span className="truncate">{item.label}</span>
+      <span className="flex-1 truncate">{item.label}</span>
+      {count > 0 && <NavBadge count={count} />}
     </Link>
   );
 }

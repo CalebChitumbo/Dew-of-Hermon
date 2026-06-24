@@ -16,6 +16,7 @@ import { useFundraisingAccess } from "@/hooks/useFundraisingAccess";
 import { useTransportAccess } from "@/hooks/useTransportAccess";
 import { useMediaAccess } from "@/hooks/useMediaAccess";
 import { useFoodAccess } from "@/hooks/useFoodAccess";
+import { usePendingCounts } from "@/hooks/usePendingCounts";
 
 export function Header() {
   const { userData, signOut } = useAuth();
@@ -25,6 +26,7 @@ export function Header() {
   const { canManageTransport, canApproveAccounts } = useTransportAccess();
   const { canManageMedia } = useMediaAccess();
   const { canConfirmFood } = useFoodAccess();
+  const { counts } = usePendingCounts();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -107,7 +109,7 @@ export function Header() {
               </Button>
             </div>
             <nav className="flex-1 p-4 overflow-y-auto">
-              <SidebarNav entries={navEntries} onNavigate={closeMenu} />
+              <SidebarNav entries={navEntries} onNavigate={closeMenu} counts={counts} />
               {/* Mobile-only shortcuts — same for every account type */}
               <div className="mt-2 space-y-1 border-t border-clay-100 pt-2">
                 <MobileMenuItem
