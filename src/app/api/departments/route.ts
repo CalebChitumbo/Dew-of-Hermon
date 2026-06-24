@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { hasMinRole } from "@/lib/permissions";
 import { UserRole } from "@/types";
 
@@ -151,5 +152,63 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error("PATCH /api/departments error:", error);
     return NextResponse.json({ error: "Failed to update department" }, { status: 500 });
+  }
+}
+
+// DELETE /api/departments?departmentId=... - Delete a department.
+// Restricted to the Chairperson (SUPER_ADMIN), consistent with the app's
+// destructive-delete policy. Also strips the department id from every user's
+// departmentIds / leadsDepartmentIds so no dangling references remain.
+export async function DELETE(request: Request) {
+  try {
+    const caller = await getCaller();
+    if (!caller || caller.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Only the Chairperson can delete departments" },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const departmentId =
+      searchParams.get("departmentId") || searchParams.get("id");
+    if (!departmentId) {
+      return NextResponse.json(
+        { error: "departmentId is required" },
+        { status: 400 }
+      );
+    }
+
+    const deptRef = adminDb.collection("departments").doc(departmentId);
+    const deptDoc = await deptRef.get();
+    if (!deptDoc.exists) {
+      return NextResponse.json({ error: "Department not found" }, { status: 404 });
+    }
+
+    // Remove the department from any users that still reference it.
+    let referencesCleaned = 0;
+    for (const field of ["departmentIds", "leadsDepartmentIds"] as const) {
+      const usersSnap = await adminDb
+        .collection("users")
+        .where(field, "array-contains", departmentId)
+        .get();
+      for (let i = 0; i < usersSnap.docs.length; i += 400) {
+        const batch = adminDb.batch();
+        for (const userDoc of usersSnap.docs.slice(i, i + 400)) {
+          batch.update(userDoc.ref, {
+            [field]: FieldValue.arrayRemove(departmentId),
+          });
+          referencesCleaned++;
+        }
+        await batch.commit();
+      }
+    }
+
+    await deptRef.delete();
+
+    return NextResponse.json({ success: true, referencesCleaned });
+  } catch (error) {
+    console.error("DELETE /api/departments error:", error);
+    return NextResponse.json({ error: "Failed to delete department" }, { status: 500 });
   }
 }

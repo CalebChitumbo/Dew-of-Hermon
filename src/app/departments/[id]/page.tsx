@@ -100,6 +100,11 @@ export default function DepartmentDetailPage() {
   const [removingMember, setRemovingMember] = useState<string | null>(null);
   const [creatingTask, setCreatingTask] = useState(false);
 
+  // Delete-department flow (Chairperson only)
+  const [deleteDeptOpen, setDeleteDeptOpen] = useState(false);
+  const [deletingDept, setDeletingDept] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // New task form
   const [newTask, setNewTask] = useState({
     title: "",
@@ -305,6 +310,27 @@ export default function DepartmentDetailPage() {
   const inProgressTasks = tasks.filter((t) => t.status === "IN_PROGRESS");
   const doneTasks = tasks.filter((t) => t.status === "DONE");
 
+  const handleDeleteDept = async () => {
+    setDeletingDept(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/departments?departmentId=${deptId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete department");
+      }
+      setDeleteDeptOpen(false);
+      router.push("/departments");
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : "Failed to delete department"
+      );
+      setDeletingDept(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -370,9 +396,72 @@ export default function DepartmentDetailPage() {
               <UserPlus className="mr-2 h-4 w-4" />
               Add Member
             </Button>
+            {isSuperAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteDeptOpen(true);
+                }}
+                className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            )}
           </>
         }
       />
+
+      {/* Delete Department Confirmation */}
+      <Dialog
+        open={deleteDeptOpen}
+        onOpenChange={(o) => {
+          if (!o && !deletingDept) setDeleteDeptOpen(false);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {department.name}?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the department.
+              {members.length > 0
+                ? ` It will also be removed from ${members.length} member${
+                    members.length !== 1 ? "s" : ""
+                  }' profile${members.length !== 1 ? "s" : ""}.`
+                : ""}{" "}
+              This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <p className="text-sm text-red-600">{deleteError}</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDeptOpen(false)}
+              disabled={deletingDept}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDeleteDept}
+              disabled={deletingDept}
+              className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+            >
+              {deletingDept ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete department
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
