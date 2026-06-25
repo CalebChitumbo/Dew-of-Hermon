@@ -4,18 +4,12 @@ import { useEffect, useState } from "react";
 import { BookOpenText } from "lucide-react";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useBibleBookmarks } from "@/hooks/useBibleBookmarks";
-import { DEFAULT_TRANSLATION, TRANSLATIONS } from "@/lib/bible/api";
+import { DEFAULT_TRANSLATION } from "@/lib/bible/api";
 import { Reader } from "./components/Reader";
 import { SearchPanel } from "./components/SearchPanel";
 import { SavedPanel } from "./components/SavedPanel";
+import { TranslationPicker } from "./components/TranslationPicker";
 
 const STORAGE_KEY = "bible:last";
 
@@ -83,21 +77,10 @@ export default function BiblePage() {
         icon={BookOpenText}
         tone="gold"
         actions={
-          <Select
+          <TranslationPicker
             value={pos.translation}
-            onValueChange={(translation) => setPos((p) => ({ ...p, translation }))}
-          >
-            <SelectTrigger className="w-[170px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TRANSLATIONS.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.id} — {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(translation) => setPos((p) => ({ ...p, translation }))}
+          />
         }
       />
 

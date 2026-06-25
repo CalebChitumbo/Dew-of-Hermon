@@ -20,6 +20,10 @@ export interface Translation {
   name: string;
 }
 
+/**
+ * The small built-in list used as an offline fallback when the provider's full
+ * translation catalogue can't be fetched. All public-domain.
+ */
 export const TRANSLATIONS: Translation[] = [
   { id: "WEB", name: "World English Bible" },
   { id: "KJV", name: "King James Version" },
@@ -29,6 +33,11 @@ export const TRANSLATIONS: Translation[] = [
 ];
 
 export const DEFAULT_TRANSLATION = "WEB";
+
+/** A translation as listed in the provider's catalogue, tagged by language. */
+export interface TranslationOption extends Translation {
+  language: string;
+}
 
 export interface BibleVerse {
   verse: number;
@@ -106,6 +115,46 @@ export async function fetchChapter(
 
   chapterCache.set(key, verses);
   return verses;
+}
+
+const FALLBACK_TRANSLATIONS: TranslationOption[] = TRANSLATIONS.map((t) => ({
+  ...t,
+  language: "English",
+}));
+
+let translationsCache: TranslationOption[] | null = null;
+
+/**
+ * Fetch the provider's full catalogue of translations (every language and
+ * version it serves), so the version switcher always reflects what's actually
+ * available. Cached for the life of the page. Falls back to the built-in
+ * public-domain list if the catalogue can't be loaded or looks malformed.
+ */
+export async function fetchTranslations(): Promise<TranslationOption[]> {
+  if (translationsCache) return translationsCache;
+  try {
+    const data = await getJson(`${BASE}/static/bolls/app/views/languages.json`);
+    const out: TranslationOption[] = [];
+    if (Array.isArray(data)) {
+      for (const group of data as Record<string, unknown>[]) {
+        const language = String(group?.language ?? group?.name ?? "Other").trim() || "Other";
+        const list = Array.isArray(group?.translations)
+          ? (group.translations as Record<string, unknown>[])
+          : [];
+        for (const t of list) {
+          const id = String(t?.short_name ?? t?.shortName ?? "").trim();
+          if (!id) continue;
+          const name = String(t?.full_name ?? t?.fullName ?? id).trim() || id;
+          out.push({ id, name, language });
+        }
+      }
+    }
+    if (out.length === 0) throw new Error("Empty translation catalogue");
+    translationsCache = out;
+    return out;
+  } catch {
+    return FALLBACK_TRANSLATIONS;
+  }
 }
 
 /**
