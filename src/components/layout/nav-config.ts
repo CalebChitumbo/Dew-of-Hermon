@@ -29,6 +29,7 @@ import {
   Inbox,
   ShieldCheck,
   UserPlus,
+  BookOpenText,
 } from "lucide-react";
 import { canAccessPage } from "@/lib/access-control";
 import type { PagePermissions, UserRole } from "@/types";
@@ -60,6 +61,8 @@ const TOP_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
   // My Schedule: members/leads only — handled by the role check in shouldShow().
   { label: "My Schedule", href: "/my-schedule", icon: CalendarDays, pageKey: null },
+  // Bible: available to every signed-in user — handled in shouldShow().
+  { label: "Bible", href: "/bible", icon: BookOpenText, pageKey: null },
 ];
 
 // ─── Collapsible groups (rendered in this order) ───
@@ -156,6 +159,9 @@ function shouldShow(
 
   // My Schedule is the personal view for non-admin roles.
   if (item.href === "/my-schedule") return SCHEDULE_ROLES.includes(role);
+
+  // Bible is a shared devotional resource — visible to every role.
+  if (item.href === "/bible") return true;
 
   // Anything else without a page key has no guard of its own — hide it.
   if (!item.pageKey) return false;

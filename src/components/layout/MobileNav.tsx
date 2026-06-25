@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Sparkles,
   Users,
+  BookOpenText,
 } from "lucide-react";
 
 interface MobileNavItem {
@@ -28,8 +29,8 @@ interface MobileNavItem {
 const adminPriority: MobileNavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
   { label: "Members", href: "/manage/members", icon: Users, pageKey: "members" },
-  { label: "Services", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
   { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
+  { label: "Bible", href: "/bible", icon: BookOpenText, pageKey: null },
   { label: "Profile", href: "/profile", icon: UserCircle, pageKey: null },
 ];
 
@@ -37,15 +38,15 @@ const leadPriority: MobileNavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
   { label: "Services", href: "/manage/services", icon: ClipboardList, pageKey: "services" },
   { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
-  { label: "Alerts", href: "/notifications", icon: Bell, pageKey: null },
+  { label: "Bible", href: "/bible", icon: BookOpenText, pageKey: null },
   { label: "Profile", href: "/profile", icon: UserCircle, pageKey: null },
 ];
 
 const memberPriority: MobileNavItem[] = [
   { label: "Schedule", href: "/my-schedule", icon: CalendarDays, pageKey: null },
+  { label: "Bible", href: "/bible", icon: BookOpenText, pageKey: null },
   { label: "Calendar", href: "/calendar", icon: Calendar, pageKey: "calendar" },
   { label: "Notes", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
-  { label: "Alerts", href: "/notifications", icon: Bell, pageKey: null },
   { label: "Profile", href: "/profile", icon: UserCircle, pageKey: null },
 ];
 

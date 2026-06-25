@@ -409,6 +409,29 @@ export interface Affirmation {
   updatedAt: Date;
 }
 
+/** Colour a user can apply when highlighting a Bible verse. */
+export type BibleHighlightColor = "gold" | "sage" | "blue" | "rose" | "lavender";
+
+/**
+ * A verse a user has saved or highlighted in the Bible reader. Stored per-user
+ * in the `bibleBookmarks` collection, keyed by `verseKey` (see lib/bible/api).
+ */
+export interface BibleBookmark {
+  id: string;
+  userId: string;
+  translation: string;
+  bookId: number;
+  bookName: string;
+  chapter: number;
+  verse: number;
+  /** Snapshot of the verse text at save time, for the bookmarks list. */
+  text: string;
+  /** A highlight colour, or null for a plain (uncoloured) bookmark. */
+  color: BibleHighlightColor | null;
+  note: string | null;
+  createdAt: Date;
+}
+
 export type EmailDeliveryStatus = "pending" | "queued" | "delivered" | "failed" | "skipped";
 
 export interface Notification {
