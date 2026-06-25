@@ -22,6 +22,38 @@ interface TranslationPickerProps {
 /** Languages listed first in the picker, in this order. The rest follow A→Z. */
 const PINNED_LANGUAGES = ["English"];
 
+/** Synthetic group surfaced above the languages for the most-wanted versions. */
+const POPULAR_GROUP = "Popular";
+
+/**
+ * Versions to bubble into the "Popular" group. Matched against the live
+ * catalogue by code or name, so we only ever show what the provider actually
+ * serves (a code we don't recognise just stays searchable in its language).
+ */
+const POPULAR_IDS = new Set(
+  [
+    "AMP", "AMPC", // Amplified
+    "ESV",
+    "NIV", "NIV11", "NIV2011",
+    "NKJV",
+    "GNB", "GNT", "GNTD", "GNBDC", // Good News
+    "WEB", "KJV", // dependable public-domain staples
+  ].map((s) => s.toUpperCase())
+);
+const POPULAR_NAME_HINTS = [
+  "amplified",
+  "good news",
+  "new international",
+  "english standard",
+  "new king james",
+];
+
+function isPopular(o: TranslationOption): boolean {
+  if (POPULAR_IDS.has(o.id.toUpperCase())) return true;
+  const name = o.name.toLowerCase();
+  return POPULAR_NAME_HINTS.some((h) => name.includes(h));
+}
+
 /**
  * Version switcher. Loads the provider's full translation catalogue once, then
  * lets the user search and pick from every available version, grouped by
@@ -56,8 +88,14 @@ export function TranslationPicker({ value, onChange }: TranslationPickerProps) {
         )
       : options;
 
+    // Pull the most-wanted versions into a "Popular" group up top. While
+    // searching, skip it so results aren't shown twice.
+    const popular = q ? [] : filtered.filter(isPopular);
+    const popularIds = new Set(popular.map((o) => o.id));
+
     const byLang = new Map<string, TranslationOption[]>();
     for (const o of filtered) {
+      if (popularIds.has(o.id)) continue;
       const list = byLang.get(o.language) ?? [];
       list.push(o);
       byLang.set(o.language, list);
@@ -72,10 +110,18 @@ export function TranslationPicker({ value, onChange }: TranslationPickerProps) {
       return a.localeCompare(b);
     });
 
-    return languages.map((language) => ({
+    const result = languages.map((language) => ({
       language,
       items: (byLang.get(language) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
     }));
+
+    if (popular.length > 0) {
+      result.unshift({
+        language: POPULAR_GROUP,
+        items: popular.sort((a, b) => a.name.localeCompare(b.name)),
+      });
+    }
+    return result;
   }, [options, term]);
 
   const handleOpenChange = (next: boolean) => {
