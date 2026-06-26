@@ -35,6 +35,7 @@ import {
   MapPin,
   Clock,
   ClipboardList,
+  BellRing,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -131,6 +132,7 @@ export default function EventRoleBoardPage() {
   const [userSearch, setUserSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [generatingRoles, setGeneratingRoles] = useState(false);
+  const [reminding, setReminding] = useState(false);
 
   // Access control: DEPARTMENT_LEAD+ can view this page
   const hasAccess = userData ? hasMinRole(userData.role, "DEPARTMENT_LEAD") : false;
@@ -402,6 +404,50 @@ export default function EventRoleBoardPage() {
     }
   }
 
+  // ─── Remind department heads about unfilled roles ───
+
+  async function handleRemindLeads() {
+    if (!eventId) return;
+    setReminding(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/remind-roles`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send reminders");
+      }
+
+      if (data.sent > 0) {
+        toast({
+          title: "Reminders sent",
+          description: `Notified ${data.sent} department head${data.sent === 1 ? "" : "s"} about ${data.totalUnfilled} unfilled role${data.totalUnfilled === 1 ? "" : "s"}.`,
+          variant: "success",
+        });
+      } else {
+        toast({
+          title: "No reminders sent",
+          description:
+            data.message ||
+            "No active department heads were found for the unfilled roles.",
+        });
+      }
+
+      if (data.departmentsWithoutLead?.length) {
+        toast({
+          title: "Some departments have no active head",
+          description: `No one currently leads: ${data.departmentsWithoutLead.join(", ")}. Ask an admin to assign a department head.`,
+          variant: "destructive",
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setReminding(false);
+    }
+  }
+
   // ─── Core Role Assignment ───
 
   async function handleCoreAssign(user: User) {
@@ -487,6 +533,17 @@ export default function EventRoleBoardPage() {
   const filledDeptRoles = allRoles.filter((r) => r.assignedUserId).length;
   const totalFilled = filledCoreRoles + filledDeptRoles;
   const overallPct = totalRoles > 0 ? Math.round((totalFilled / totalRoles) * 100) : 0;
+
+  // Who can nudge department heads: the event creator, an admin, or the
+  // Events & Fellowship Manager (the fine-grained E&F check is enforced
+  // server-side; here we surface it to the creator and admins).
+  const isCreator = !!event && userData?.id === event.createdBy;
+  const unfilledDeptCount = allRoles.filter((r) => !r.assignedUserId).length;
+  const canRemindLeads =
+    !!event &&
+    event.approvalStatus === "APPROVED" &&
+    unfilledDeptCount > 0 &&
+    (isCreator || isAdmin);
 
   // For department role assignment, only show members of that department.
   const deptFilteredUsers = activeUsers.filter((u) => {
@@ -719,6 +776,38 @@ export default function EventRoleBoardPage() {
                 );
               })}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Remind department heads about unfilled roles */}
+      {canRemindLeads && (
+        <Card className="border-clay-100/70 bg-cream/40">
+          <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <BellRing className="h-5 w-5 text-clay-500 flex-shrink-0" />
+            <div className="flex-1 text-sm text-clay-700">
+              <p className="font-semibold">
+                {unfilledDeptCount} department role
+                {unfilledDeptCount === 1 ? "" : "s"} still unassigned
+              </p>
+              <p className="text-clay-500">
+                Send a reminder to the relevant department heads asking them to
+                fill these roles.
+              </p>
+            </div>
+            <Button
+              variant="gold"
+              className="gap-2 flex-shrink-0"
+              onClick={handleRemindLeads}
+              disabled={reminding}
+            >
+              {reminding ? (
+                <LoadingSpinner size="sm" />
+              ) : (
+                <BellRing className="h-4 w-4" />
+              )}
+              Remind department heads
+            </Button>
           </CardContent>
         </Card>
       )}
