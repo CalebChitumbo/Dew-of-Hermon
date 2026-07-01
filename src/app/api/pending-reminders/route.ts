@@ -485,8 +485,11 @@ export async function POST(request: Request) {
     const notifiedRecipients: string[] = [];
 
     for (const { recipient, items } of plan) {
-      // Per-recipient cooldown so repeated clicks don't spam a leader.
+      // Per-recipient cooldown so a repeated "Remind all" broadcast doesn't
+      // spam a leader. A deliberate single-person nudge (targetUserId) always
+      // goes through — that's an explicit choice by the admin.
       if (
+        !targetUserId &&
         recipient.lastPendingReminderAt &&
         now.getTime() - recipient.lastPendingReminderAt.getTime() <
           REMINDER_COOLDOWN_MS

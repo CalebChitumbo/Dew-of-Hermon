@@ -175,6 +175,9 @@ export function PendingRemindersCard() {
                 </p>
                 <p className="text-xs text-clay-500 truncate">
                   {r.items.map((i) => i.label).join(" · ")}
+                  {r.onCooldown && (
+                    <span className="text-clay-400"> · reminded recently</span>
+                  )}
                 </p>
               </div>
               {r.hasEmail ? (
@@ -183,10 +186,10 @@ export function PendingRemindersCard() {
                   size="sm"
                   className="gap-1.5 flex-shrink-0"
                   onClick={() => sendReminder(r.id)}
-                  disabled={busy || r.onCooldown}
+                  disabled={busy}
                   title={
                     r.onCooldown
-                      ? "Reminded in the last few hours — try again later"
+                      ? "Reminded recently — sending again will nudge them once more"
                       : undefined
                   }
                 >
@@ -195,7 +198,7 @@ export function PendingRemindersCard() {
                   ) : (
                     <Mail className="h-3.5 w-3.5" />
                   )}
-                  {r.onCooldown ? "Reminded" : "Remind"}
+                  Remind
                 </Button>
               ) : (
                 <span
