@@ -381,14 +381,22 @@ export async function GET() {
       (sum, p) => sum + p.items.reduce((s, i) => s + i.count, 0),
       0
     );
+    const now = new Date();
 
     return NextResponse.json({
       recipientCount: plan.length,
       totalItems,
       recipients: plan.map((p) => ({
+        id: p.recipient.id,
         name: p.recipient.name,
         itemCount: p.items.reduce((s, i) => s + i.count, 0),
+        items: p.items.map((i) => ({ label: i.label, link: i.link })),
         hasEmail: !!p.recipient.email,
+        // Lets the UI disable a per-person button that's still cooling down.
+        onCooldown:
+          !!p.recipient.lastPendingReminderAt &&
+          now.getTime() - p.recipient.lastPendingReminderAt.getTime() <
+            REMINDER_COOLDOWN_MS,
       })),
     });
   } catch (error) {
@@ -401,10 +409,12 @@ export async function GET() {
 }
 
 // ─── POST /api/pending-reminders ───
-// Emails each responsible leader/manager a digest of what's waiting on them.
-// Access: ADMIN and above (Chair / Vice / Admin staff).
+// Emails responsible leaders/managers a digest of what's waiting on them.
+// With no body, reminds every leader who has something pending. With a
+// { userId } body, reminds only that one leader (so an admin can nudge a
+// single person). Access: ADMIN and above (Chair / Vice / Admin staff).
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const caller = await getCaller();
     if (!caller) {
@@ -413,6 +423,12 @@ export async function POST() {
     if (!hasMinRole(caller.role, "ADMIN")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    // Optional single-recipient target. Body may be empty for a broadcast.
+    const body = (await request.json().catch(() => ({}))) as {
+      userId?: string;
+    };
+    const targetUserId = body.userId || null;
 
     const configError = validateEmailConfig();
     if (configError) {
@@ -423,7 +439,21 @@ export async function POST() {
       );
     }
 
-    const plan = await computePlan(caller.uid);
+    let plan = await computePlan(caller.uid);
+
+    if (targetUserId) {
+      plan = plan.filter((p) => p.recipient.id === targetUserId);
+      if (plan.length === 0) {
+        return NextResponse.json({
+          sent: 0,
+          totalItems: 0,
+          skippedCooldown: 0,
+          noEmail: 0,
+          recipients: [],
+          message: "That leader has nothing waiting on them right now.",
+        });
+      }
+    }
 
     if (plan.length === 0) {
       return NextResponse.json({
