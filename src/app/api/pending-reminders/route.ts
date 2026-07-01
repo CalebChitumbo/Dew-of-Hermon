@@ -5,7 +5,6 @@ import {
   getFeaturePermissionsConfig,
   getDepartmentNameToIdMap,
 } from "@/lib/feature-permissions-server";
-import { checkFeatureAccess } from "@/lib/access-control";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import { validateEmailConfig } from "@/lib/email";
 import { UserRole, FeatureMinRoles, DepartmentAccessRule } from "@/types";
@@ -178,9 +177,15 @@ async function loadPendingData(): Promise<PendingData> {
 }
 
 /**
- * Compute the queues awaiting a single leader/manager. This mirrors, item for
- * item, the gating in GET /api/pending-counts — so a leader is reminded of
- * exactly what their own sidebar badges show, no more and no less.
+ * Compute the queues awaiting a single leader/manager.
+ *
+ * A reminder must only reach the person whose *specific* responsibility a
+ * queue is — the Media lead about media, the Food lead about food — never
+ * everyone who merely *could* act on it. So the coordinator queues are gated
+ * by whether this account actually LEADS the department the (configurable)
+ * access rules mark as responsible for that feature, not by the broad
+ * minimum-role check. The role-tier queues (vice-chair / chair stages, chair
+ * report review, chair join-request stage) stay gated by the exact role.
  */
 function pendingForRecipient(
   r: Recipient,
@@ -188,31 +193,34 @@ function pendingForRecipient(
   config: FeatureConfig,
   deptMap: Record<string, string>
 ): PendingItem[] {
-  const can = (featureKey: string) =>
-    checkFeatureAccess(
-      featureKey,
-      r.role,
-      r.departmentIds,
-      r.leadsDepartmentIds,
-      deptMap,
-      config
-    );
-
-  const isAdminPlus = hasMinRole(r.role, "ADMIN");
   const isSuperAdmin = r.role === "SUPER_ADMIN";
+  const isViceChair = r.role === "VICE_CHAIRPERSON";
   const items: PendingItem[] = [];
   const push = (label: string, count: number, link: string) => {
     if (count > 0) items.push({ label, count, link });
   };
 
-  // 1. Event approvals — the stage(s) this user personally signs off.
+  // Does this account lead a department that the access rules mark as the
+  // responsible owner (requiresLeadership) for the given feature? This is what
+  // ties, e.g., the "confirm_food" queue to the Food Logistics lead alone.
+  const ownsFeature = (featureKey: string) =>
+    config.rules.some(
+      (rule) =>
+        rule.featureKey === featureKey &&
+        rule.requiresLeadership &&
+        !!deptMap[rule.departmentName] &&
+        r.leadsDepartmentIds.includes(deptMap[rule.departmentName])
+    );
+
+  // 1. Event approvals — dispatch / stakeholder stage belongs to the Events &
+  //    Fellowship lead; the vice-chair and chair stages to those officers.
   let approvalCount = 0;
-  if (can("approve_events")) {
+  if (ownsFeature("approve_events")) {
     approvalCount +=
       (data.eventStageCounts["PENDING_DISPATCH"] || 0) +
       (data.eventStageCounts["PENDING_STAKEHOLDERS"] || 0);
   }
-  if (r.role === "VICE_CHAIRPERSON" || isSuperAdmin) {
+  if (isViceChair) {
     approvalCount += data.eventStageCounts["PENDING_VICE_CHAIR"] || 0;
   }
   if (isSuperAdmin) {
@@ -233,15 +241,11 @@ function pendingForRecipient(
     );
   }
 
-  // 3. Department join requests — manager stage (dept lead or ADMIN+/Vice)
-  //    plus the chair stage (Chairperson only).
+  // 3. Department join requests — the manager stage belongs to the lead of the
+  //    department being joined; the chair stage to the Chairperson.
   let joinCount = 0;
-  if (isAdminPlus || r.role === "VICE_CHAIRPERSON") {
-    joinCount += data.joinManagerTotal;
-  } else if (r.role === "DEPARTMENT_LEAD") {
-    for (const deptId of r.leadsDepartmentIds) {
-      joinCount += data.joinManagerByDept[deptId] || 0;
-    }
+  for (const deptId of r.leadsDepartmentIds) {
+    joinCount += data.joinManagerByDept[deptId] || 0;
   }
   if (isSuperAdmin) joinCount += data.joinChairCount;
   push(
@@ -250,8 +254,11 @@ function pendingForRecipient(
     "/manage/department-requests"
   );
 
-  // 4. Campus Ministry follow-ups awaiting lead approval.
-  if (can("approve_follow_up")) {
+  // 4. Campus Ministry follow-ups awaiting the Campus Ministry lead's approval.
+  //    Scoped to the Campus Ministry lead specifically (the approve_follow_up
+  //    rules also cover Life Groups, whose lead this campus queue isn't for).
+  const campusDeptId = deptMap["Campus Ministry"];
+  if (campusDeptId && r.leadsDepartmentIds.includes(campusDeptId)) {
     push(
       `${data.campusFollowUpCount} campus follow-up${data.campusFollowUpCount === 1 ? "" : "s"} awaiting your approval`,
       data.campusFollowUpCount,
@@ -259,8 +266,8 @@ function pendingForRecipient(
     );
   }
 
-  // 5. Discipleship — approved contacts not yet assigned.
-  if (can("manage_follow_ups")) {
+  // 5. Discipleship — approved contacts the Discipleship lead must assign.
+  if (ownsFeature("manage_follow_ups")) {
     push(
       `${data.discipleshipCount} new contact${data.discipleshipCount === 1 ? "" : "s"} to assign`,
       data.discipleshipCount,
@@ -268,8 +275,8 @@ function pendingForRecipient(
     );
   }
 
-  // 6. Transport requests awaiting the coordinator's details.
-  if (can("manage_transport_logistics")) {
+  // 6. Transport requests awaiting the Transport lead's details.
+  if (ownsFeature("manage_transport_logistics")) {
     push(
       `${data.transportDetailsCount} transport request${data.transportDetailsCount === 1 ? "" : "s"} awaiting your details`,
       data.transportDetailsCount,
@@ -277,8 +284,8 @@ function pendingForRecipient(
     );
   }
 
-  // 7. Media requests awaiting the Media coordinator's confirmation.
-  if (can("manage_media")) {
+  // 7. Media requests awaiting the Media lead's confirmation.
+  if (ownsFeature("manage_media")) {
     push(
       `${data.mediaCount} media request${data.mediaCount === 1 ? "" : "s"} awaiting your confirmation`,
       data.mediaCount,
@@ -286,8 +293,8 @@ function pendingForRecipient(
     );
   }
 
-  // 8. Food requests awaiting Food Logistics' confirmation.
-  if (can("confirm_food")) {
+  // 8. Food requests awaiting the Food Logistics lead's confirmation.
+  if (ownsFeature("confirm_food")) {
     push(
       `${data.foodCount} food request${data.foodCount === 1 ? "" : "s"} awaiting your confirmation`,
       data.foodCount,
@@ -295,8 +302,8 @@ function pendingForRecipient(
     );
   }
 
-  // 9. Accounts — transport + budget requests awaiting the treasurer.
-  if (can("approve_accounts")) {
+  // 9. Accounts — transport + budget requests awaiting the Finance lead.
+  if (ownsFeature("approve_accounts")) {
     const accounts =
       data.transportTreasurerCount + data.budgetTreasurerCount;
     push(
