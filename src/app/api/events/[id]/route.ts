@@ -1,51 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
-import { UserRole } from "@/types";
+import { adminDb } from "@/lib/firebase-admin";
+import { hasMinRole } from "@/lib/permissions";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-
-// ─── Helper: Get caller info from session cookie ───
-
-async function getCaller(): Promise<{
-  uid: string;
-  role: UserRole;
-  name: string;
-  leadsDepartmentIds: string[];
-} | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      leadsDepartmentIds: data.leadsDepartmentIds || [],
-    };
-  } catch {
-    return null;
-  }
-}
-
-const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 6,
-  VICE_CHAIRPERSON: 5,
-  ADMIN: 4,
-  DEPARTMENT_LEAD: 3,
-  YOUTH_LEADER: 2,
-  MEMBER: 1,
-};
-
-function hasMinRole(role: string, required: string): boolean {
-  return (ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[required] || 0);
-}
 
 // ─── GET /api/events/[id] ───
 // Returns a single event by ID.
@@ -176,9 +134,43 @@ export async function PATCH(
     if (body.description !== undefined) updateData.description = body.description || null;
     if (body.lifeGroupTarget !== undefined) updateData.lifeGroupTarget = body.lifeGroupTarget || null;
 
+    // Material changes to an event that already passed Events-Lead review
+    // (title, venue, audience) invalidate the sign-offs given for the old
+    // details. Unless an Admin+ makes the change, send it back through the
+    // approval pipeline. Staffing (coreRoles) and description edits are
+    // operational and don't trigger re-approval.
+    const MATERIAL_FIELDS = ["title", "venue", "lifeGroupTarget"] as const;
+    const changedMaterial = MATERIAL_FIELDS.filter(
+      (f) =>
+        body[f] !== undefined && (body[f] || null) !== (eventData[f] ?? null)
+    );
+    const status = eventData.approvalStatus || "APPROVED";
+    const pastLeadStage = [
+      "APPROVED",
+      "PENDING_VICE_CHAIR",
+      "PENDING_CHAIR",
+    ].includes(status);
+    let approvalReset = false;
+    if (changedMaterial.length > 0 && pastLeadStage && !isAdminPlus) {
+      approvalReset = true;
+      updateData.approvalStatus = "PENDING_DISPATCH";
+      updateData.approvalComments = `Requires re-approval: ${changedMaterial.join(", ")} edited by ${caller.name} after the event passed Events Lead review.`;
+      updateData.viceChairApprovedBy = null;
+      updateData.viceChairApprovedAt = null;
+      updateData.chairApprovedBy = null;
+      updateData.chairApprovedAt = null;
+      updateData.approvedBy = null;
+      updateData.approvedAt = null;
+    }
+
     await eventRef.update(updateData);
 
-    return NextResponse.json({ success: true, eventId, updated: Object.keys(updateData) });
+    return NextResponse.json({
+      success: true,
+      eventId,
+      updated: Object.keys(updateData),
+      approvalReset,
+    });
   } catch (error) {
     console.error("PATCH /api/events/[id] error:", error);
     return NextResponse.json(

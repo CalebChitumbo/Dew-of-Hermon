@@ -371,13 +371,19 @@ export async function GET(request: NextRequest) {
 
     const eventIds = Array.from(eventMap.keys());
 
-    // For each event, get linked services
-    const servicesSnapshot = await adminDb
-      .collection("services")
-      .where("eventId", "in", eventIds.slice(0, 10)) // Firestore "in" limit
-      .get();
+    // For each event, get linked services. Firestore "in" queries accept at
+    // most 10 values, so chunk the ids instead of silently dropping events.
+    const serviceDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    for (let i = 0; i < eventIds.length; i += 10) {
+      const chunk = eventIds.slice(i, i + 10);
+      const snap = await adminDb
+        .collection("services")
+        .where("eventId", "in", chunk)
+        .get();
+      serviceDocs.push(...snap.docs);
+    }
 
-    if (servicesSnapshot.empty) {
+    if (serviceDocs.length === 0) {
       return NextResponse.json({
         message: "No services linked to upcoming events",
         sent: 0,
@@ -385,7 +391,7 @@ export async function GET(request: NextRequest) {
     }
 
     const serviceMap = new Map<string, Service>();
-    servicesSnapshot.docs.forEach((doc) => {
+    serviceDocs.forEach((doc) => {
       const data = doc.data();
       serviceMap.set(doc.id, {
         id: doc.id,

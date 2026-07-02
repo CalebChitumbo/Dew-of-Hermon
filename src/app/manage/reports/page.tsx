@@ -68,10 +68,14 @@ export default function ReportsPage() {
   useEffect(() => {
     async function fetchReportData() {
       try {
-        // Fetch members
-        const usersSnapshot = await getDocs(
-          query(safeCollection("users"), orderBy("name"))
-        );
+        // The four collections are independent — fetch them in parallel.
+        const [usersSnapshot, deptsSnapshot, servicesSnapshot, assignmentsSnapshot] =
+          await Promise.all([
+            getDocs(query(safeCollection("users"), orderBy("name"))),
+            getDocs(query(safeCollection("departments"), orderBy("order"))),
+            getDocs(safeCollection("services")),
+            getDocs(safeCollection("serviceAssignments")),
+          ]);
         const users = usersSnapshot.docs.map((doc) => doc.data());
 
         const byRole: Record<string, number> = {};
@@ -95,10 +99,7 @@ export default function ReportsPage() {
           byRole,
         });
 
-        // Fetch departments and count members per department
-        const deptsSnapshot = await getDocs(
-          query(safeCollection("departments"), orderBy("order"))
-        );
+        // Count members per department
         const deptsData = deptsSnapshot.docs.map((doc) => {
           const data = doc.data();
           const deptId = doc.id;
@@ -113,12 +114,8 @@ export default function ReportsPage() {
         });
         setDepartments(deptsData);
 
-        // Fetch services
-        const servicesSnapshot = await getDocs(safeCollection("services"));
         const totalServices = servicesSnapshot.size;
 
-        // Fetch all assignments
-        const assignmentsSnapshot = await getDocs(safeCollection("serviceAssignments"));
         let confirmed = 0;
         let pending = 0;
         let declined = 0;

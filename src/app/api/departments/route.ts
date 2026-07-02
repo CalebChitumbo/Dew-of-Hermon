@@ -1,27 +1,10 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { hasMinRole } from "@/lib/permissions";
-import { UserRole } from "@/types";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller(): Promise<{ uid: string; role: UserRole } | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    return { uid: decoded.uid, role: userDoc.data()!.role as UserRole };
-  } catch {
-    return null;
-  }
-}
 
 // POST /api/departments - Create a new department
 export async function POST(request: Request) {

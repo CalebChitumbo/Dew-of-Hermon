@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
-import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
+import { adminDb } from "@/lib/firebase-admin";
+import {
+  serverCheckFeatureAccess,
+  getDepartmentIdByName,
+} from "@/lib/feature-permissions-server";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import { DevotionalScope, UserRole } from "@/types";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import { DevotionalScope } from "@/types";
 
 const VALID_SCOPES: DevotionalScope[] = ["CAMPUS_MINISTRY", "LIFE_GROUPS"];
 
@@ -41,38 +44,6 @@ function parseScope(raw: string | null): DevotionalScope | null {
 }
 
 export const dynamic = "force-dynamic";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: (data.departmentIds || []) as string[],
-      leadsDepartmentIds: (data.leadsDepartmentIds || []) as string[],
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function getDeptIdByName(name: string): Promise<string | null> {
-  const snap = await adminDb
-    .collection("departments")
-    .where("name", "==", name)
-    .limit(1)
-    .get();
-  return snap.empty ? null : snap.docs[0].id;
-}
 
 // GET /api/devotionals — anyone signed in can read the devotional feed.
 export async function GET(request: Request) {
@@ -198,7 +169,7 @@ export async function POST(request: Request) {
 
     // Notify every active member of the target department so the whole
     // audience sees this week's focus.
-    const deptId = await getDeptIdByName(config.departmentName);
+    const deptId = await getDepartmentIdByName(config.departmentName);
     if (deptId) {
       const membersSnap = await adminDb
         .collection("users")

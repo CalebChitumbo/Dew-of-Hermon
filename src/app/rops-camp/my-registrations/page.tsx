@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -68,8 +68,14 @@ export default function MyRegistrationsPage() {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadInFlight = useRef(false);
 
   const load = async () => {
+    // Guard against overlapping runs (effect + Refresh button): a second call
+    // while one is in flight could consume the pending claim twice and let
+    // responses resolve out of order.
+    if (loadInFlight.current) return;
+    loadInFlight.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -102,6 +108,7 @@ export default function MyRegistrationsPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
+      loadInFlight.current = false;
       setLoading(false);
     }
   };

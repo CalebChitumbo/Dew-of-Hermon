@@ -1,47 +1,18 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import { notifyApproversOfPendingEvent } from "@/lib/event-helpers";
 import {
   getStakeholderBlockers,
   cancelAllStakeholderRequests,
 } from "@/lib/event-stakeholders";
-import { UserRole } from "@/types";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import { transitionIfStatus } from "@/lib/workflow-transitions";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
 
-// ─── Helper: Get caller info from session cookie ───
-
-async function getCaller(): Promise<{
-  uid: string;
-  role: UserRole;
-  name: string;
-  departmentIds: string[];
-  leadsDepartmentIds: string[];
-} | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: data.departmentIds || [],
-      leadsDepartmentIds: data.leadsDepartmentIds || [],
-    };
-  } catch {
-    return null;
-  }
-}
+const EVENTS_LEAD_STAGES = ["PENDING_DISPATCH", "PENDING_STAKEHOLDERS"];
 
 // ─── PATCH /api/events/[id]/approve ───
 // Events Lead action. Body: { action: "APPROVE" | "REJECT" | "REQUEST_CHANGES", comments? }
@@ -72,14 +43,6 @@ export async function PATCH(
       );
     }
 
-    const eventRef = adminDb.collection("events").doc(eventId);
-    const eventDoc = await eventRef.get();
-
-    if (!eventDoc.exists) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-
-    const eventData = eventDoc.data()!;
     const body = await request.json();
     const { action, comments } = body;
 
@@ -90,20 +53,11 @@ export async function PATCH(
       );
     }
 
-    const now = new Date();
-    const status = eventData.approvalStatus;
-
     // The Events Lead route only governs the Events-Lead stage. Once an event
     // has advanced to the Vice Chair or Chair tier, only that tier may act on
     // it (through /tier-approve) — including reject and request-changes.
-    if (status !== "PENDING_DISPATCH" && status !== "PENDING_STAKEHOLDERS") {
-      return NextResponse.json(
-        {
-          error: `This event has moved past the Events Lead stage (current status: ${status}). Only the current approver can act on it.`,
-        },
-        { status: 409 }
-      );
-    }
+    // The status guard + write happens inside a transaction so two concurrent
+    // approvers can't double-apply.
 
     if (action === "APPROVE") {
       // Every flagged stakeholder must be confirmed/approved first.
@@ -118,11 +72,20 @@ export async function PATCH(
         );
       }
 
-      await eventRef.update({
-        approvalStatus: "PENDING_VICE_CHAIR",
-        approvalComments: comments || null,
-        updatedAt: now,
+      const txn = await transitionIfStatus({
+        collection: "events",
+        id: eventId,
+        expectedStatus: EVENTS_LEAD_STAGES,
+        newStatus: "PENDING_VICE_CHAIR",
+        actor: { uid: caller.uid, name: caller.name },
+        statusField: "approvalStatus",
+        historyField: null,
+        patch: { approvalComments: comments || null },
       });
+      if (!txn.ok) {
+        return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+      }
+      const eventData = txn.current;
 
       // Notify the Vice Chairperson queue.
       notifyApproversOfPendingEvent(eventData.title, "VICE_CHAIR").catch(
@@ -153,11 +116,20 @@ export async function PATCH(
     }
 
     if (action === "REJECT") {
-      await eventRef.update({
-        approvalStatus: "REJECTED",
-        approvalComments: comments || null,
-        updatedAt: now,
+      const txn = await transitionIfStatus({
+        collection: "events",
+        id: eventId,
+        expectedStatus: EVENTS_LEAD_STAGES,
+        newStatus: "REJECTED",
+        actor: { uid: caller.uid, name: caller.name },
+        statusField: "approvalStatus",
+        historyField: null,
+        patch: { approvalComments: comments || null },
       });
+      if (!txn.ok) {
+        return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+      }
+      const eventData = txn.current;
 
       await cancelAllStakeholderRequests(
         eventId,
@@ -188,11 +160,20 @@ export async function PATCH(
     }
 
     // REQUEST_CHANGES
-    await eventRef.update({
-      approvalStatus: "CHANGES_REQUESTED",
-      approvalComments: comments || null,
-      updatedAt: now,
+    const txn = await transitionIfStatus({
+      collection: "events",
+      id: eventId,
+      expectedStatus: EVENTS_LEAD_STAGES,
+      newStatus: "CHANGES_REQUESTED",
+      actor: { uid: caller.uid, name: caller.name },
+      statusField: "approvalStatus",
+      historyField: null,
+      patch: { approvalComments: comments || null },
     });
+    if (!txn.ok) {
+      return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+    }
+    const eventData = txn.current;
 
     const creatorId = eventData.createdBy;
     if (creatorId) {

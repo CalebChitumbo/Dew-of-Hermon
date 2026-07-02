@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { onSnapshot, orderBy, query } from "firebase/firestore";
-import { safeCollection } from "@/lib/firebase";
+import { getDoc, limit, onSnapshot, orderBy, query } from "firebase/firestore";
+import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Affirmation, Service, AppEvent } from "@/types";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -35,9 +35,12 @@ export default function AffirmationsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only the latest affirmation plus a collapsed "previous" list is shown,
+    // so cap the live query instead of streaming the whole collection.
     const affirmationsQuery = query(
       safeCollection("affirmations"),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(25)
     );
 
     const unsub = onSnapshot(affirmationsQuery, (snapshot) => {
@@ -57,43 +60,75 @@ export default function AffirmationsPage() {
     return () => unsub();
   }, []);
 
+  // Resolve service→event dates for just the affirmations on screen instead
+  // of subscribing to the entire services and events collections.
   useEffect(() => {
-    const unsub = onSnapshot(safeCollection("services"), (snapshot) => {
-      const svcMap = new Map<string, Service>();
-      snapshot.docs.forEach((d) => {
-        const data = d.data();
-        svcMap.set(d.id, {
-          id: d.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        } as Service);
-      });
-      setServices(svcMap);
-    });
+    const serviceIds = Array.from(
+      new Set(
+        affirmations
+          .map((a) => a.serviceId)
+          .filter((id): id is string => !!id)
+      )
+    ).filter((id) => !services.has(id));
+    if (serviceIds.length === 0) return;
 
-    return () => unsub();
-  }, []);
+    let cancelled = false;
+    (async () => {
+      try {
+        const serviceSnaps = await Promise.all(
+          serviceIds.map((id) => getDoc(safeDoc("services", id)))
+        );
+        const newServices: Service[] = [];
+        serviceSnaps.forEach((snap) => {
+          if (!snap.exists()) return;
+          const data = snap.data();
+          newServices.push({
+            id: snap.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+            updatedAt: data.updatedAt?.toDate?.() || new Date(),
+          } as Service);
+        });
 
-  useEffect(() => {
-    const unsub = onSnapshot(safeCollection("events"), (snapshot) => {
-      const evtMap = new Map<string, AppEvent>();
-      snapshot.docs.forEach((d) => {
-        const data = d.data();
-        evtMap.set(d.id, {
-          id: d.id,
-          ...data,
-          startDate: data.startDate?.toDate?.() || new Date(),
-          endDate: data.endDate?.toDate?.() || null,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        } as AppEvent);
-      });
-      setEvents(evtMap);
-    });
+        const eventIds = Array.from(
+          new Set(newServices.map((s) => s.eventId).filter(Boolean))
+        );
+        const eventSnaps = await Promise.all(
+          eventIds.map((id) => getDoc(safeDoc("events", id)))
+        );
+        if (cancelled) return;
 
-    return () => unsub();
-  }, []);
+        setServices((prev) => {
+          const next = new Map(prev);
+          newServices.forEach((s) => next.set(s.id, s));
+          return next;
+        });
+        setEvents((prev) => {
+          const next = new Map(prev);
+          eventSnaps.forEach((snap) => {
+            if (!snap.exists()) return;
+            const data = snap.data();
+            next.set(snap.id, {
+              id: snap.id,
+              ...data,
+              startDate: data.startDate?.toDate?.() || new Date(),
+              endDate: data.endDate?.toDate?.() || null,
+              createdAt: data.createdAt?.toDate?.() || new Date(),
+              updatedAt: data.updatedAt?.toDate?.() || new Date(),
+            } as AppEvent);
+          });
+          return next;
+        });
+      } catch (error) {
+        console.error("Failed to load service dates for affirmations:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [affirmations]);
 
   const getServiceDate = (serviceId: string | null): Date | null => {
     if (!serviceId) return null;

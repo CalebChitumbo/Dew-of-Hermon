@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   query,
   where,
   orderBy,
   onSnapshot,
   updateDoc,
+  limit,
   Timestamp,
 } from "firebase/firestore";
 import { safeCollection, safeDoc, safeWriteBatch } from "@/lib/firebase";
@@ -106,8 +108,13 @@ function groupNotificationsByDate(
     }));
 }
 
+// Cap the real-time list so a long-lived account doesn't stream its entire
+// notification history on every visit.
+const NOTIFICATIONS_LIMIT = 100;
+
 export default function NotificationsPage() {
   const { firebaseUser } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -120,7 +127,8 @@ export default function NotificationsPage() {
     const q = query(
       notificationsRef,
       where("userId", "==", firebaseUser.uid),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(NOTIFICATIONS_LIMIT)
     );
 
     const unsubscribe = onSnapshot(
@@ -197,7 +205,7 @@ export default function NotificationsPage() {
       markAsRead(notification.id);
     }
     if (notification.link) {
-      window.location.href = notification.link;
+      router.push(notification.link);
     }
   }
 
@@ -260,11 +268,19 @@ export default function NotificationsPage() {
                 return (
                   <Card
                     key={notification.id}
+                    role="button"
+                    tabIndex={0}
                     className={cn(
-                      "cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)]",
+                      "cursor-pointer transition-all hover:bg-white hover:shadow-[0_8px_24px_-16px_rgba(91,58,41,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C8963E]",
                       !notification.isRead && "border-l-4 border-l-[#C8963E] bg-[#C8963E]/[0.03]"
                     )}
                     onClick={() => handleNotificationClick(notification)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleNotificationClick(notification);
+                      }
+                    }}
                   >
                     <CardContent className="py-4">
                       <div className="flex items-start gap-3">

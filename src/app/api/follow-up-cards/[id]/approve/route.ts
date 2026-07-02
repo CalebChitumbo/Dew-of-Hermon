@@ -1,43 +1,14 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import { FollowUpStatus, UserRole } from "@/types";
+import {
+  serverCheckFeatureAccess,
+  getDepartmentIdByName,
+} from "@/lib/feature-permissions-server";
+import { FollowUpStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: (data.departmentIds || []) as string[],
-      leadsDepartmentIds: (data.leadsDepartmentIds || []) as string[],
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function getDeptIdByName(name: string): Promise<string | null> {
-  const snap = await adminDb
-    .collection("departments")
-    .where("name", "==", name)
-    .limit(1)
-    .get();
-  return snap.empty ? null : snap.docs[0].id;
-}
 
 // POST /api/follow-up-cards/[id]/approve
 // Body: { action: "APPROVE" | "REJECT", reason?: string }
@@ -145,7 +116,7 @@ export async function POST(
 
     // On approval, notify the discipleship team that a new card is in their queue.
     if (action === "APPROVE") {
-      const discipleshipDeptId = await getDeptIdByName("Discipleship & Follow-Up");
+      const discipleshipDeptId = await getDepartmentIdByName("Discipleship & Follow-Up");
       if (discipleshipDeptId) {
         const discipleshipMembers = await adminDb
           .collection("users")

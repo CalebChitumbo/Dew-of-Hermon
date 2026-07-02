@@ -1,28 +1,10 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getAssignableRoles } from "@/lib/permissions";
 import { serverHasFeatureMinRole } from "@/lib/feature-permissions-server";
+import { getSessionCaller as getCallerRole } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-import { UserRole } from "@/types";
-
-async function getCallerRole(): Promise<{ uid: string; role: UserRole } | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return { uid: decoded.uid, role: data.role as UserRole };
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(
   request: Request,
@@ -107,6 +89,18 @@ export async function PUT(
 
     const existingData = existingDoc.data()!;
 
+    // Enforce hierarchy on ALL edits (not just role changes): a caller may not
+    // modify any account that outranks them — otherwise an ADMIN could
+    // deactivate the SUPER_ADMIN, change their email, or strip their
+    // departments. Editing yourself is always allowed.
+    const assignable = getAssignableRoles(callerRole);
+    if (id !== caller.uid && !assignable.includes(existingData.role)) {
+      return NextResponse.json(
+        { error: "You cannot modify someone with a higher role than yours" },
+        { status: 403 }
+      );
+    }
+
     if (role && role !== existingData.role) {
       if (!(await serverHasFeatureMinRole("change_user_roles", callerRole))) {
         return NextResponse.json(
@@ -115,7 +109,6 @@ export async function PUT(
         );
       }
       // Enforce hierarchy: caller can only assign roles at or below their own level
-      const assignable = getAssignableRoles(callerRole);
       if (!assignable.includes(role)) {
         return NextResponse.json(
           { error: "You cannot assign a role higher than your own" },

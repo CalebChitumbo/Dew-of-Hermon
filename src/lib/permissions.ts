@@ -1,6 +1,6 @@
 import { UserRole } from "@/types";
 
-const roleHierarchy: Record<UserRole, number> = {
+export const roleHierarchy: Record<UserRole, number> = {
   SUPER_ADMIN: 6,
   VICE_CHAIRPERSON: 5,
   ADMIN: 4,

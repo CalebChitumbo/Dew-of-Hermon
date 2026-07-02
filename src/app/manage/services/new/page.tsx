@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -51,7 +52,7 @@ function CreateServiceForm() {
     setSubmitting(true);
 
     try {
-      const response = await fetch("/api/services", {
+      const response = await fetchWithAuth("/api/services", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -59,8 +60,6 @@ function CreateServiceForm() {
           theme: theme.trim() || null,
           venue: venue.trim(),
           serviceTime,
-          callerRole: userData.role,
-          callerId: userData.id,
         }),
       });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -106,27 +106,24 @@ export default function RopsCampPage() {
   const [registeredCount, setRegisteredCount] = useState<number>(0);
   const formRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const refresh = async () => {
-      try {
-        const res = await fetch(
-          `/api/camp-registrations/capacity?campId=${camp.id}`
-        );
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!cancelled) setRegisteredCount(json.registered ?? 0);
-      } catch {
-        // capacity badge is best-effort
-      }
-    };
-    refresh();
-    const id = setInterval(refresh, 30_000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
+  const refreshCount = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/camp-registrations/capacity?campId=${camp.id}`
+      );
+      if (!res.ok) return;
+      const json = await res.json();
+      setRegisteredCount(json.registered ?? 0);
+    } catch {
+      // capacity badge is best-effort
+    }
   }, []);
+
+  useEffect(() => {
+    refreshCount();
+    const id = setInterval(refreshCount, 30_000);
+    return () => clearInterval(id);
+  }, [refreshCount]);
 
   return (
     <div className="font-body bg-rops-cream min-h-screen text-rops-ink">
@@ -144,7 +141,10 @@ export default function RopsCampPage() {
           <Glimpses />
           <RegistrationForm
             formRef={formRef}
-            onSubmitted={() => setRegisteredCount((c) => c + 1)}
+            // Re-read the authoritative count rather than optimistically
+            // bumping it, so the badge can't flicker back down on the next
+            // 30s poll.
+            onSubmitted={refreshCount}
           />
           <Footer onAdminClick={() => setView("admin-gate")} />
         </>

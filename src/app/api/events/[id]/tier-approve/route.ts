@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import {
   createDepartmentRoleSkeletons,
@@ -10,30 +9,10 @@ import {
 } from "@/lib/event-helpers";
 import { cancelAllStakeholderRequests } from "@/lib/event-stakeholders";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import { UserRole } from "@/types";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import { transitionIfStatus } from "@/lib/workflow-transitions";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: data.departmentIds || [],
-      leadsDepartmentIds: data.leadsDepartmentIds || [],
-    };
-  } catch {
-    return null;
-  }
-}
 
 async function notifyCreator(
   eventData: FirebaseFirestore.DocumentData,
@@ -125,13 +104,27 @@ export async function PATCH(
 
     const now = new Date();
 
+    // The pre-read above only chose the tier + permission check; the actual
+    // status guard + write happens atomically so two concurrent approvers
+    // can't double-apply a transition.
+    const expectedStatus =
+      tier === "VICE_CHAIR" ? "PENDING_VICE_CHAIR" : "PENDING_CHAIR";
+
     if (action === "REJECT" || action === "REQUEST_CHANGES") {
       const newStatus = action === "REJECT" ? "REJECTED" : "CHANGES_REQUESTED";
-      await eventRef.update({
-        approvalStatus: newStatus,
-        approvalComments: comments || null,
-        updatedAt: now,
+      const txn = await transitionIfStatus({
+        collection: "events",
+        id: eventId,
+        expectedStatus,
+        newStatus,
+        actor: { uid: caller.uid, name: caller.name },
+        statusField: "approvalStatus",
+        historyField: null,
+        patch: { approvalComments: comments || null },
       });
+      if (!txn.ok) {
+        return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+      }
       if (action === "REJECT") {
         await cancelAllStakeholderRequests(
           eventId,
@@ -152,13 +145,23 @@ export async function PATCH(
 
     // APPROVE
     if (tier === "VICE_CHAIR") {
-      await eventRef.update({
-        approvalStatus: "PENDING_CHAIR",
-        viceChairApprovedBy: caller.uid,
-        viceChairApprovedAt: now,
-        approvalComments: comments || null,
-        updatedAt: now,
+      const txn = await transitionIfStatus({
+        collection: "events",
+        id: eventId,
+        expectedStatus,
+        newStatus: "PENDING_CHAIR",
+        actor: { uid: caller.uid, name: caller.name },
+        statusField: "approvalStatus",
+        historyField: null,
+        patch: {
+          viceChairApprovedBy: caller.uid,
+          viceChairApprovedAt: now,
+          approvalComments: comments || null,
+        },
       });
+      if (!txn.ok) {
+        return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+      }
       notifyApproversOfPendingEvent(eventData.title, "CHAIR").catch(console.error);
       await notifyCreator(
         eventData,
@@ -170,15 +173,25 @@ export async function PATCH(
     }
 
     // tier === "CHAIR" → final approval publishes the event.
-    await eventRef.update({
-      approvalStatus: "APPROVED",
-      chairApprovedBy: caller.uid,
-      chairApprovedAt: now,
-      approvedBy: caller.uid,
-      approvedAt: now,
-      approvalComments: comments || null,
-      updatedAt: now,
+    const txn = await transitionIfStatus({
+      collection: "events",
+      id: eventId,
+      expectedStatus,
+      newStatus: "APPROVED",
+      actor: { uid: caller.uid, name: caller.name },
+      statusField: "approvalStatus",
+      historyField: null,
+      patch: {
+        chairApprovedBy: caller.uid,
+        chairApprovedAt: now,
+        approvedBy: caller.uid,
+        approvedAt: now,
+        approvalComments: comments || null,
+      },
     });
+    if (!txn.ok) {
+      return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+    }
 
     // Publish side-effects (only now does the event go live).
     createDepartmentRoleSkeletons(eventId).catch(console.error);

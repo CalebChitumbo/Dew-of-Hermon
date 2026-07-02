@@ -1,65 +1,12 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import { EventType, UserRole, LifeGroup } from "@/types";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import { hasMinRole } from "@/lib/permissions";
+import { getDepartmentIdByName } from "@/lib/feature-permissions-server";
+import { EventType, LifeGroup } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-// ─── Helper: Get caller info from session cookie ───
-
-async function getCaller(): Promise<{
-  uid: string;
-  role: UserRole;
-  name: string;
-  leadsDepartmentIds: string[];
-  departmentIds: string[];
-} | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      leadsDepartmentIds: data.leadsDepartmentIds || [],
-      departmentIds: data.departmentIds || [],
-    };
-  } catch {
-    return null;
-  }
-}
-
-const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 6,
-  VICE_CHAIRPERSON: 5,
-  ADMIN: 4,
-  DEPARTMENT_LEAD: 3,
-  YOUTH_LEADER: 2,
-  MEMBER: 1,
-};
-
-function hasMinRole(role: string, required: string): boolean {
-  return (ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[required] || 0);
-}
-
-// ─── Helper: Get Events & Fellowship department ID ───
-
-async function getEventsFellowshipDeptId(): Promise<string | null> {
-  const snap = await adminDb
-    .collection("departments")
-    .where("name", "==", "Events & Fellowship")
-    .limit(1)
-    .get();
-  return snap.empty ? null : snap.docs[0].id;
-}
 
 // ─── Helper: Notify Events & Fellowship managers about a pending event ───
 
@@ -68,7 +15,7 @@ async function notifyEventsFellowshipManagers(
   eventTitle: string
 ) {
   try {
-    const efDeptId = await getEventsFellowshipDeptId();
+    const efDeptId = await getDepartmentIdByName("Events & Fellowship");
     if (!efDeptId) return;
 
     // Find users who lead Events & Fellowship

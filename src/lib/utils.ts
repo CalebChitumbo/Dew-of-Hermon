@@ -30,7 +30,7 @@ export function replacePlaceholders(
 ): string {
   let result = template;
   for (const [key, value] of Object.entries(data)) {
-    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+    result = result.split(`{{${key}}}`).join(value);
   }
   return result;
 }
@@ -42,8 +42,4 @@ export function firestoreTimestampToDate(timestamp: { seconds: number; nanosecon
     return new Date(timestamp.seconds * 1000);
   }
   return null;
-}
-
-export function generateId(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }

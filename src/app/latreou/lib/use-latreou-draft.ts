@@ -195,6 +195,26 @@ export function useLatreouDraft(): UseLatreouDraft {
     };
   }, []);
 
+  // React cleanup doesn't run on a hard tab close, so also flush any edits
+  // still inside the debounce window when the page is being hidden/unloaded.
+  useEffect(() => {
+    const flushOnExit = () => {
+      if (pendingCycleRef.current) {
+        writeStoredDraft(pendingCycleRef.current);
+        pendingCycleRef.current = null;
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flushOnExit();
+    };
+    window.addEventListener("beforeunload", flushOnExit);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("beforeunload", flushOnExit);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
   return {
     cycle,
     setCycle,

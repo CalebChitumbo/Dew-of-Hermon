@@ -1,38 +1,10 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { canAssignAnyRole, canAssignOwnDeptRole } from "@/lib/permissions";
 import { createNotificationWithEmail } from "@/lib/notifications";
+import { getSessionCaller } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-import { UserRole } from "@/types";
-
-/**
- * Resolve the caller from their session cookie. Gives us a trustworthy role and
- * the departments they lead, which the body cannot be trusted to supply.
- */
-async function getSessionCaller(): Promise<{
-  uid: string;
-  role: UserRole;
-  leadsDepartmentIds: string[];
-} | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      leadsDepartmentIds: data.leadsDepartmentIds || [],
-    };
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(
   request: Request,
@@ -40,6 +12,12 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    // Assignments include member emails/phone numbers — require a session.
+    const caller = await getSessionCaller();
+    if (!caller) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const assignmentsSnapshot = await adminDb
       .collection("serviceAssignments")
@@ -84,22 +62,15 @@ export async function POST(
   try {
     const { id: serviceId } = await params;
     const body = await request.json();
-    const { roleId, userId, callerRole } = body;
+    const { roleId, userId } = body;
 
-    // Prefer the verified session for the role; fall back to the body so older
-    // clients keep working.
+    // The caller's role must come from a verified session — never the body.
     const caller = await getSessionCaller();
-    const effectiveRole: UserRole | undefined =
-      caller?.role || (callerRole as UserRole | undefined);
-
-    if (!effectiveRole) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
+    if (!caller) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!canAssignAnyRole(effectiveRole) && !canAssignOwnDeptRole(effectiveRole)) {
+    if (!canAssignAnyRole(caller.role) && !canAssignOwnDeptRole(caller.role)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -115,9 +86,8 @@ export async function POST(
 
     // Department scoping: ADMIN+ can assign any role, but a department head may
     // only assign roles within a department they lead (so the Media head staffs
-    // Media, Hospitality staffs Hospitality, etc.). Only enforced when we have a
-    // verified session — legacy callers without one keep the prior behaviour.
-    if (caller && !canAssignAnyRole(caller.role)) {
+    // Media, Hospitality staffs Hospitality, etc.).
+    if (!canAssignAnyRole(caller.role)) {
       const roleSnap = await adminDb.collection("serviceRoles").doc(roleId).get();
       if (!roleSnap.exists) {
         return NextResponse.json(
@@ -314,6 +284,7 @@ export async function POST(
         message: notificationMessage,
         type: "assignment",
         link: "/my-schedule",
+        metadata: { assignmentId: assignment.id, serviceId },
         email: {
           subject: emailSubject,
           text: emailText,

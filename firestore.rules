@@ -39,10 +39,10 @@ service cloud.firestore {
       allow update: if isOwner(userId) || isDeptLead();
       allow delete: if isSuperAdmin();
 
-      match /availabilities/{dateId} {
+      // Self-service availability: users manage their own unavailable dates.
+      match /availability/{dateId} {
         allow read: if isSignedIn();
-        allow create, update: if isOwner(userId) || isAdmin();
-        allow delete: if isSuperAdmin();
+        allow create, update, delete: if isOwner(userId) || isAdmin();
       }
     }
 
@@ -230,12 +230,14 @@ service cloud.firestore {
     }
 
     // ─── ROPs Camp Registrations ───
-    // Anyone can submit a registration (public form). Reads and updates
-    // (e.g. marking paid/unpaid) are admin-only and go through the API.
-    // Hard-deletion of registrations is reserved for the Chairperson.
+    // Registrations are submitted through /api/camp-registrations (Admin SDK,
+    // which validates the payload and enforces capacity), so direct client
+    // writes are closed off. Reads and updates (e.g. marking paid/unpaid) are
+    // admin-only. Hard-deletion of registrations is reserved for the
+    // Chairperson.
     match /campRegistrations/{regId} {
       allow read: if isAdmin();
-      allow create: if request.resource.data.paymentStatus == "UNPAID";
+      allow create: if false;
       allow update: if isAdmin();
       allow delete: if isSuperAdmin();
     }

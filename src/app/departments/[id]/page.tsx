@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { hasMinRole } from "@/lib/permissions";
 import {
   User,
@@ -64,7 +65,7 @@ import {
   AlertCircle,
   CalendarDays,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 const priorityColors: Record<TaskPriority, string> = {
   LOW: "bg-clay-100 text-clay-600",
@@ -84,6 +85,7 @@ export default function DepartmentDetailPage() {
   const router = useRouter();
   const deptId = params.id as string;
   const { userData } = useAuth();
+  const { toast } = useToast();
 
   const [department, setDepartment] = useState<Department | null>(null);
   const [members, setMembers] = useState<User[]>([]);
@@ -157,8 +159,11 @@ export default function DepartmentDetailPage() {
     return () => unsub();
   }, [deptId]);
 
-  // Listen to all users (for add member dialog)
+  // Listen to all users, but only while the add-member dialog is open and the
+  // viewer is a lead — streaming the whole user directory to every visitor is
+  // both wasteful and unnecessary.
   useEffect(() => {
+    if (!isDeptLead || !addMemberOpen) return;
     const unsub = onSnapshot(safeCollection("users"), (snapshot) => {
       setAllUsers(
         snapshot.docs.map((d) => ({
@@ -170,7 +175,7 @@ export default function DepartmentDetailPage() {
       );
     });
     return () => unsub();
-  }, []);
+  }, [isDeptLead, addMemberOpen]);
 
   // Fetch tasks
   const fetchTasks = useCallback(async () => {
@@ -182,7 +187,9 @@ export default function DepartmentDetailPage() {
         setTasks(
           data.tasks.map((t: DepartmentTask & { dueDate: string | null; completedAt: string | null; createdAt: string; updatedAt: string }) => ({
             ...t,
-            dueDate: t.dueDate ? new Date(t.dueDate) : null,
+            // parseISO treats date-only strings as local time, so a
+            // "yyyy-MM-dd" due date can't render as the previous day.
+            dueDate: t.dueDate ? parseISO(t.dueDate) : null,
             completedAt: t.completedAt ? new Date(t.completedAt) : null,
             createdAt: new Date(t.createdAt),
             updatedAt: new Date(t.updatedAt),
@@ -211,6 +218,11 @@ export default function DepartmentDetailPage() {
       setSearchQuery("");
     } catch (error) {
       console.error("Error adding member:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add the member. Please try again.",
+        variant: "destructive",
+      });
     }
     setAddingMember(null);
   };
@@ -223,6 +235,11 @@ export default function DepartmentDetailPage() {
       });
     } catch (error) {
       console.error("Error removing member:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove the member. Please try again.",
+        variant: "destructive",
+      });
     }
     setRemovingMember(null);
   };
@@ -260,9 +277,21 @@ export default function DepartmentDetailPage() {
           dueDate: "",
         });
         fetchTasks();
+      } else {
+        const data = await res.json().catch(() => null);
+        toast({
+          title: "Error",
+          description: data?.error || "Failed to create the task. Please try again.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Error creating task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create the task. Please try again.",
+        variant: "destructive",
+      });
     }
     setCreatingTask(false);
   };

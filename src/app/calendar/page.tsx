@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   startOfMonth,
@@ -14,7 +14,6 @@ import {
   startOfWeek,
   endOfWeek,
   isToday,
-  parseISO,
 } from "date-fns";
 import {
   query,
@@ -25,6 +24,7 @@ import {
   limit as fsLimit,
 } from "firebase/firestore";
 import { safeCollection } from "@/lib/firebase";
+import { mapEventDoc } from "@/lib/event-mapper";
 import { useAuth } from "@/contexts/AuthContext";
 import { canCreateEvents, hasMinRole } from "@/lib/permissions";
 import { AppEvent, EventType, LifeGroup } from "@/types";
@@ -101,64 +101,7 @@ const EVENT_TYPE_CONFIG: Record<
 
 const DAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// ─── Helper to parse Firestore dates ───
-
-function parseFirestoreDate(val: unknown): Date {
-  if (val instanceof Timestamp) return val.toDate();
-  if (val instanceof Date) return val;
-  if (typeof val === "string") return parseISO(val);
-  if (val && typeof val === "object" && "seconds" in val) {
-    return new Date((val as { seconds: number }).seconds * 1000);
-  }
-  return new Date();
-}
-
-function mapEvent(doc: { id: string; data: () => Record<string, unknown> }): AppEvent {
-  const data = doc.data();
-  return {
-    id: doc.id,
-    title: data.title as string,
-    description: (data.description as string) || null,
-    type: data.type as EventType,
-    startDate: parseFirestoreDate(data.startDate),
-    endDate: data.endDate ? parseFirestoreDate(data.endDate) : null,
-    venue: (data.venue as string) || "",
-    isRecurring: (data.isRecurring as boolean) || false,
-    createdBy: (data.createdBy as string) || "",
-    lifeGroupTarget: (data.lifeGroupTarget as LifeGroup | "ALL") || null,
-    approvalStatus: (data.approvalStatus as AppEvent["approvalStatus"]) || "APPROVED",
-    approvalComments: (data.approvalComments as string) || null,
-    approvedBy: (data.approvedBy as string) || null,
-    approvedAt: data.approvedAt ? parseFirestoreDate(data.approvedAt) : null,
-    createdByDepartmentId: (data.createdByDepartmentId as string) || null,
-    coreRoles: (data.coreRoles as AppEvent["coreRoles"]) || [],
-    speaker: (data.speaker as string) || null,
-    objective: (data.objective as string) || null,
-    isPaid: (data.isPaid as boolean) || false,
-    attendanceFee: (data.attendanceFee as number) ?? null,
-    attendanceFeeCurrency: (data.attendanceFeeCurrency as string) || null,
-    transportRequired: (data.transportRequired as boolean) || false,
-    transportNeeds: (data.transportNeeds as string) || null,
-    transportRequestId: (data.transportRequestId as string) || null,
-    budgetRequested: (data.budgetRequested as boolean) || false,
-    budgetAmount: (data.budgetAmount as number) ?? null,
-    budgetCurrency: (data.budgetCurrency as string) || null,
-    budgetPurpose: (data.budgetPurpose as string) || null,
-    budgetRequestId: (data.budgetRequestId as string) || null,
-    mediaRequired: (data.mediaRequired as boolean) || false,
-    mediaNeeds: (data.mediaNeeds as string) || null,
-    mediaRequestId: (data.mediaRequestId as string) || null,
-    foodRequired: (data.foodRequired as boolean) || false,
-    foodNeeds: (data.foodNeeds as string) || null,
-    foodRequestId: (data.foodRequestId as string) || null,
-    viceChairApprovedBy: (data.viceChairApprovedBy as string) || null,
-    viceChairApprovedAt: data.viceChairApprovedAt ? parseFirestoreDate(data.viceChairApprovedAt) : null,
-    chairApprovedBy: (data.chairApprovedBy as string) || null,
-    chairApprovedAt: data.chairApprovedAt ? parseFirestoreDate(data.chairApprovedAt) : null,
-    createdAt: parseFirestoreDate(data.createdAt),
-    updatedAt: parseFirestoreDate(data.updatedAt),
-  };
-}
+const mapEvent = mapEventDoc;
 
 // ─── ICS (calendar subscription) ───
 
@@ -212,6 +155,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [upcoming, setUpcoming] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const canCreate = userData ? canCreateEvents(userData.role) : false;
@@ -220,6 +164,7 @@ export default function CalendarPage() {
   // ─── Fetch events for current month range ───
   const fetchEvents = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const monthStart = startOfMonth(currentMonth);
       const monthEnd = endOfMonth(currentMonth);
@@ -234,6 +179,7 @@ export default function CalendarPage() {
       setEvents(fetched.filter((e) => e.approvalStatus === "APPROVED"));
     } catch (error) {
       console.error("Failed to fetch events:", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -271,8 +217,21 @@ export default function CalendarPage() {
   const calendarEnd = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
+  // Bucket events by day once instead of filtering the full list for each of
+  // the ~42 grid cells on every render.
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, AppEvent[]>();
+    for (const event of events) {
+      const key = format(event.startDate, "yyyy-MM-dd");
+      const bucket = map.get(key);
+      if (bucket) bucket.push(event);
+      else map.set(key, [event]);
+    }
+    return map;
+  }, [events]);
+
   function getEventsForDay(day: Date): AppEvent[] {
-    return events.filter((event) => isSameDay(event.startDate, day));
+    return eventsByDay.get(format(day, "yyyy-MM-dd")) ?? [];
   }
 
   const selectedDayEvents = selectedDate ? getEventsForDay(selectedDate) : [];
@@ -356,6 +315,16 @@ export default function CalendarPage() {
               {loading ? (
                 <div className="flex items-center justify-center py-20">
                   <LoadingSpinner size="lg" />
+                </div>
+              ) : loadError ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+                  <p className="text-sm text-clay-500">
+                    Couldn&apos;t load this month&apos;s events. Check your
+                    connection and try again.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={fetchEvents}>
+                    Retry
+                  </Button>
                 </div>
               ) : (
                 <>

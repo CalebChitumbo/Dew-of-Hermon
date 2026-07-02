@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import { hasMinRole } from "@/lib/permissions";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import { transitionIfStatus } from "@/lib/workflow-transitions";
 import { DepartmentJoinRequestStatus, UserRole } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -16,28 +17,6 @@ type DecisionAction =
   | "APPROVE"
   | "REJECT"
   | "CANCEL";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: (data.name as string) || "",
-      leadsDepartmentIds: (data.leadsDepartmentIds || []) as string[],
-    };
-  } catch {
-    return null;
-  }
-}
 
 // POST /api/department-join-requests/[id]/decision
 // Body: { action: "RECOMMEND" | "DECLINE" | "APPROVE" | "REJECT" | "CANCEL", comments?: string }
@@ -90,7 +69,6 @@ export async function POST(
     const isChair = caller.role === "SUPER_ADMIN";
 
     const now = new Date();
-    const history = (req.statusHistory || []) as Array<unknown>;
 
     // ── Manager stage ─────────────────────────────────────────────────────
     if (action === "RECOMMEND" || action === "DECLINE") {
@@ -110,24 +88,23 @@ export async function POST(
       const newStatus: DepartmentJoinRequestStatus =
         action === "RECOMMEND" ? "PENDING_CHAIR" : "REJECTED";
 
-      await docRef.update({
-        status: newStatus,
-        managerId: caller.uid,
-        managerName: caller.name,
-        managerDecidedAt: now,
-        managerComments: comments,
-        statusHistory: [
-          ...history,
-          {
-            status: newStatus,
-            changedBy: caller.uid,
-            changedByName: caller.name,
-            changedAt: now,
-            comments,
-          },
-        ],
-        updatedAt: now,
+      const txn = await transitionIfStatus({
+        collection: "departmentJoinRequests",
+        id,
+        expectedStatus: "PENDING_MANAGER",
+        newStatus,
+        actor: { uid: caller.uid, name: caller.name },
+        comments,
+        patch: {
+          managerId: caller.uid,
+          managerName: caller.name,
+          managerDecidedAt: now,
+          managerComments: comments,
+        },
       });
+      if (!txn.ok) {
+        return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+      }
 
       if (action === "RECOMMEND") {
         // Notify the Chairperson(s) that a request awaits final approval.
@@ -195,6 +172,26 @@ export async function POST(
       const newStatus: DepartmentJoinRequestStatus =
         action === "APPROVE" ? "APPROVED" : "REJECTED";
 
+      // Transition first (atomically), so a concurrent second decision can't
+      // add the member to the department twice or double-notify.
+      const txn = await transitionIfStatus({
+        collection: "departmentJoinRequests",
+        id,
+        expectedStatus: "PENDING_CHAIR",
+        newStatus,
+        actor: { uid: caller.uid, name: caller.name },
+        comments,
+        patch: {
+          chairId: caller.uid,
+          chairName: caller.name,
+          chairDecidedAt: now,
+          chairComments: comments,
+        },
+      });
+      if (!txn.ok) {
+        return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+      }
+
       // On approval, add the member to the department and — for a plain member
       // — lift them to Youth Leader, since belonging to a team grants the
       // department-level access that role carries. Higher roles are left as-is.
@@ -218,25 +215,6 @@ export async function POST(
           }
         }
       }
-
-      await docRef.update({
-        status: newStatus,
-        chairId: caller.uid,
-        chairName: caller.name,
-        chairDecidedAt: now,
-        chairComments: comments,
-        statusHistory: [
-          ...history,
-          {
-            status: newStatus,
-            changedBy: caller.uid,
-            changedByName: caller.name,
-            changedAt: now,
-            comments,
-          },
-        ],
-        updatedAt: now,
-      });
 
       // Notify the requester of the final outcome.
       createNotificationWithEmail({
@@ -288,20 +266,17 @@ export async function POST(
         );
       }
 
-      await docRef.update({
-        status: "CANCELLED" as DepartmentJoinRequestStatus,
-        statusHistory: [
-          ...history,
-          {
-            status: "CANCELLED",
-            changedBy: caller.uid,
-            changedByName: caller.name,
-            changedAt: now,
-            comments,
-          },
-        ],
-        updatedAt: now,
+      const txn = await transitionIfStatus({
+        collection: "departmentJoinRequests",
+        id,
+        expectedStatus: ["PENDING_MANAGER", "PENDING_CHAIR"],
+        newStatus: "CANCELLED",
+        actor: { uid: caller.uid, name: caller.name },
+        comments,
       });
+      if (!txn.ok) {
+        return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+      }
 
       return NextResponse.json({ success: true, status: "CANCELLED" });
     }

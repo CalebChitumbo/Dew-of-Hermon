@@ -1,28 +1,10 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { getAssignableRoles } from "@/lib/permissions";
 import { serverHasFeatureMinRole } from "@/lib/feature-permissions-server";
+import { getSessionCaller as getCallerRole } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-import { UserRole } from "@/types";
-
-async function getCallerRole(): Promise<{ uid: string; role: UserRole } | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return { uid: decoded.uid, role: data.role as UserRole };
-  } catch {
-    return null;
-  }
-}
 
 export async function GET() {
   try {
@@ -119,41 +101,67 @@ export async function POST(request: Request) {
       password: tempPassword,
     });
 
-    // If student, auto-add Campus Ministry department
-    let finalDepartmentIds = departmentIds || [];
-    if (isStudent) {
-      // Find Campus Ministry department ID
-      const campusDeptSnapshot = await adminDb
-        .collection("departments")
-        .where("name", "==", "Campus Ministry")
-        .limit(1)
-        .get();
-      if (!campusDeptSnapshot.empty) {
-        const campusDeptId = campusDeptSnapshot.docs[0].id;
-        if (!finalDepartmentIds.includes(campusDeptId)) {
-          finalDepartmentIds = [...finalDepartmentIds, campusDeptId];
+    let userData: {
+      name: string;
+      email: string;
+      phone: string | null;
+      role: string;
+      departmentIds: string[];
+      leadsDepartmentIds: string[];
+      profileImage: string | null;
+      isActive: boolean;
+      lifeGroup: string | null;
+      isStudent: boolean;
+      institutionId: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+    try {
+      // If student, auto-add Campus Ministry department
+      let finalDepartmentIds = departmentIds || [];
+      if (isStudent) {
+        // Find Campus Ministry department ID
+        const campusDeptSnapshot = await adminDb
+          .collection("departments")
+          .where("name", "==", "Campus Ministry")
+          .limit(1)
+          .get();
+        if (!campusDeptSnapshot.empty) {
+          const campusDeptId = campusDeptSnapshot.docs[0].id;
+          if (!finalDepartmentIds.includes(campusDeptId)) {
+            finalDepartmentIds = [...finalDepartmentIds, campusDeptId];
+          }
         }
       }
+
+      // Create Firestore document
+      userData = {
+        name,
+        email,
+        phone: phone || null,
+        role: role || "MEMBER",
+        departmentIds: finalDepartmentIds,
+        leadsDepartmentIds: [],
+        profileImage: null,
+        isActive: true,
+        lifeGroup: lifeGroup || null,
+        isStudent: isStudent || false,
+        institutionId: isStudent ? (institutionId || null) : null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await adminDb.collection("users").doc(userRecord.uid).set(userData);
+    } catch (profileError) {
+      // Don't leave an orphaned Auth account (email consumed, no profile) if
+      // the Firestore write fails — roll the Auth user back.
+      await adminAuth
+        .deleteUser(userRecord.uid)
+        .catch((cleanupError) =>
+          console.error("Failed to roll back auth user:", cleanupError)
+        );
+      throw profileError;
     }
-
-    // Create Firestore document
-    const userData = {
-      name,
-      email,
-      phone: phone || null,
-      role: role || "MEMBER",
-      departmentIds: finalDepartmentIds,
-      leadsDepartmentIds: [],
-      profileImage: null,
-      isActive: true,
-      lifeGroup: lifeGroup || null,
-      isStudent: isStudent || false,
-      institutionId: isStudent ? (institutionId || null) : null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    await adminDb.collection("users").doc(userRecord.uid).set(userData);
 
     return NextResponse.json(
       {

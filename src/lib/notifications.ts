@@ -8,12 +8,27 @@ import {
 import { sendPushToUser } from "@/lib/push";
 import type { EmailDeliveryStatus } from "@/types";
 
+/** Escape user-controlled values before interpolating them into email HTML. */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 interface CreateNotificationParams {
   userId: string;
   title: string;
   message: string;
   type: "reminder" | "assignment" | "event" | "announcement";
   link?: string | null;
+  /**
+   * Structured references (e.g. { assignmentId, serviceId }) so clients can
+   * find related notifications without matching on display text.
+   */
+  metadata?: Record<string, string> | null;
   /** Pass the recipient email directly to avoid an extra Firestore lookup */
   recipientEmail?: string;
   email?: {
@@ -34,6 +49,7 @@ export async function createNotificationWithEmail({
   message,
   type,
   link = null,
+  metadata = null,
   recipientEmail,
   email,
 }: CreateNotificationParams) {
@@ -45,6 +61,7 @@ export async function createNotificationWithEmail({
     type,
     isRead: false,
     link,
+    metadata,
     emailStatus: "pending" as EmailDeliveryStatus,
     emailDocId: null,
     emailError: null,
@@ -108,8 +125,8 @@ export async function createNotificationWithEmail({
     email?.html ||
     `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #5C4033;">${title}</h2>
-      <p>${message}</p>
+      <h2 style="color: #5C4033;">${escapeHtml(title)}</h2>
+      <p>${escapeHtml(message)}</p>
       <a href="${linkUrl}" style="display: inline-block; padding: 10px 24px; background-color: #14b8a6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">View Details</a>
       <p style="margin-top: 24px; color: #888;">Blessings,<br/>Potter's Wheel Team</p>
     </div>
@@ -231,8 +248,8 @@ export async function retryNotificationEmail(
         text: `${data.message}\n\nView details: ${linkUrl}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #5C4033;">${data.title}</h2>
-            <p>${data.message}</p>
+            <h2 style="color: #5C4033;">${escapeHtml(data.title)}</h2>
+            <p>${escapeHtml(data.message)}</p>
             <a href="${linkUrl}" style="display: inline-block; padding: 10px 24px; background-color: #14b8a6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">View Details</a>
             <p style="margin-top: 24px; color: #888;">Blessings,<br/>Potter's Wheel Team</p>
           </div>

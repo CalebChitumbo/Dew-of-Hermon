@@ -1,36 +1,12 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import { DepartmentJoinRequestStatus, UserRole } from "@/types";
+import { DepartmentJoinRequestStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 const QUEUE_LINK = "/manage/department-requests";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: (data.name as string) || "",
-      email: (data.email as string) || null,
-      departmentIds: (data.departmentIds || []) as string[],
-      leadsDepartmentIds: (data.leadsDepartmentIds || []) as string[],
-    };
-  } catch {
-    return null;
-  }
-}
 
 const ACTIVE_STATUSES: DepartmentJoinRequestStatus[] = [
   "PENDING_MANAGER",

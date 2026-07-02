@@ -183,36 +183,59 @@ const roles = [
 export async function POST(request: Request) {
   try {
     // Accept a fresh ID token from the request body, or fall back to session cookie
-    let token: string | undefined;
+    let idToken: string | undefined;
 
     try {
       const body = await request.json();
-      token = body.idToken;
+      idToken = body.idToken;
     } catch {
       // No JSON body — fall back to cookie
     }
 
-    if (!token) {
-      const cookieStore = await cookies();
-      token = cookieStore.get("session")?.value;
+    let uid: string | undefined;
+    try {
+      if (idToken) {
+        const decoded = await adminAuth.verifyIdToken(idToken);
+        uid = decoded.uid;
+      } else {
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("session")?.value;
+        if (sessionCookie) {
+          const decoded = await adminAuth.verifySessionCookie(sessionCookie);
+          uid = decoded.uid;
+        }
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid session. Please log in again." },
+        { status: 401 }
+      );
     }
 
-    if (!token) {
+    if (!uid) {
       return NextResponse.json(
         { error: "You must be logged in to seed data" },
         { status: 401 }
       );
     }
 
-    let uid: string;
-    try {
-      const decoded = await adminAuth.verifyIdToken(token);
-      uid = decoded.uid;
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid session. Please log in again." },
-        { status: 401 }
-      );
+    // Seeding (and the SUPER_ADMIN self-upgrade below) is only allowed for an
+    // existing SUPER_ADMIN, or for anyone during first-run bootstrap while no
+    // SUPER_ADMIN exists yet.
+    const callerDoc = await adminDb.collection("users").doc(uid).get();
+    const callerRole = callerDoc.exists ? callerDoc.data()?.role : null;
+    if (callerRole !== "SUPER_ADMIN") {
+      const superAdmins = await adminDb
+        .collection("users")
+        .where("role", "==", "SUPER_ADMIN")
+        .limit(1)
+        .get();
+      if (!superAdmins.empty) {
+        return NextResponse.json(
+          { error: "Only a SUPER_ADMIN can seed data" },
+          { status: 403 }
+        );
+      }
     }
 
     const results: string[] = [];

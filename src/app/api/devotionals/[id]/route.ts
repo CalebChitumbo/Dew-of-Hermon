@@ -1,33 +1,13 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import { DevotionalScope, UserRole } from "@/types";
+import {
+  getSessionCaller as getCaller,
+  SessionCaller,
+} from "@/lib/server-auth";
+import { DevotionalScope } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: (data.departmentIds || []) as string[],
-      leadsDepartmentIds: (data.leadsDepartmentIds || []) as string[],
-    };
-  } catch {
-    return null;
-  }
-}
 
 const FEATURE_KEY_BY_SCOPE: Record<DevotionalScope, string> = {
   CAMPUS_MINISTRY: "manage_devotionals",
@@ -35,7 +15,7 @@ const FEATURE_KEY_BY_SCOPE: Record<DevotionalScope, string> = {
 };
 
 async function callerCanManageDoc(
-  caller: NonNullable<Awaited<ReturnType<typeof getCaller>>>,
+  caller: SessionCaller,
   docScope: DevotionalScope
 ): Promise<boolean> {
   const featureKey = FEATURE_KEY_BY_SCOPE[docScope];

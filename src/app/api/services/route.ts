@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { serverHasFeatureMinRole } from "@/lib/feature-permissions-server";
 import { ensureServiceForDate, maybeNotifyRotaOpen } from "@/lib/service-provisioning";
+import { getSessionCaller } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-import { UserRole } from "@/types";
 
 export async function GET(request: Request) {
   try {
@@ -131,9 +131,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { date, theme, venue, serviceTime, callerRole, callerId } = body;
+    const { date, theme, venue, serviceTime } = body;
 
-    if (!callerRole || !(await serverHasFeatureMinRole("create_service", callerRole as UserRole))) {
+    // The caller's identity and role must come from a verified session —
+    // never the request body.
+    const caller = await getSessionCaller();
+    if (!caller) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!(await serverHasFeatureMinRole("create_service", caller.role))) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -156,7 +162,7 @@ export async function POST(request: Request) {
       venue: venue.trim(),
       serviceTime,
       theme: theme?.trim() || null,
-      createdBy: callerId || "",
+      createdBy: caller.uid,
       autoProvisioned: false,
     });
 

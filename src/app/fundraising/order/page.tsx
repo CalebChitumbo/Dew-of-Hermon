@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import {
   CURRENCY_SYMBOL,
   FUNDRAISING_PICKUP_OPTIONS,
@@ -74,6 +74,14 @@ export default function PottersShockersOrderPage() {
   const [copied, setCopied] = useState(false);
 
   const drawerRef = useRef<HTMLDivElement | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear any pending "Copied" reset on unmount.
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
 
   // ─── Initial data ───────────────────────────────────────────────
   useEffect(() => {
@@ -231,7 +239,8 @@ export default function PottersShockersOrderPage() {
     try {
       await navigator.clipboard.writeText(raw);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 1800);
     } catch {
       // ignore — most browsers will allow it; fallback could be added if needed
     }
@@ -245,6 +254,23 @@ export default function PottersShockersOrderPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
+
+  // While the drawer is open, lock background scroll and move focus into it
+  // so keyboard/screen-reader users land in the dialog rather than the page
+  // behind it.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeButton =
+      drawerRef.current?.querySelector<HTMLElement>(".po-cart-close");
+    closeButton?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus?.();
+    };
   }, [drawerOpen]);
 
   // ─── Render ─────────────────────────────────────────────────────
@@ -326,7 +352,7 @@ export default function PottersShockersOrderPage() {
                 {braais.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.title} ·{" "}
-                    {format(new Date(b.eventDate), "EEE, d MMM yyyy")}
+                    {format(parseISO(b.eventDate), "EEE, d MMM yyyy")}
                     {b.venue ? ` · ${b.venue}` : ""}
                   </option>
                 ))}
@@ -341,7 +367,7 @@ export default function PottersShockersOrderPage() {
                   }}
                 >
                   Your order will be ready for collection on{" "}
-                  {format(new Date(selectedBraai.eventDate), "EEEE, d MMMM")}.
+                  {format(parseISO(selectedBraai.eventDate), "EEEE, d MMMM")}.
                 </p>
               )}
             </>
@@ -434,6 +460,10 @@ export default function PottersShockersOrderPage() {
       <aside
         className={`po-cart-drawer ${drawerOpen ? "po-open" : ""}`}
         ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Order basket"
+        aria-hidden={!drawerOpen}
       >
         <div className="po-cart-head">
           <span>
@@ -880,7 +910,7 @@ function ReceiptView({
             <span>{order.braaiEventTitle}</span>
             <span>
               {order.braaiEventDate
-                ? format(new Date(order.braaiEventDate), "EEE, d MMM")
+                ? format(parseISO(order.braaiEventDate), "EEE, d MMM")
                 : ""}
             </span>
           </div>

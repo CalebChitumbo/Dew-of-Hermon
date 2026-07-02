@@ -1,35 +1,11 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import {
-  transitionBudgetRequest,
-  notifyEventsLeadOfBudgetDecision,
-} from "@/lib/budget-helpers";
-import type { UserRole } from "@/types";
+import { notifyEventsLeadOfBudgetDecision } from "@/lib/budget-helpers";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: data.departmentIds || [],
-      leadsDepartmentIds: data.leadsDepartmentIds || [],
-    };
-  } catch {
-    return null;
-  }
-}
 
 type Action = "APPROVE" | "REJECT";
 
@@ -84,59 +60,71 @@ export async function PATCH(
     }
 
     const requestRef = adminDb.collection("budgetRequests").doc(id);
-    const requestDoc = await requestRef.get();
-    if (!requestDoc.exists) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    const current = requestDoc.data()!;
-    if (current.status !== "PENDING_TREASURER") {
-      return NextResponse.json(
-        {
-          error: `Cannot decide on request in status ${current.status}; must be PENDING_TREASURER`,
-        },
-        { status: 409 }
-      );
-    }
-
-    const requestedAmount: number = current.requestedAmount ?? 0;
-    const currency: string = current.currency ?? "";
-
-    let finalApprovedAmount: number | null = null;
-    if (action === "APPROVE") {
-      const candidate = Number(approvedAmount ?? requestedAmount);
-      if (!Number.isFinite(candidate) || candidate < 0) {
-        return NextResponse.json(
-          { error: "approvedAmount must be a non-negative number" },
-          { status: 400 }
-        );
-      }
-      if (candidate > requestedAmount) {
-        return NextResponse.json(
-          {
-            error: `approvedAmount (${candidate}) cannot exceed requestedAmount (${requestedAmount})`,
-          },
-          { status: 400 }
-        );
-      }
-      finalApprovedAmount = candidate;
-    }
-
     const now = new Date();
     const newStatus = action === "APPROVE" ? "APPROVED" : "REJECTED";
 
-    await transitionBudgetRequest(
-      id,
-      newStatus,
-      { uid: caller.uid, name: caller.name },
-      trimmedComments,
-      {
+    // Read, status-guard, and write atomically so two concurrent treasurers
+    // can't both pass the PENDING_TREASURER check and double-apply.
+    const txn = await adminDb.runTransaction(async (tx) => {
+      const requestDoc = await tx.get(requestRef);
+      if (!requestDoc.exists) {
+        return { error: "Not found", httpStatus: 404 } as const;
+      }
+      const current = requestDoc.data()!;
+      if (current.status !== "PENDING_TREASURER") {
+        return {
+          error: `Cannot decide on request in status ${current.status}; must be PENDING_TREASURER`,
+          httpStatus: 409,
+        } as const;
+      }
+
+      const requestedAmount: number = current.requestedAmount ?? 0;
+
+      let finalApprovedAmount: number | null = null;
+      if (action === "APPROVE") {
+        const candidate = Number(approvedAmount ?? requestedAmount);
+        if (!Number.isFinite(candidate) || candidate < 0) {
+          return {
+            error: "approvedAmount must be a non-negative number",
+            httpStatus: 400,
+          } as const;
+        }
+        if (candidate > requestedAmount) {
+          return {
+            error: `approvedAmount (${candidate}) cannot exceed requestedAmount (${requestedAmount})`,
+            httpStatus: 400,
+          } as const;
+        }
+        finalApprovedAmount = candidate;
+      }
+
+      tx.update(requestRef, {
         approvedAmount: finalApprovedAmount,
         treasurerId: caller.uid,
         treasurerName: caller.name,
         treasurerDecidedAt: now,
         treasurerComments: trimmedComments,
-      }
-    );
+        status: newStatus,
+        updatedAt: now,
+        statusHistory: FieldValue.arrayUnion({
+          status: newStatus,
+          changedBy: caller.uid,
+          changedByName: caller.name,
+          changedAt: now,
+          comments: trimmedComments,
+        }),
+      });
+
+      return { current, finalApprovedAmount } as const;
+    });
+
+    if ("error" in txn) {
+      return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+    }
+
+    const { current, finalApprovedAmount } = txn;
+    const requestedAmount: number = current.requestedAmount ?? 0;
+    const currency: string = current.currency ?? "";
 
     // Look up event creator for notifications
     let creatorId: string | null = null;

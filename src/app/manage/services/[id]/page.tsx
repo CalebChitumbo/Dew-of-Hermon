@@ -12,6 +12,7 @@ import {
   documentId,
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleProtected } from "@/components/shared/RoleProtected";
 import { LoadingSpinner, PageLoader } from "@/components/shared/LoadingSpinner";
@@ -774,15 +775,14 @@ function AssignmentBoardContent() {
 
       setAssigning(true);
       try {
-        const response = await fetch(`/api/services/${serviceId}/assignments`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            roleId: selectedRoleId,
-            userId,
-            callerRole: userData.role,
-          }),
-        });
+        const response = await fetchWithAuth(
+          `/api/services/${serviceId}/assignments`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ roleId: selectedRoleId, userId }),
+          }
+        );
 
         const result = await response.json();
 
@@ -821,8 +821,8 @@ function AssignmentBoardContent() {
 
       setRemovingId(assignmentId);
       try {
-        const response = await fetch(
-          `/api/services/${serviceId}/assignments/${assignmentId}?callerRole=${userData.role}`,
+        const response = await fetchWithAuth(
+          `/api/services/${serviceId}/assignments/${assignmentId}`,
           { method: "DELETE" }
         );
 
@@ -861,10 +861,10 @@ function AssignmentBoardContent() {
     setSendingReminder(true);
     setReminderConfirmOpen(false);
     try {
-      const response = await fetch(`/api/services/${serviceId}/remind`, {
+      const response = await fetchWithAuth(`/api/services/${serviceId}/remind`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callerRole: userData.role }),
+        body: JSON.stringify({}),
       });
 
       const result = await response.json();

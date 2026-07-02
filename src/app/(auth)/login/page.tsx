@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,12 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { signIn, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Honour a ?next= deep link (same safety check as the register page).
+  const nextUrl = searchParams.get("next");
+  const isSafeNext = nextUrl && nextUrl.startsWith("/") && !nextUrl.startsWith("//");
+  const postAuthRedirect = isSafeNext ? nextUrl : "/dashboard";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +32,7 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password);
-      router.push("/dashboard");
+      router.push(postAuthRedirect);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to sign in";
@@ -42,7 +48,7 @@ export default function LoginPage() {
 
     try {
       await signInWithGoogle();
-      router.push("/dashboard");
+      router.push(postAuthRedirect);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Failed to sign in with Google";

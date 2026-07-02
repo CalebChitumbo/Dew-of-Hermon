@@ -3,7 +3,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import { validateEmailConfig } from "@/lib/email";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import { hasMinRole } from "@/lib/permissions";
-import { UserRole } from "@/types";
+import { getSessionCaller } from "@/lib/server-auth";
 import { format } from "date-fns";
 
 export async function POST(
@@ -12,10 +12,10 @@ export async function POST(
 ) {
   try {
     const { id: serviceId } = await params;
-    const body = await request.json();
-    const { callerRole } = body as { callerRole: UserRole };
 
-    if (!callerRole || !hasMinRole(callerRole, "DEPARTMENT_LEAD")) {
+    // The caller's role must come from a verified session, not the body.
+    const caller = await getSessionCaller();
+    if (!caller || !hasMinRole(caller.role, "DEPARTMENT_LEAD")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
