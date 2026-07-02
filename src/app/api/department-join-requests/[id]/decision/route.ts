@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import { hasMinRole } from "@/lib/permissions";
 import { DepartmentJoinRequestStatus, UserRole } from "@/types";
@@ -90,7 +91,6 @@ export async function POST(
     const isChair = caller.role === "SUPER_ADMIN";
 
     const now = new Date();
-    const history = (req.statusHistory || []) as Array<unknown>;
 
     // ── Manager stage ─────────────────────────────────────────────────────
     if (action === "RECOMMEND" || action === "DECLINE") {
@@ -116,16 +116,13 @@ export async function POST(
         managerName: caller.name,
         managerDecidedAt: now,
         managerComments: comments,
-        statusHistory: [
-          ...history,
-          {
-            status: newStatus,
-            changedBy: caller.uid,
-            changedByName: caller.name,
-            changedAt: now,
-            comments,
-          },
-        ],
+        statusHistory: FieldValue.arrayUnion({
+          status: newStatus,
+          changedBy: caller.uid,
+          changedByName: caller.name,
+          changedAt: now,
+          comments,
+        }),
         updatedAt: now,
       });
 
@@ -225,16 +222,13 @@ export async function POST(
         chairName: caller.name,
         chairDecidedAt: now,
         chairComments: comments,
-        statusHistory: [
-          ...history,
-          {
-            status: newStatus,
-            changedBy: caller.uid,
-            changedByName: caller.name,
-            changedAt: now,
-            comments,
-          },
-        ],
+        statusHistory: FieldValue.arrayUnion({
+          status: newStatus,
+          changedBy: caller.uid,
+          changedByName: caller.name,
+          changedAt: now,
+          comments,
+        }),
         updatedAt: now,
       });
 
@@ -290,16 +284,13 @@ export async function POST(
 
       await docRef.update({
         status: "CANCELLED" as DepartmentJoinRequestStatus,
-        statusHistory: [
-          ...history,
-          {
-            status: "CANCELLED",
-            changedBy: caller.uid,
-            changedByName: caller.name,
-            changedAt: now,
-            comments,
-          },
-        ],
+        statusHistory: FieldValue.arrayUnion({
+          status: "CANCELLED",
+          changedBy: caller.uid,
+          changedByName: caller.name,
+          changedAt: now,
+          comments,
+        }),
         updatedAt: now,
       });
 

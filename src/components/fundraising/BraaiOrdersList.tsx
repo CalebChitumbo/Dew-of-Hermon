@@ -115,6 +115,7 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [menu, setMenu] = useState<FundraisingMenuConfig | null>(null);
   const [menuLoading, setMenuLoading] = useState(false);
+  const [menuError, setMenuError] = useState<string | null>(null);
 
   const [paymentDialog, setPaymentDialog] = useState<{
     order: SerializedOrder;
@@ -148,23 +149,28 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
   }, [firebaseUser, load]);
 
   // Load menu lazily when the "Add on behalf" dialog opens
+  const loadMenu = useCallback(async () => {
+    setMenuLoading(true);
+    setMenuError(null);
+    try {
+      const res = await fetch("/api/fundraising/public/menu");
+      const data = await res.json();
+      if (res.ok) {
+        setMenu(data);
+      } else {
+        setMenuError(data?.error || "Failed to load the menu.");
+      }
+    } catch {
+      setMenuError("Failed to load the menu.");
+    } finally {
+      setMenuLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!addOpen || menu) return;
-    let cancelled = false;
-    (async () => {
-      setMenuLoading(true);
-      try {
-        const res = await fetch("/api/fundraising/public/menu");
-        const data = await res.json();
-        if (!cancelled && res.ok) setMenu(data);
-      } finally {
-        if (!cancelled) setMenuLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [addOpen, menu]);
+    loadMenu();
+  }, [addOpen, menu, loadMenu]);
 
   const filtered = useMemo(() => {
     let list = orders;
@@ -609,6 +615,8 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
         braaiTitle={braaiTitle}
         menu={menu}
         menuLoading={menuLoading}
+        menuError={menuError}
+        onRetryMenu={loadMenu}
         onCreated={(o) => {
           setOrders((prev) => [o, ...prev]);
           setAddOpen(false);
@@ -1018,6 +1026,8 @@ function AddOrderDialog({
   braaiTitle,
   menu,
   menuLoading,
+  menuError,
+  onRetryMenu,
   onCreated,
 }: {
   open: boolean;
@@ -1026,6 +1036,8 @@ function AddOrderDialog({
   braaiTitle: string;
   menu: FundraisingMenuConfig | null;
   menuLoading: boolean;
+  menuError: string | null;
+  onRetryMenu: () => void;
   onCreated: (order: SerializedOrder) => void;
 }) {
   const { firebaseUser } = useAuth();
@@ -1138,6 +1150,13 @@ function AddOrderDialog({
         {menuLoading ? (
           <div className="flex items-center justify-center py-8">
             <LoadingSpinner />
+          </div>
+        ) : menuError && !menu ? (
+          <div className="space-y-3 py-4 text-center">
+            <p className="text-sm text-red-700">{menuError}</p>
+            <Button type="button" variant="outline" size="sm" onClick={onRetryMenu}>
+              Try again
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">

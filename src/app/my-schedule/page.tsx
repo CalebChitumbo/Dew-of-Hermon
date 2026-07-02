@@ -282,6 +282,11 @@ export default function MySchedulePage() {
       setUnavailableReason("");
     } catch (error) {
       console.error("Error setting availability:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save your unavailable date. Please try again.",
+        variant: "destructive",
+      });
     }
     setSavingAvailability(false);
   };
@@ -292,6 +297,11 @@ export default function MySchedulePage() {
       await deleteDoc(safeDoc("users", firebaseUser.uid, "availability", date));
     } catch (error) {
       console.error("Error removing availability:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove the unavailable date. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -511,14 +521,13 @@ export default function MySchedulePage() {
                           ({a.reason})
                         </span>
                       )}
-                      {userData?.role === "SUPER_ADMIN" && (
-                        <button
-                          onClick={() => handleRemoveUnavailable(a.date)}
-                          className="ml-1 hover:text-red-500 transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleRemoveUnavailable(a.date)}
+                        className="ml-1 hover:text-red-500 transition-colors"
+                        aria-label={`Remove unavailability on ${format(parseISO(a.date), "MMM d, yyyy")}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </Badge>
                   ))}
               </div>

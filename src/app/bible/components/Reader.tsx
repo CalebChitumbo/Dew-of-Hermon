@@ -56,7 +56,11 @@ export function Reader({
         if (!active) return;
         setVerses(data);
         setLoading(false);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        // When jumping to a specific verse (e.g. from Search), VerseList
+        // scrolls to it — don't fight that with a scroll-to-top.
+        if (!focusVerse) {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
       })
       .catch(() => {
         if (!active) return;
@@ -66,6 +70,9 @@ export function Reader({
     return () => {
       active = false;
     };
+    // focusVerse is deliberately omitted: it only matters at navigation time
+    // (when translation/book/chapter change) and must not refetch the chapter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [translation, bookId, chapter]);
 
   const prev = step(bookId, chapter, -1);

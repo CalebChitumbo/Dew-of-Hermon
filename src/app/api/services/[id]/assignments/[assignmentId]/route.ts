@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { canAssignAnyRole, canAssignOwnDeptRole } from "@/lib/permissions";
+import { getSessionCaller } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-import { UserRole, AssignmentStatus } from "@/types";
+import { AssignmentStatus } from "@/types";
 
 export async function PUT(
   request: Request,
@@ -12,7 +13,14 @@ export async function PUT(
   try {
     const { id: serviceId, assignmentId } = await params;
     const body = await request.json();
-    const { status, notes, callerRole, callerId } = body;
+    const { status, notes } = body;
+
+    // The caller's identity and role must come from a verified session —
+    // never the request body.
+    const caller = await getSessionCaller();
+    if (!caller) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     // For status updates, either the assigned user themselves or an admin can do it
     const assignmentDoc = await adminDb
@@ -38,9 +46,9 @@ export async function PUT(
     }
 
     // Permission: the assigned user can confirm/decline their own, admins can do anything
-    const isOwnAssignment = callerId && assignmentData.userId === callerId;
-    const isAdmin = callerRole && canAssignAnyRole(callerRole as UserRole);
-    const isDeptLead = callerRole && canAssignOwnDeptRole(callerRole as UserRole);
+    const isOwnAssignment = assignmentData.userId === caller.uid;
+    const isAdmin = canAssignAnyRole(caller.role);
+    const isDeptLead = canAssignOwnDeptRole(caller.role);
 
     if (!isOwnAssignment && !isAdmin && !isDeptLead) {
       return NextResponse.json(
@@ -123,10 +131,13 @@ export async function DELETE(
 ) {
   try {
     const { id: serviceId, assignmentId } = await params;
-    const { searchParams } = new URL(request.url);
-    const callerRole = searchParams.get("callerRole") as UserRole | null;
 
-    if (callerRole !== "SUPER_ADMIN") {
+    // The caller's role must come from a verified session, not a query param.
+    const caller = await getSessionCaller();
+    if (!caller) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (caller.role !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "Only the Chairperson (Super Admin) can delete assignments" },
         { status: 403 }

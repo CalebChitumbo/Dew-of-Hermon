@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   startOfMonth,
@@ -212,6 +212,7 @@ export default function CalendarPage() {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [upcoming, setUpcoming] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const canCreate = userData ? canCreateEvents(userData.role) : false;
@@ -220,6 +221,7 @@ export default function CalendarPage() {
   // ─── Fetch events for current month range ───
   const fetchEvents = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const monthStart = startOfMonth(currentMonth);
       const monthEnd = endOfMonth(currentMonth);
@@ -234,6 +236,7 @@ export default function CalendarPage() {
       setEvents(fetched.filter((e) => e.approvalStatus === "APPROVED"));
     } catch (error) {
       console.error("Failed to fetch events:", error);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -271,8 +274,21 @@ export default function CalendarPage() {
   const calendarEnd = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
+  // Bucket events by day once instead of filtering the full list for each of
+  // the ~42 grid cells on every render.
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, AppEvent[]>();
+    for (const event of events) {
+      const key = format(event.startDate, "yyyy-MM-dd");
+      const bucket = map.get(key);
+      if (bucket) bucket.push(event);
+      else map.set(key, [event]);
+    }
+    return map;
+  }, [events]);
+
   function getEventsForDay(day: Date): AppEvent[] {
-    return events.filter((event) => isSameDay(event.startDate, day));
+    return eventsByDay.get(format(day, "yyyy-MM-dd")) ?? [];
   }
 
   const selectedDayEvents = selectedDate ? getEventsForDay(selectedDate) : [];
@@ -356,6 +372,16 @@ export default function CalendarPage() {
               {loading ? (
                 <div className="flex items-center justify-center py-20">
                   <LoadingSpinner size="lg" />
+                </div>
+              ) : loadError ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+                  <p className="text-sm text-clay-500">
+                    Couldn&apos;t load this month&apos;s events. Check your
+                    connection and try again.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={fetchEvents}>
+                    Retry
+                  </Button>
                 </div>
               ) : (
                 <>

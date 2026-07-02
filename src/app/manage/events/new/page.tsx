@@ -380,6 +380,15 @@ export default function NewEventPage() {
       return;
     }
 
+    if (endDate && endDate < date) {
+      toast({
+        title: "Invalid end date",
+        description: "The end date cannot be before the start date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const startDate = new Date(`${date}T${time || "09:00"}`);
@@ -391,7 +400,11 @@ export default function NewEventPage() {
           title: title.trim(),
           type,
           startDate: startDate.toISOString(),
-          endDate: endDate ? new Date(`${endDate}T09:00`).toISOString() : null,
+          // Multi-day events end at the same time of day they start rather
+          // than a hardcoded 09:00.
+          endDate: endDate
+            ? new Date(`${endDate}T${time || "09:00"}`).toISOString()
+            : null,
           venue: venue.trim(),
           description: description.trim() || null,
           isRecurring: false,

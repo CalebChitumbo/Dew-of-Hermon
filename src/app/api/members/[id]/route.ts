@@ -107,6 +107,18 @@ export async function PUT(
 
     const existingData = existingDoc.data()!;
 
+    // Enforce hierarchy on ALL edits (not just role changes): a caller may not
+    // modify any account that outranks them — otherwise an ADMIN could
+    // deactivate the SUPER_ADMIN, change their email, or strip their
+    // departments. Editing yourself is always allowed.
+    const assignable = getAssignableRoles(callerRole);
+    if (id !== caller.uid && !assignable.includes(existingData.role)) {
+      return NextResponse.json(
+        { error: "You cannot modify someone with a higher role than yours" },
+        { status: 403 }
+      );
+    }
+
     if (role && role !== existingData.role) {
       if (!(await serverHasFeatureMinRole("change_user_roles", callerRole))) {
         return NextResponse.json(
@@ -115,7 +127,6 @@ export async function PUT(
         );
       }
       // Enforce hierarchy: caller can only assign roles at or below their own level
-      const assignable = getAssignableRoles(callerRole);
       if (!assignable.includes(role)) {
         return NextResponse.json(
           { error: "You cannot assign a role higher than your own" },

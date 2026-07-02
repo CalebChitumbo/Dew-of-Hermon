@@ -55,9 +55,11 @@ export default function MembersPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch users
-        const usersQuery = query(safeCollection("users"), orderBy("name"));
-        const usersSnapshot = await getDocs(usersQuery);
+        // Users and departments are independent — fetch them in parallel.
+        const [usersSnapshot, deptsSnapshot] = await Promise.all([
+          getDocs(query(safeCollection("users"), orderBy("name"))),
+          getDocs(query(safeCollection("departments"), orderBy("order"))),
+        ]);
         const usersData = usersSnapshot.docs.map((doc) => {
           const data = doc.data();
           return {
@@ -72,9 +74,6 @@ export default function MembersPage() {
         });
         setMembers(usersData);
 
-        // Fetch departments
-        const deptsQuery = query(safeCollection("departments"), orderBy("order"));
-        const deptsSnapshot = await getDocs(deptsQuery);
         const deptsData = deptsSnapshot.docs.map((doc) => {
           const data = doc.data();
           return {

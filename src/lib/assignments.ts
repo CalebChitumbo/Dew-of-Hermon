@@ -59,7 +59,7 @@ export async function assignRole(
           adminDb
             .collection("users")
             .doc(userId)
-            .collection("availabilities")
+            .collection("availability")
             .doc(dateStr)
         );
 

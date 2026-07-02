@@ -75,6 +75,54 @@ function toDate(val: unknown): Date {
   return new Date();
 }
 
+/** Map a Firestore event document to an AppEvent (shared by both listeners). */
+function mapEventDoc(d: { id: string; data: () => Record<string, any> }): AppEvent {
+  const data = d.data();
+  return {
+    id: d.id,
+    title: data.title,
+    description: data.description ?? null,
+    type: data.type,
+    startDate: toDate(data.startDate),
+    endDate: data.endDate ? toDate(data.endDate) : null,
+    venue: data.venue,
+    isRecurring: data.isRecurring ?? false,
+    createdBy: data.createdBy,
+    lifeGroupTarget: data.lifeGroupTarget ?? null,
+    approvalStatus: data.approvalStatus ?? "APPROVED",
+    approvalComments: data.approvalComments ?? null,
+    approvedBy: data.approvedBy ?? null,
+    approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
+    createdByDepartmentId: data.createdByDepartmentId ?? null,
+    coreRoles: data.coreRoles ?? [],
+    speaker: data.speaker ?? null,
+    objective: data.objective ?? null,
+    isPaid: data.isPaid ?? false,
+    attendanceFee: data.attendanceFee ?? null,
+    attendanceFeeCurrency: data.attendanceFeeCurrency ?? null,
+    transportRequired: data.transportRequired ?? false,
+    transportNeeds: data.transportNeeds ?? null,
+    transportRequestId: data.transportRequestId ?? null,
+    budgetRequested: data.budgetRequested ?? false,
+    budgetAmount: data.budgetAmount ?? null,
+    budgetCurrency: data.budgetCurrency ?? null,
+    budgetPurpose: data.budgetPurpose ?? null,
+    budgetRequestId: data.budgetRequestId ?? null,
+    mediaRequired: data.mediaRequired ?? false,
+    mediaNeeds: data.mediaNeeds ?? null,
+    mediaRequestId: data.mediaRequestId ?? null,
+    foodRequired: data.foodRequired ?? false,
+    foodNeeds: data.foodNeeds ?? null,
+    foodRequestId: data.foodRequestId ?? null,
+    viceChairApprovedBy: data.viceChairApprovedBy ?? null,
+    viceChairApprovedAt: data.viceChairApprovedAt ? toDate(data.viceChairApprovedAt) : null,
+    chairApprovedBy: data.chairApprovedBy ?? null,
+    chairApprovedAt: data.chairApprovedAt ? toDate(data.chairApprovedAt) : null,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  } as AppEvent;
+}
+
 function greeting(now: Date): string {
   const h = now.getHours();
   if (h < 12) return "Good morning";
@@ -529,68 +577,29 @@ export default function DashboardPage() {
 
   // ─── Subscriptions ─────────────────────────────────────────────────────
 
-  // Next upcoming approved event
+  // Next upcoming approved event. Fetch a few and pick the first APPROVED one
+  // so pending/rejected events never surface in the "next up" panel (the
+  // approval filter can't be part of the query without a composite index).
   useEffect(() => {
     if (!userData) return;
     const q = query(
       safeCollection("events"),
       where("startDate", ">=", Timestamp.fromDate(new Date())),
       orderBy("startDate", "asc"),
-      limit(1)
+      limit(10)
     );
     const unsub = onSnapshot(
       q,
       (snap) => {
-        if (snap.empty) {
+        const d = snap.docs.find(
+          (doc) => (doc.data().approvalStatus ?? "APPROVED") === "APPROVED"
+        );
+        if (!d) {
           setNextEvent(null);
           setLoadingCore(false);
           return;
         }
-        const d = snap.docs[0];
-        const data = d.data();
-        setNextEvent({
-          id: d.id,
-          title: data.title,
-          description: data.description ?? null,
-          type: data.type,
-          startDate: toDate(data.startDate),
-          endDate: data.endDate ? toDate(data.endDate) : null,
-          venue: data.venue,
-          isRecurring: data.isRecurring ?? false,
-          createdBy: data.createdBy,
-          lifeGroupTarget: data.lifeGroupTarget ?? null,
-          approvalStatus: data.approvalStatus ?? "APPROVED",
-          approvalComments: data.approvalComments ?? null,
-          approvedBy: data.approvedBy ?? null,
-          approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
-          createdByDepartmentId: data.createdByDepartmentId ?? null,
-          coreRoles: data.coreRoles ?? [],
-          speaker: data.speaker ?? null,
-          objective: data.objective ?? null,
-          isPaid: data.isPaid ?? false,
-          attendanceFee: data.attendanceFee ?? null,
-          attendanceFeeCurrency: data.attendanceFeeCurrency ?? null,
-          transportRequired: data.transportRequired ?? false,
-          transportNeeds: data.transportNeeds ?? null,
-          transportRequestId: data.transportRequestId ?? null,
-          budgetRequested: data.budgetRequested ?? false,
-          budgetAmount: data.budgetAmount ?? null,
-          budgetCurrency: data.budgetCurrency ?? null,
-          budgetPurpose: data.budgetPurpose ?? null,
-          budgetRequestId: data.budgetRequestId ?? null,
-          mediaRequired: data.mediaRequired ?? false,
-          mediaNeeds: data.mediaNeeds ?? null,
-          mediaRequestId: data.mediaRequestId ?? null,
-          foodRequired: data.foodRequired ?? false,
-          foodNeeds: data.foodNeeds ?? null,
-          foodRequestId: data.foodRequestId ?? null,
-          viceChairApprovedBy: data.viceChairApprovedBy ?? null,
-          viceChairApprovedAt: data.viceChairApprovedAt ? toDate(data.viceChairApprovedAt) : null,
-          chairApprovedBy: data.chairApprovedBy ?? null,
-          chairApprovedAt: data.chairApprovedAt ? toDate(data.chairApprovedAt) : null,
-          createdAt: toDate(data.createdAt),
-          updatedAt: toDate(data.updatedAt),
-        });
+        setNextEvent(mapEventDoc(d));
       },
       (err) => {
         console.error("dashboard: events listener", err);
@@ -826,52 +835,7 @@ export default function DashboardPage() {
       q,
       (snap) => {
         const items: AppEvent[] = snap.docs
-          .map((d) => {
-            const data = d.data();
-            return {
-              id: d.id,
-              title: data.title,
-              description: data.description ?? null,
-              type: data.type,
-              startDate: toDate(data.startDate),
-              endDate: data.endDate ? toDate(data.endDate) : null,
-              venue: data.venue,
-              isRecurring: data.isRecurring ?? false,
-              createdBy: data.createdBy,
-              lifeGroupTarget: data.lifeGroupTarget ?? null,
-              approvalStatus: data.approvalStatus ?? "APPROVED",
-              approvalComments: data.approvalComments ?? null,
-              approvedBy: data.approvedBy ?? null,
-              approvedAt: data.approvedAt ? toDate(data.approvedAt) : null,
-              createdByDepartmentId: data.createdByDepartmentId ?? null,
-              coreRoles: data.coreRoles ?? [],
-              speaker: data.speaker ?? null,
-              objective: data.objective ?? null,
-              isPaid: data.isPaid ?? false,
-              attendanceFee: data.attendanceFee ?? null,
-              attendanceFeeCurrency: data.attendanceFeeCurrency ?? null,
-              transportRequired: data.transportRequired ?? false,
-              transportNeeds: data.transportNeeds ?? null,
-              transportRequestId: data.transportRequestId ?? null,
-              budgetRequested: data.budgetRequested ?? false,
-              budgetAmount: data.budgetAmount ?? null,
-              budgetCurrency: data.budgetCurrency ?? null,
-              budgetPurpose: data.budgetPurpose ?? null,
-              budgetRequestId: data.budgetRequestId ?? null,
-              mediaRequired: data.mediaRequired ?? false,
-              mediaNeeds: data.mediaNeeds ?? null,
-              mediaRequestId: data.mediaRequestId ?? null,
-              foodRequired: data.foodRequired ?? false,
-              foodNeeds: data.foodNeeds ?? null,
-              foodRequestId: data.foodRequestId ?? null,
-              viceChairApprovedBy: data.viceChairApprovedBy ?? null,
-              viceChairApprovedAt: data.viceChairApprovedAt ? toDate(data.viceChairApprovedAt) : null,
-              chairApprovedBy: data.chairApprovedBy ?? null,
-              chairApprovedAt: data.chairApprovedAt ? toDate(data.chairApprovedAt) : null,
-              createdAt: toDate(data.createdAt),
-              updatedAt: toDate(data.updatedAt),
-            };
-          })
+          .map(mapEventDoc)
           .filter((e) => e.approvalStatus === "APPROVED")
           .slice(0, 5);
         setUpcomingEvents(items);

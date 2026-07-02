@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { updateDoc, Timestamp } from "firebase/firestore";
 import {
   updatePassword,
@@ -38,6 +38,16 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState(userData?.phone || "");
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState("");
+
+  // userData resolves asynchronously after mount, so the useState initializers
+  // above usually capture "". Re-sync the form once the profile arrives.
+  useEffect(() => {
+    if (userData) {
+      setName(userData.name || "");
+      setPhone(userData.phone || "");
+    }
+  }, [userData]);
 
   // Password form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -51,6 +61,7 @@ export default function ProfilePage() {
     if (!firebaseUser || !name.trim()) return;
     setSavingProfile(true);
     setProfileSaved(false);
+    setProfileError("");
 
     try {
       await updateDoc(safeDoc("users", firebaseUser.uid), {
@@ -62,6 +73,7 @@ export default function ProfilePage() {
       setTimeout(() => setProfileSaved(false), 3000);
     } catch (error) {
       console.error("Error saving profile:", error);
+      setProfileError("Failed to save your profile. Please try again.");
     }
     setSavingProfile(false);
   };
@@ -202,6 +214,13 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 text-teal text-sm">
               <CheckCircle className="h-4 w-4" />
               Profile updated successfully!
+            </div>
+          )}
+
+          {profileError && (
+            <div className="flex items-center gap-2 text-destructive text-sm">
+              <AlertCircle className="h-4 w-4" />
+              {profileError}
             </div>
           )}
 

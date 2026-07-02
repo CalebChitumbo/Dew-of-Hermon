@@ -14,6 +14,8 @@ export function useNotifications() {
 
   useEffect(() => {
     if (!firebaseUser) {
+      setNotifications([]);
+      setUnreadCount(0);
       setLoading(false);
       return;
     }
@@ -24,19 +26,26 @@ export function useNotifications() {
       orderBy("createdAt", "desc")
     );
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      const notifs = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-        } as Notification;
-      });
-      setNotifications(notifs);
-      setUnreadCount(notifs.filter((n) => !n.isRead).length);
-      setLoading(false);
-    });
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const notifs = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+          } as Notification;
+        });
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter((n) => !n.isRead).length);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error loading notifications:", error);
+        setLoading(false);
+      }
+    );
 
     return unsub;
   }, [firebaseUser]);

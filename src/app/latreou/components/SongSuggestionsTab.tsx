@@ -69,6 +69,8 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
   const [submitting, setSubmitting] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<SongSuggestion | null>(null);
+  // Guards Restore/Delete against double-clicks firing the mutation twice.
+  const [workingId, setWorkingId] = useState<string | null>(null);
 
   useEffect(() => {
     setOpenLoading(true);
@@ -132,6 +134,8 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
   };
 
   const handleRestore = async (s: SongSuggestion) => {
+    if (workingId) return;
+    setWorkingId(s.id);
     try {
       await restoreSuggestion(s.id);
       toast({
@@ -145,11 +149,14 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
         description: "Try again in a moment.",
         variant: "destructive",
       });
+    } finally {
+      setWorkingId(null);
     }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || workingId) return;
+    setWorkingId(deleteTarget.id);
     try {
       await deleteSuggestion(deleteTarget.id);
       toast({
@@ -165,6 +172,7 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
       });
     } finally {
       setDeleteTarget(null);
+      setWorkingId(null);
     }
   };
 
@@ -205,6 +213,7 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
             variant="outline"
             size="sm"
             onClick={() => handleRestore(s)}
+            disabled={workingId !== null}
           >
             <RotateCcw className="mr-1 h-4 w-4" />
             Restore
@@ -370,8 +379,12 @@ export function SongSuggestionsTab({ isLead }: SongSuggestionsTabProps) {
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-              Delete
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={workingId !== null}
+            >
+              {workingId ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

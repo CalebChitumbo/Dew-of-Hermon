@@ -122,16 +122,18 @@ export async function GET() {
       //    ADMIN+/Vice-Chair) plus the chair stage (Chairperson only).
       (async () => {
         let n = 0;
-        const mgr = await adminDb
+        const mgrQueue = adminDb
           .collection("departmentJoinRequests")
-          .where("status", "==", "PENDING_MANAGER")
-          .get();
+          .where("status", "==", "PENDING_MANAGER");
         if (isAdminPlus || role === "VICE_CHAIRPERSON") {
-          n += mgr.size;
-        } else if (role === "DEPARTMENT_LEAD") {
-          n += mgr.docs.filter((d) =>
-            leadsDepartmentIds.includes(d.data().departmentId)
-          ).length;
+          n += await aggCount(mgrQueue);
+        } else if (role === "DEPARTMENT_LEAD" && leadsDepartmentIds.length > 0) {
+          // Count only this lead's departments server-side ("in" accepts ≤10
+          // values, so chunk) instead of downloading the whole queue.
+          for (let i = 0; i < leadsDepartmentIds.length; i += 10) {
+            const chunk = leadsDepartmentIds.slice(i, i + 10);
+            n += await aggCount(mgrQueue.where("departmentId", "in", chunk));
+          }
         }
         if (isSuperAdmin) {
           n += await aggCount(
