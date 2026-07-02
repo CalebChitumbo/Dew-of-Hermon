@@ -1342,18 +1342,25 @@ export default function DashboardPage() {
   // Departments that actually serve in the upcoming service own the rota roles.
   // "Service readiness" is only relevant to people on one of those teams, plus
   // the admin staff who coordinate the whole service.
-  const serviceDeptIds = new Set(
-    allRoles.map((r) => r.departmentId).filter(Boolean)
+  const serviceDeptIds = useMemo(
+    () => new Set(allRoles.map((r) => r.departmentId).filter(Boolean)),
+    [allRoles]
   );
-  const mineForService = [
-    ...(userData?.departmentIds ?? []),
-    ...(userData?.leadsDepartmentIds ?? []),
-  ];
-  const onServiceTeam =
-    isAdmin || mineForService.some((id) => serviceDeptIds.has(id));
-  const leadsServiceDept =
-    isAdmin ||
-    (userData?.leadsDepartmentIds ?? []).some((id) => serviceDeptIds.has(id));
+  const { onServiceTeam, leadsServiceDept } = useMemo(() => {
+    const mineForService = [
+      ...(userData?.departmentIds ?? []),
+      ...(userData?.leadsDepartmentIds ?? []),
+    ];
+    return {
+      onServiceTeam:
+        isAdmin || mineForService.some((id) => serviceDeptIds.has(id)),
+      leadsServiceDept:
+        isAdmin ||
+        (userData?.leadsDepartmentIds ?? []).some((id) =>
+          serviceDeptIds.has(id)
+        ),
+    };
+  }, [isAdmin, serviceDeptIds, userData]);
 
   // Each stat is shown to its own team (inDept already includes admin staff).
   const showFollowUpsTile = inDept(["Discipleship & Follow-Up"]);

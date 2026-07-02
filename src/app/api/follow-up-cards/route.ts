@@ -1,43 +1,14 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import { UserRole, FollowUpSource, FollowUpStatus, FollowUpReason } from "@/types";
+import {
+  serverCheckFeatureAccess,
+  getDepartmentIdByName,
+} from "@/lib/feature-permissions-server";
+import { FollowUpSource, FollowUpStatus, FollowUpReason } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: (data.departmentIds || []) as string[],
-      leadsDepartmentIds: (data.leadsDepartmentIds || []) as string[],
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function getDeptIdByName(name: string): Promise<string | null> {
-  const snap = await adminDb
-    .collection("departments")
-    .where("name", "==", name)
-    .limit(1)
-    .get();
-  return snap.empty ? null : snap.docs[0].id;
-}
 
 // ─── GET /api/follow-up-cards ───
 // Query params: status, source, assigneeId
@@ -255,7 +226,7 @@ export async function POST(request: Request) {
     if (requiresApproval) {
       // Notify the department leads of the source dept so they can approve the
       // submission before it hits the discipleship pipeline.
-      const sourceDeptId = await getDeptIdByName(sourceDeptName);
+      const sourceDeptId = await getDepartmentIdByName(sourceDeptName);
       if (sourceDeptId) {
         const leadsSnap = await adminDb
           .collection("users")
@@ -280,7 +251,7 @@ export async function POST(request: Request) {
       }
     } else {
       // Notify Discipleship & Follow-Up dept members about the new card
-      const discipleshipDeptId = await getDeptIdByName("Discipleship & Follow-Up");
+      const discipleshipDeptId = await getDepartmentIdByName("Discipleship & Follow-Up");
       if (discipleshipDeptId) {
         const discipleshipMembers = await adminDb
           .collection("users")

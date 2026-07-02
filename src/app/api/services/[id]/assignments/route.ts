@@ -284,6 +284,7 @@ export async function POST(
         message: notificationMessage,
         type: "assignment",
         link: "/my-schedule",
+        metadata: { assignmentId: assignment.id, serviceId },
         email: {
           subject: emailSubject,
           text: emailText,

@@ -5,6 +5,8 @@ import { UserRole } from "@/types";
 export interface SessionCaller {
   uid: string;
   role: UserRole;
+  name: string;
+  email: string | null;
   departmentIds: string[];
   leadsDepartmentIds: string[];
 }
@@ -26,6 +28,8 @@ export async function getSessionCaller(): Promise<SessionCaller | null> {
     return {
       uid: decoded.uid,
       role: data.role as UserRole,
+      name: data.name || "",
+      email: data.email || null,
       departmentIds: data.departmentIds || [],
       leadsDepartmentIds: data.leadsDepartmentIds || [],
     };

@@ -65,7 +65,7 @@ import {
   AlertCircle,
   CalendarDays,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 const priorityColors: Record<TaskPriority, string> = {
   LOW: "bg-clay-100 text-clay-600",
@@ -187,7 +187,9 @@ export default function DepartmentDetailPage() {
         setTasks(
           data.tasks.map((t: DepartmentTask & { dueDate: string | null; completedAt: string | null; createdAt: string; updatedAt: string }) => ({
             ...t,
-            dueDate: t.dueDate ? new Date(t.dueDate) : null,
+            // parseISO treats date-only strings as local time, so a
+            // "yyyy-MM-dd" due date can't render as the previous day.
+            dueDate: t.dueDate ? parseISO(t.dueDate) : null,
             completedAt: t.completedAt ? new Date(t.completedAt) : null,
             createdAt: new Date(t.createdAt),
             updatedAt: new Date(t.updatedAt),

@@ -1,53 +1,11 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { createNotificationWithEmail } from "@/lib/notifications";
-import { UserRole } from "@/types";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import { hasMinRole } from "@/lib/permissions";
 import { format } from "date-fns";
 
 export const dynamic = "force-dynamic";
-
-// ─── Helper: Get caller info from session cookie ───
-
-async function getCaller(): Promise<{
-  uid: string;
-  role: UserRole;
-  name: string;
-  leadsDepartmentIds: string[];
-} | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      leadsDepartmentIds: data.leadsDepartmentIds || [],
-    };
-  } catch {
-    return null;
-  }
-}
-
-const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 6,
-  VICE_CHAIRPERSON: 5,
-  ADMIN: 4,
-  DEPARTMENT_LEAD: 3,
-  YOUTH_LEADER: 2,
-  MEMBER: 1,
-};
-
-function hasMinRole(role: string, required: string): boolean {
-  return (ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[required] || 0);
-}
 
 // Avoid spamming department heads with back-to-back nudges. A manual reminder
 // can only be sent once every few hours per event.

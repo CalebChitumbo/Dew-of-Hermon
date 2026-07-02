@@ -24,6 +24,11 @@ interface CreateNotificationParams {
   message: string;
   type: "reminder" | "assignment" | "event" | "announcement";
   link?: string | null;
+  /**
+   * Structured references (e.g. { assignmentId, serviceId }) so clients can
+   * find related notifications without matching on display text.
+   */
+  metadata?: Record<string, string> | null;
   /** Pass the recipient email directly to avoid an extra Firestore lookup */
   recipientEmail?: string;
   email?: {
@@ -44,6 +49,7 @@ export async function createNotificationWithEmail({
   message,
   type,
   link = null,
+  metadata = null,
   recipientEmail,
   email,
 }: CreateNotificationParams) {
@@ -55,6 +61,7 @@ export async function createNotificationWithEmail({
     type,
     isRead: false,
     link,
+    metadata,
     emailStatus: "pending" as EmailDeliveryStatus,
     emailDocId: null,
     emailError: null,

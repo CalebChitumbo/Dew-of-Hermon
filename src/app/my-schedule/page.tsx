@@ -12,6 +12,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { safeCollection, safeDoc } from "@/lib/firebase";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserAvailability, AssignmentStatus } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -69,7 +70,7 @@ function buildAssignmentUrl(assignment: EnrichedAssignment): string {
 }
 
 export default function MySchedulePage() {
-  const { firebaseUser, userData } = useAuth();
+  const { firebaseUser } = useAuth();
   const { toast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
   const [availability, setAvailability] = useState<UserAvailability[]>([]);
@@ -155,8 +156,13 @@ export default function MySchedulePage() {
     .sort((a, b) => (b.serviceDate!.getTime() - a.serviceDate!.getTime()))
     .slice(0, 5);
 
-  // Mark unread notifications related to an assignment as read
-  const markRelatedNotificationsAsRead = async (roleName: string) => {
+  // Mark unread notifications related to an assignment as read. Prefer the
+  // structured assignmentId reference; fall back to a title match only for
+  // older notifications created before metadata existed.
+  const markRelatedNotificationsAsRead = async (
+    roleName: string,
+    assignmentId?: string
+  ) => {
     if (!firebaseUser) return;
     try {
       const q = query(
@@ -167,8 +173,14 @@ export default function MySchedulePage() {
       const snapshot = await getDocs(q);
       const updatePromises = snapshot.docs
         .filter((doc) => {
-          const title = doc.data().title as string;
-          return title?.includes(roleName);
+          const data = doc.data();
+          const metaAssignmentId = data.metadata?.assignmentId as
+            | string
+            | undefined;
+          if (metaAssignmentId) {
+            return assignmentId !== undefined && metaAssignmentId === assignmentId;
+          }
+          return (data.title as string | undefined)?.includes(roleName);
         })
         .map((doc) => updateDoc(safeDoc("notifications", doc.id), { isRead: true }));
       await Promise.all(updatePromises);
@@ -186,17 +198,13 @@ export default function MySchedulePage() {
       const assignment = assignments.find((a) => a.id === assignmentId);
       if (!assignment) throw new Error("Assignment not found");
 
-      const response = await fetch(buildAssignmentUrl(assignment), {
+      const response = await fetchWithAuth(buildAssignmentUrl(assignment), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({
-          status: "CONFIRMED",
-          callerRole: userData?.role,
-          callerId: firebaseUser.uid,
-        }),
+        body: JSON.stringify({ status: "CONFIRMED" }),
       });
 
       if (!response.ok) {
@@ -209,7 +217,7 @@ export default function MySchedulePage() {
         description: "You have confirmed your assignment.",
         variant: "success",
       });
-      markRelatedNotificationsAsRead(assignment.roleName);
+      markRelatedNotificationsAsRead(assignment.roleName, assignment.id);
       // Refresh assignments from API
       fetchAssignments();
     } catch (error) {
@@ -231,17 +239,13 @@ export default function MySchedulePage() {
       const assignment = assignments.find((a) => a.id === assignmentId);
       if (!assignment) throw new Error("Assignment not found");
 
-      const response = await fetch(buildAssignmentUrl(assignment), {
+      const response = await fetchWithAuth(buildAssignmentUrl(assignment), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
-        body: JSON.stringify({
-          status: "DECLINED",
-          callerRole: userData?.role,
-          callerId: firebaseUser.uid,
-        }),
+        body: JSON.stringify({ status: "DECLINED" }),
       });
 
       if (!response.ok) {
@@ -253,7 +257,7 @@ export default function MySchedulePage() {
         title: "Assignment declined",
         description: "You have declined this assignment.",
       });
-      markRelatedNotificationsAsRead(assignment.roleName);
+      markRelatedNotificationsAsRead(assignment.roleName, assignment.id);
       fetchAssignments();
     } catch (error) {
       console.error("Error declining assignment:", error);

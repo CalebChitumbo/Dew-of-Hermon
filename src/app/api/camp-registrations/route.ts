@@ -160,20 +160,6 @@ export async function POST(request: Request) {
 
     const submitter = await getOptionalSubmitter();
 
-    // Capacity check (count current registrations for this camp).
-    const countSnap = await adminDb
-      .collection("campRegistrations")
-      .where("campId", "==", campId)
-      .count()
-      .get();
-    const currentCount = countSnap.data().count;
-    if (currentCount >= camp.capacity) {
-      return NextResponse.json(
-        { error: "Camp is full. Registration is closed." },
-        { status: 409 }
-      );
-    }
-
     const now = new Date();
     const ref = adminDb.collection("campRegistrations").doc();
     const claimToken = randomBytes(24).toString("hex");
@@ -218,7 +204,28 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
-    await ref.set(registrationData);
+    // Capacity check + create atomically, so two submissions racing near the
+    // cap can't both pass the check and overbook the camp.
+    const atCapacity = await adminDb.runTransaction(async (tx) => {
+      const countSnap = await tx.get(
+        adminDb
+          .collection("campRegistrations")
+          .where("campId", "==", campId)
+          .count()
+      );
+      if (countSnap.data().count >= camp.capacity) {
+        return true;
+      }
+      tx.set(ref, registrationData);
+      return false;
+    });
+
+    if (atCapacity) {
+      return NextResponse.json(
+        { error: "Camp is full. Registration is closed." },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json(
       {

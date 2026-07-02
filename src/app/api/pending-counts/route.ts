@@ -1,46 +1,15 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import type { Query } from "firebase-admin/firestore";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import {
   getFeaturePermissionsConfig,
   getDepartmentNameToIdMap,
 } from "@/lib/feature-permissions-server";
 import { checkFeatureAccess } from "@/lib/access-control";
-import { UserRole } from "@/types";
+import { hasMinRole } from "@/lib/permissions";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-
-const ROLE_HIERARCHY: Record<string, number> = {
-  SUPER_ADMIN: 6,
-  VICE_CHAIRPERSON: 5,
-  ADMIN: 4,
-  DEPARTMENT_LEAD: 3,
-  YOUTH_LEADER: 2,
-  MEMBER: 1,
-};
-
-const hasMinRole = (role: string, min: string) =>
-  (ROLE_HIERARCHY[role] || 0) >= (ROLE_HIERARCHY[min] || 0);
-
-async function getCaller() {
-  try {
-    const session = (await cookies()).get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-    const d = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: d.role as UserRole,
-      departmentIds: (d.departmentIds || []) as string[],
-      leadsDepartmentIds: (d.leadsDepartmentIds || []) as string[],
-    };
-  } catch {
-    return null;
-  }
-}
 
 async function aggCount(q: Query): Promise<number> {
   const snap = await q.count().get();

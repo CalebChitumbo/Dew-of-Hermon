@@ -1,34 +1,11 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
 import { createNotificationWithEmail } from "@/lib/notifications";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import { UserRole, FollowUpStatus } from "@/types";
+import { FollowUpStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: (data.departmentIds || []) as string[],
-      leadsDepartmentIds: (data.leadsDepartmentIds || []) as string[],
-    };
-  } catch {
-    return null;
-  }
-}
 
 // Status progression order for the discipleship pipeline. PENDING_LEAD_APPROVAL
 // and REJECTED live outside this flow — they're transitioned via the dedicated

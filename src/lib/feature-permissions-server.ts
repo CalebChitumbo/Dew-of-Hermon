@@ -84,6 +84,14 @@ export async function getDepartmentNameToIdMap(
   return map;
 }
 
+/** Resolve a single department's Firestore ID by its display name. */
+export async function getDepartmentIdByName(
+  name: string
+): Promise<string | null> {
+  const map = await getDepartmentNameToIdMap([name]);
+  return map[name] ?? null;
+}
+
 /**
  * Simple server-side check for features that only need role-based access
  * (no department rules). Lighter weight than serverCheckFeatureAccess.

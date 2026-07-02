@@ -1,36 +1,15 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 import {
-  transitionTransportRequest,
   notifyEventsLeadOfTransportDecision,
   notifyTransportCoordinators,
 } from "@/lib/transport-helpers";
-import type { UserRole, TransportRequestStatus } from "@/types";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import { transitionIfStatus } from "@/lib/workflow-transitions";
+import type { TransportRequestStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller() {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-    const data = userDoc.data()!;
-    return {
-      uid: decoded.uid,
-      role: data.role as UserRole,
-      name: data.name || "",
-      departmentIds: data.departmentIds || [],
-      leadsDepartmentIds: data.leadsDepartmentIds || [],
-    };
-  } catch {
-    return null;
-  }
-}
 
 type Action = "APPROVE" | "REQUEST_CHANGES" | "REJECT";
 
@@ -88,36 +67,27 @@ export async function PATCH(
       );
     }
 
-    const requestRef = adminDb.collection("transportRequests").doc(id);
-    const requestDoc = await requestRef.get();
-    if (!requestDoc.exists) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    const current = requestDoc.data()!;
-    if (current.status !== "PENDING_TREASURER") {
-      return NextResponse.json(
-        {
-          error: `Cannot decide on request in status ${current.status}; must be PENDING_TREASURER`,
-        },
-        { status: 409 }
-      );
-    }
-
     const now = new Date();
     const newStatus = STATUS_BY_ACTION[action];
 
-    await transitionTransportRequest(
+    const txn = await transitionIfStatus({
+      collection: "transportRequests",
       id,
+      expectedStatus: "PENDING_TREASURER",
       newStatus,
-      { uid: caller.uid, name: caller.name },
-      trimmedComments,
-      {
+      actor: { uid: caller.uid, name: caller.name },
+      comments: trimmedComments,
+      patch: {
         treasurerId: caller.uid,
         treasurerName: caller.name,
         treasurerDecidedAt: now,
         treasurerComments: trimmedComments,
-      }
-    );
+      },
+    });
+    if (!txn.ok) {
+      return NextResponse.json({ error: txn.error }, { status: txn.httpStatus });
+    }
+    const current = txn.current;
 
     // Resolve the event creator for downstream notifications
     let creatorId: string | null = null;

@@ -1,26 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
-import type { UserRole, BudgetRequestStatus } from "@/types";
+import { adminDb } from "@/lib/firebase-admin";
+import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import type { BudgetRequestStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-async function getCaller(): Promise<{ uid: string; role: UserRole } | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
-    if (!userDoc.exists) return null;
-    return {
-      uid: decoded.uid,
-      role: userDoc.data()!.role as UserRole,
-    };
-  } catch {
-    return null;
-  }
-}
 
 function toIsoOrNull(val: unknown): string | null {
   if (!val) return null;

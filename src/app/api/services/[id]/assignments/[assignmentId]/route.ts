@@ -45,12 +45,23 @@ export async function PUT(
       );
     }
 
-    // Permission: the assigned user can confirm/decline their own, admins can do anything
+    // Permission: the assigned user can confirm/decline their own, admins can
+    // do anything, and a department lead can manage assignments for roles in
+    // a department they lead.
     const isOwnAssignment = assignmentData.userId === caller.uid;
     const isAdmin = canAssignAnyRole(caller.role);
-    const isDeptLead = canAssignOwnDeptRole(caller.role);
+    let isDeptLeadForRole = false;
+    if (!isOwnAssignment && !isAdmin && canAssignOwnDeptRole(caller.role)) {
+      const roleSnap = await adminDb
+        .collection("serviceRoles")
+        .doc(assignmentData.roleId)
+        .get();
+      const roleDeptId = roleSnap.exists ? roleSnap.data()!.departmentId : null;
+      isDeptLeadForRole =
+        !!roleDeptId && caller.leadsDepartmentIds.includes(roleDeptId);
+    }
 
-    if (!isOwnAssignment && !isAdmin && !isDeptLead) {
+    if (!isOwnAssignment && !isAdmin && !isDeptLeadForRole) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

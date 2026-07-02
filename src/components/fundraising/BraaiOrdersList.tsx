@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertCircle,
@@ -171,6 +171,10 @@ export function BraaiOrdersList({ braaiId, braaiTitle }: Props) {
     if (!addOpen || menu) return;
     loadMenu();
   }, [addOpen, menu, loadMenu]);
+
+  // Defer the search term so keystrokes stay responsive while the (possibly
+  // long) order list re-filters at lower priority.
+  const deferredSearch = useDeferredValue(search);
 
   const filtered = useMemo(() => {
     let list = orders;
