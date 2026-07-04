@@ -301,25 +301,47 @@ export default function DepartmentDetailPage() {
     status: TaskStatus
   ) => {
     try {
-      await fetch("/api/department-tasks", {
+      const res = await fetch("/api/department-tasks", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, status }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to update the task");
+      }
       fetchTasks();
     } catch (error) {
       console.error("Error updating task:", error);
+      toast({
+        title: "Couldn't update task",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+      fetchTasks();
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      await fetch(`/api/department-tasks?taskId=${taskId}`, {
+      const res = await fetch(`/api/department-tasks?taskId=${taskId}`, {
         method: "DELETE",
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to delete the task");
+      }
       fetchTasks();
     } catch (error) {
       console.error("Error deleting task:", error);
+      toast({
+        title: "Couldn't delete task",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+      fetchTasks();
     }
   };
 

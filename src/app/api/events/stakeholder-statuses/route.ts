@@ -1,20 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getSessionCaller } from "@/lib/server-auth";
+import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 
 export const dynamic = "force-dynamic";
-
-async function getCallerUid(): Promise<string | null> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    return decoded.uid;
-  } catch {
-    return null;
-  }
-}
 
 const FK_BY_KIND = {
   transport: { fk: "transportRequestId", collection: "transportRequests" },
@@ -34,9 +23,20 @@ type StatusBundle = Partial<Record<Kind, string | null>>;
 
 export async function POST(request: Request) {
   try {
-    const uid = await getCallerUid();
-    if (!uid) {
+    const caller = await getSessionCaller();
+    if (!caller) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    // Stakeholder statuses back the Event Approvals surface — gate reads to
+    // callers who can access it rather than any signed-in member.
+    const canView = await serverCheckFeatureAccess(
+      "events_approvals",
+      caller.role,
+      caller.departmentIds,
+      caller.leadsDepartmentIds
+    );
+    if (!canView) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = (await request.json()) as { eventIds?: string[] };

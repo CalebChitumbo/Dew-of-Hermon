@@ -18,10 +18,12 @@ export async function GET() {
 
     let uid: string;
     let tokenEmail: string | null = null;
+    let emailVerified = false;
     try {
       const decoded = await adminAuth.verifySessionCookie(session.value);
       uid = decoded.uid;
       tokenEmail = decoded.email ?? null;
+      emailVerified = decoded.email_verified === true;
     } catch {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -34,13 +36,21 @@ export async function GET() {
       ? (userDoc.data()?.email as string | undefined)
       : undefined) ?? null;
 
-    const emails = Array.from(
-      new Set(
-        [tokenEmail, profileEmail]
-          .filter((e): e is string => !!e && e.length > 0)
-          .map((e) => e.toLowerCase())
-      )
-    );
+    // Only match registrations by email when Firebase has verified the caller
+    // owns that address. Firebase email/password sign-up accepts an arbitrary,
+    // unverified email, so trusting it would let an attacker enumerate another
+    // person's registrations (and minors' medical PII) by signing up as their
+    // email. Unverified callers still see registrations they submitted while
+    // signed in (matched by uid below) and can link others via the claim flow.
+    const emails = emailVerified
+      ? Array.from(
+          new Set(
+            [tokenEmail, profileEmail]
+              .filter((e): e is string => !!e && e.length > 0)
+              .map((e) => e.toLowerCase())
+          )
+        )
+      : [];
 
     const collected = new Map<string, FirebaseFirestore.DocumentData>();
 

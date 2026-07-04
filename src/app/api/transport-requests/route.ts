@@ -29,6 +29,27 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Transport requests carry cost estimates and coordinator notes. They are
+    // read from both the Transport coordinator queue and the Accounts/treasurer
+    // queue — allow either surface, deny everyone else.
+    const [canCoordinate, canApproveAccounts] = await Promise.all([
+      serverCheckFeatureAccess(
+        "transport_requests",
+        caller.role,
+        caller.departmentIds,
+        caller.leadsDepartmentIds
+      ),
+      serverCheckFeatureAccess(
+        "accounts_approvals",
+        caller.role,
+        caller.departmentIds,
+        caller.leadsDepartmentIds
+      ),
+    ]);
+    if (!canCoordinate && !canApproveAccounts) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get("status") as
       | TransportRequestStatus

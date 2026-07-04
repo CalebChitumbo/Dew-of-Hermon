@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { getSessionCaller as getCaller } from "@/lib/server-auth";
+import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
 import type { MediaRequestStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,18 @@ export async function GET(request: Request) {
     const caller = await getCaller();
     if (!caller) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Media assignments and coordinator notes — restrict reads to the Media
+    // requests coordinator surface, not every signed-in member.
+    const canView = await serverCheckFeatureAccess(
+      "media_requests",
+      caller.role,
+      caller.departmentIds,
+      caller.leadsDepartmentIds
+    );
+    if (!canView) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

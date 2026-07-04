@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { getSessionCaller as getCaller } from "@/lib/server-auth";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import {
-  transitionMediaRequest,
-  notifyEventsLeadOfMediaDecision,
-} from "@/lib/media-helpers";
+import { notifyEventsLeadOfMediaDecision } from "@/lib/media-helpers";
+import { transitionIfStatus } from "@/lib/workflow-transitions";
 
 export const dynamic = "force-dynamic";
 
@@ -69,21 +67,6 @@ export async function PATCH(
       );
     }
 
-    const requestRef = adminDb.collection("mediaRequests").doc(id);
-    const requestDoc = await requestRef.get();
-    if (!requestDoc.exists) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-    const current = requestDoc.data()!;
-    if (current.status !== "PENDING_MEDIA") {
-      return NextResponse.json(
-        {
-          error: `Cannot act on request in status ${current.status}; must be PENDING_MEDIA`,
-        },
-        { status: 409 }
-      );
-    }
-
     const now = new Date();
     let patch: Record<string, unknown>;
     let newStatus: "CONFIRMED" | "DECLINED";
@@ -122,13 +105,25 @@ export async function PATCH(
       };
     }
 
-    await transitionMediaRequest(
+    // Atomically guard the PENDING_MEDIA → CONFIRMED/DECLINED transition so a
+    // double-submit (or two coordinators) can't both pass the status check and
+    // double-notify the Events Lead.
+    const result = await transitionIfStatus({
+      collection: "mediaRequests",
       id,
+      expectedStatus: "PENDING_MEDIA",
       newStatus,
-      { uid: caller.uid, name: caller.name },
-      trimmedComments,
-      patch
-    );
+      actor: { uid: caller.uid, name: caller.name },
+      comments: trimmedComments,
+      patch,
+    });
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: result.httpStatus }
+      );
+    }
+    const current = result.current;
 
     // Look up event creator for notifications
     let creatorId: string | null = null;
