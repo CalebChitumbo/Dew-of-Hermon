@@ -44,8 +44,18 @@ export async function PATCH(
       updates.paymentMarkedAt = new Date();
     }
     if (body.paymentAmount !== undefined) {
-      updates.paymentAmount =
-        body.paymentAmount === null ? null : Number(body.paymentAmount);
+      if (body.paymentAmount === null) {
+        updates.paymentAmount = null;
+      } else {
+        const amount = Number(body.paymentAmount);
+        if (!Number.isFinite(amount) || amount < 0) {
+          return NextResponse.json(
+            { error: "Invalid payment amount" },
+            { status: 400 }
+          );
+        }
+        updates.paymentAmount = amount;
+      }
     }
     if (body.paymentReference !== undefined) {
       updates.paymentReference =
@@ -89,7 +99,35 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    await adminDb.collection("campRegistrations").doc(id).delete();
+    const ref = adminDb.collection("campRegistrations").doc(id);
+
+    // Delete and decrement the capacity counter atomically so a freed spot
+    // becomes available again (the counter is what gates overbooking on the
+    // public POST). Reads must precede writes inside the transaction.
+    await adminDb.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) return;
+      const campId = snap.data()?.campId as string | undefined;
+
+      let counterRef = null;
+      let counterCount: number | null = null;
+      if (campId) {
+        counterRef = adminDb.collection("campCounters").doc(campId);
+        const counterSnap = await tx.get(counterRef);
+        if (counterSnap.exists) {
+          counterCount = (counterSnap.data()?.count as number) ?? 0;
+        }
+      }
+
+      tx.delete(ref);
+      if (counterRef && counterCount !== null) {
+        tx.update(counterRef, {
+          count: Math.max(0, counterCount - 1),
+          updatedAt: new Date(),
+        });
+      }
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting camp registration:", error);

@@ -33,10 +33,26 @@ service cloud.firestore {
     }
 
     // ─── Users ───
+    // The `role`, `isActive`, and `leadsDepartmentIds` fields drive the entire
+    // RBAC (getUserRole() reads users/{uid}.role). Client SDK writes must never
+    // be able to change them — a member editing their own doc could otherwise
+    // set role: "SUPER_ADMIN" and take over. All privileged mutations
+    // (role/activation/lead changes) go through the Admin-SDK member API, which
+    // bypasses these rules. Client writes are limited to profile fields
+    // (name/phone) and department membership by leads.
+    function userPrivilegedFieldsUnchanged() {
+      return request.resource.data.role == resource.data.role
+        && request.resource.data.isActive == resource.data.isActive
+        && request.resource.data.leadsDepartmentIds == resource.data.leadsDepartmentIds;
+    }
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isOwner(userId) || isAdmin();
-      allow update: if isOwner(userId) || isDeptLead();
+      // Client-created profiles are always plain MEMBERs; elevated accounts are
+      // provisioned server-side. Blocks self-provisioned admin at sign-up.
+      allow create: if (isOwner(userId) || isAdmin())
+        && request.resource.data.role == "MEMBER";
+      allow update: if (isOwner(userId) || isDeptLead())
+        && userPrivilegedFieldsUnchanged();
       allow delete: if isSuperAdmin();
 
       // Self-service availability: users manage their own unavailable dates.
@@ -112,10 +128,18 @@ service cloud.firestore {
     }
 
     // ─── Notifications ───
+    // Notifications are created server-side via the Admin SDK (which bypasses
+    // these rules), so client creation is closed off entirely — this also
+    // stops an admin from forging notifications to other users from the
+    // browser. Recipients may only mark their own notification read; they
+    // cannot rewrite its contents.
     match /notifications/{notifId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isAdmin();
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(["isRead", "readAt"]);
+      allow create: if false;
     }
 
     // ─── Mail (Firebase Trigger Email extension) ───
@@ -192,13 +216,26 @@ service cloud.firestore {
     }
 
     // ─── Follow-Up Cards ───
+    // Cards hold pastoral PII (contact name, phone, private notes, and reasons
+    // such as NEEDS_PASTORAL_SUPPORT). Reads are limited to the card's creator,
+    // its assignee, and dept leads/admins — not every signed-in member. (The
+    // dashboard tolerates a denied read; the discipleship board falls back to
+    // the Admin-SDK API.)
     match /followUpCards/{cardId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      // Dept leads can update any card; the assignee can update their own
-      // (status/notes) so Youth Leaders can advance contacts assigned to them.
+      allow read: if isSignedIn() && (
+        resource.data.createdBy == request.auth.uid
+        || resource.data.assigneeId == request.auth.uid
+        || isDeptLead()
+      );
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+      // Dept leads can update any card. The assignee can advance their own card
+      // but only the status/notes fields — they must not be able to self-approve
+      // by writing approvedBy/approvedAt (those flow through the approve API).
       allow update: if isDeptLead()
-        || (isSignedIn() && resource.data.assigneeId == request.auth.uid);
+        || (isSignedIn() && resource.data.assigneeId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(["status", "notes", "statusHistory", "updatedAt"]));
       allow delete: if isSuperAdmin();
     }
 

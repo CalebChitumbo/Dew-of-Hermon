@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { serverHasFeatureMinRole } from "@/lib/feature-permissions-server";
+import { getSessionCaller } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
-import { UserRole } from "@/types";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const caller = await getSessionCaller();
+    if (!caller) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const serviceDoc = await adminDb.collection("services").doc(id).get();
 
@@ -120,16 +128,23 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const body = await request.json();
-    const { theme, serviceTime, programNotes, attendanceCount, isArchived, callerRole } = body;
-
-    if (!callerRole || !(await serverHasFeatureMinRole("create_service", callerRole as UserRole))) {
+    const caller = await getSessionCaller();
+    if (!caller) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    if (!(await serverHasFeatureMinRole("create_service", caller.role))) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
       );
     }
+
+    const { id } = await params;
+    const body = await request.json();
+    const { theme, serviceTime, programNotes, attendanceCount, isArchived } = body;
 
     const serviceDoc = await adminDb.collection("services").doc(id).get();
     if (!serviceDoc.exists) {
@@ -174,16 +189,21 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const callerRole = searchParams.get("callerRole") as UserRole | null;
-
-    if (callerRole !== "SUPER_ADMIN") {
+    const caller = await getSessionCaller();
+    if (!caller) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+    if (caller.role !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "Only the Chairperson (Super Admin) can delete services" },
         { status: 403 }
       );
     }
+
+    const { id } = await params;
 
     const serviceDoc = await adminDb.collection("services").doc(id).get();
     if (!serviceDoc.exists) {

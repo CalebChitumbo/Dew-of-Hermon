@@ -502,6 +502,12 @@ export default function DiscipleshipPipelinePage() {
       }
     } catch (error) {
       console.error("Error updating notes:", error);
+      toast({
+        title: "Couldn't save notes",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -531,14 +537,24 @@ export default function DiscipleshipPipelinePage() {
     }
 
     try {
-      await fetch(`/api/follow-up-cards/${selectedCard.id}`, {
+      const res = await fetch(`/api/follow-up-cards/${selectedCard.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to save changes");
+      }
       setDetailDialogOpen(false);
     } catch (error) {
       console.error("Error saving card detail:", error);
+      toast({
+        title: "Couldn't save",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
     }
     setUpdating(null);
   };

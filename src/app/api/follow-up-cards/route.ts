@@ -66,16 +66,25 @@ export async function GET(request: Request) {
       q = q.where("source", "==", sourceParam);
     }
 
-    // Non-managers (e.g. Youth Leaders) only see cards assigned to them.
-    // This forces an assigneeId filter on their query.
-    if (!canManage && canViewAssigned) {
+    // Scope the query to what the caller is allowed to see. Only managers may
+    // read the whole collection (pastoral PII: names, phones, notes). Youth
+    // Leaders see cards assigned to them; a submit-only member sees only the
+    // cards they created. Without this, a submit-only member could read every
+    // card by calling the endpoint with no params.
+    if (canManage) {
+      if (assigneeIdParam) {
+        q = q.where("assigneeId", "==", assigneeIdParam);
+      }
+    } else if (canViewAssigned) {
       q = q.where("assigneeId", "==", caller.uid);
-    } else if (assigneeIdParam) {
-      q = q.where("assigneeId", "==", assigneeIdParam);
+    } else {
+      // Submit-only (Campus Ministry / Life Groups member).
+      q = q.where("createdBy", "==", caller.uid);
     }
 
-    q = q.orderBy("createdAt", "desc");
-
+    // Sort in JS (newest first) rather than .orderBy() — combining an equality
+    // filter with an orderBy on a different field would require a composite
+    // index for every filter permutation. The follow-up queues are small.
     const snapshot = await q.get();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,6 +121,11 @@ export async function GET(request: Request) {
         updatedAt: data.updatedAt?.toDate?.()?.toISOString() || null,
       };
     });
+
+    cards.sort(
+      (a: { createdAt: string | null }, b: { createdAt: string | null }) =>
+        (b.createdAt ?? "").localeCompare(a.createdAt ?? "")
+    );
 
     return NextResponse.json({ cards });
   } catch (error) {

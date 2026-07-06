@@ -204,19 +204,40 @@ export async function POST(request: Request) {
       updatedAt: now,
     };
 
-    // Capacity check + create atomically, so two submissions racing near the
-    // cap can't both pass the check and overbook the camp.
+    // Capacity check + create atomically. A count() aggregation read does NOT
+    // make the transaction serialize (Firestore has no predicate/phantom
+    // locking), so two submissions racing near the cap could both pass a
+    // count() check and overbook. Instead we read/write a concrete counter
+    // document — reading a real doc is what makes concurrent transactions
+    // conflict and retry. The counter self-seeds from the live count the first
+    // time it's touched, and the DELETE route decrements it.
+    const counterRef = adminDb.collection("campCounters").doc(campId);
     const atCapacity = await adminDb.runTransaction(async (tx) => {
-      const countSnap = await tx.get(
-        adminDb
-          .collection("campRegistrations")
-          .where("campId", "==", campId)
-          .count()
-      );
-      if (countSnap.data().count >= camp.capacity) {
+      const counterSnap = await tx.get(counterRef);
+      let current: number;
+      if (counterSnap.exists) {
+        current = (counterSnap.data()?.count as number) ?? 0;
+      } else {
+        // First registration since deploy: seed from the authoritative count.
+        const countSnap = await tx.get(
+          adminDb
+            .collection("campRegistrations")
+            .where("campId", "==", campId)
+            .count()
+        );
+        current = countSnap.data().count;
+      }
+
+      if (current >= camp.capacity) {
         return true;
       }
+
       tx.set(ref, registrationData);
+      tx.set(
+        counterRef,
+        { campId, count: current + 1, updatedAt: now },
+        { merge: true }
+      );
       return false;
     });
 

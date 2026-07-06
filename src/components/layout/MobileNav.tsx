@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   Calendar,
   ClipboardList,
-  Bell,
   UserCircle,
   CalendarDays,
   Sparkles,

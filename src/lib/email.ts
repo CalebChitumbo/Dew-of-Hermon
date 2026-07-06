@@ -54,7 +54,6 @@ export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
       createdAt: new Date(),
     });
 
-    console.log(`Email queued successfully for ${to}, doc: ${mailRef.id}`);
     return { id: mailRef.id };
   } catch (err) {
     console.error(`Email queue failed for ${to}:`, err);
@@ -136,8 +135,5 @@ export async function retryEmail(
     retryOf: originalMailDocId,
   });
 
-  console.log(
-    `Retry email queued: ${newMailRef.id} (retry of ${originalMailDocId})`
-  );
   return { newMailDocId: newMailRef.id };
 }
