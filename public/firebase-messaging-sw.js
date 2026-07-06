@@ -9,9 +9,28 @@ importScripts(
   "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"
 );
 
-// Firebase config is injected at runtime via the query string when the SW is registered,
-// but we also support a fallback so the SW can self-initialise when woken by the browser.
+// Firebase config is passed on the SW registration URL (query string) so the
+// worker can self-initialise the moment it starts — including when the browser
+// wakes it in the background to deliver a push, when no page is around to
+// postMessage it. A postMessage handler is kept as a fallback.
 let firebaseConfig = null;
+
+function configFromLocation() {
+  try {
+    const params = new URLSearchParams(self.location.search);
+    if (!params.get("projectId")) return null;
+    return {
+      apiKey: params.get("apiKey") || undefined,
+      authDomain: params.get("authDomain") || undefined,
+      projectId: params.get("projectId") || undefined,
+      storageBucket: params.get("storageBucket") || undefined,
+      messagingSenderId: params.get("messagingSenderId") || undefined,
+      appId: params.get("appId") || undefined,
+    };
+  } catch (e) {
+    return null;
+  }
+}
 
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "FIREBASE_CONFIG") {
@@ -19,6 +38,12 @@ self.addEventListener("message", (event) => {
     initFirebase(firebaseConfig);
   }
 });
+
+// Self-initialise from the registration URL as soon as the worker loads.
+firebaseConfig = configFromLocation();
+if (firebaseConfig) {
+  initFirebase(firebaseConfig);
+}
 
 function initFirebase(config) {
   if (!firebase.apps.length) {

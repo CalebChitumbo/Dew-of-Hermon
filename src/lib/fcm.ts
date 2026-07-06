@@ -31,11 +31,6 @@ function getMessagingInstance(): Messaging | null {
 async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) return null;
 
-  const registration = await navigator.serviceWorker.register(
-    "/firebase-messaging-sw.js"
-  );
-
-  // Send the Firebase config to the SW so it can initialise
   const config = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -45,16 +40,26 @@ async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
   };
 
-  // Wait for the SW to be ready before posting the config
-  if (registration.active) {
-    registration.active.postMessage({ type: "FIREBASE_CONFIG", config });
-  } else {
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.active?.postMessage({ type: "FIREBASE_CONFIG", config });
-    });
-  }
+  // Pass the config on the registration URL so the worker can self-initialise
+  // the instant it starts — including when the browser wakes it in the
+  // background with no page around to postMessage it.
+  const params = new URLSearchParams();
+  Object.entries(config).forEach(([k, v]) => {
+    if (v) params.set(k, v);
+  });
+  const swUrl = `/firebase-messaging-sw.js?${params.toString()}`;
 
-  return registration;
+  await navigator.serviceWorker.register(swUrl);
+
+  // Wait until a worker is actually active and controlling before we hand the
+  // registration to getToken(). register() resolves while the worker is still
+  // "installing"; using it too early is what made the first "Enable" click fail.
+  const readyRegistration = await navigator.serviceWorker.ready;
+
+  // Belt-and-braces: also postMessage the config to the active worker.
+  readyRegistration.active?.postMessage({ type: "FIREBASE_CONFIG", config });
+
+  return readyRegistration;
 }
 
 export type PushPermissionFailureReason =
@@ -123,11 +128,20 @@ export async function requestPushPermissionAndToken(
   }
   if (!token) return { ok: false, reason: "token_failed" };
 
-  await fetch("/api/fcm-tokens", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, userId }),
-  });
+  try {
+    const res = await fetch("/api/fcm-tokens", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, userId }),
+    });
+    if (!res.ok) {
+      console.error("Saving FCM token failed:", res.status);
+      return { ok: false, reason: "token_failed" };
+    }
+  } catch (e) {
+    console.error("Saving FCM token failed:", e);
+    return { ok: false, reason: "token_failed" };
+  }
 
   return { ok: true, token };
 }
