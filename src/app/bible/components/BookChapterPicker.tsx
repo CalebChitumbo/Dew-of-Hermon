@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ArrowLeft, ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,11 +20,15 @@ interface BookChapterPickerProps {
 }
 
 /**
- * A single control that opens a dialog to choose a book then a chapter. Shows
- * the current "Book Chapter" as its label.
+ * A single control that opens a dialog to choose a passage in two steps:
+ * first the book, then the chapter. Each step gets the whole dialog to
+ * itself with its own scroll area — long books like Psalms (150 chapters)
+ * can't crowd out the book list, and the back button always returns to the
+ * books. Shows the current "Book Chapter" as its label.
  */
 export function BookChapterPicker({ bookId, chapter, onSelect }: BookChapterPickerProps) {
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"books" | "chapters">("books");
   const [draftBook, setDraftBook] = useState<BibleBook | null>(null);
 
   const current = getBook(bookId);
@@ -34,8 +38,11 @@ export function BookChapterPicker({ bookId, chapter, onSelect }: BookChapterPick
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    // Reset the in-dialog book selection to the active book each time it opens.
-    if (next) setDraftBook(null);
+    // Start from the book list each time the picker opens.
+    if (next) {
+      setDraftBook(null);
+      setView("books");
+    }
   };
 
   const renderBooks = (books: BibleBook[]) => (
@@ -43,10 +50,13 @@ export function BookChapterPicker({ bookId, chapter, onSelect }: BookChapterPick
       {books.map((b) => (
         <button
           key={b.id}
-          onClick={() => setDraftBook(b)}
+          onClick={() => {
+            setDraftBook(b);
+            setView("chapters");
+          }}
           className={cn(
             "rounded-md px-2 py-1.5 text-left text-sm transition-colors",
-            pickBook.id === b.id
+            b.id === bookId
               ? "bg-gold/20 font-medium text-gold-dark"
               : "text-clay-600 hover:bg-clay-50"
           )}
@@ -65,29 +75,41 @@ export function BookChapterPicker({ bookId, chapter, onSelect }: BookChapterPick
           <ChevronDown className="h-4 w-4 opacity-60" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Choose a passage</DialogTitle>
+          <DialogTitle>
+            {view === "books" ? "Choose a book" : `${pickBook.name} — choose a chapter`}
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-clay-400">
-              Old Testament
-            </p>
-            {renderBooks(ot)}
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-clay-400">
-              New Testament
-            </p>
-            {renderBooks(nt)}
-          </div>
+        {view === "chapters" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setView("books")}
+            className="-mt-1 h-8 gap-1.5 self-start px-2 text-clay-500 hover:text-clay-700"
+          >
+            <ArrowLeft className="h-4 w-4" /> All books
+          </Button>
+        )}
 
-          <div className="sticky bottom-0 -mx-6 border-t border-clay-200 bg-white px-6 pt-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-clay-400">
-              {pickBook.name} — chapter
-            </p>
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {view === "books" ? (
+            <div className="space-y-4">
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-clay-400">
+                  Old Testament
+                </p>
+                {renderBooks(ot)}
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-clay-400">
+                  New Testament
+                </p>
+                {renderBooks(nt)}
+              </div>
+            </div>
+          ) : (
             <div className="grid grid-cols-6 gap-1.5 pb-1 sm:grid-cols-10">
               {Array.from({ length: pickBook.chapters }, (_, i) => i + 1).map((ch) => (
                 <button
@@ -107,7 +129,7 @@ export function BookChapterPicker({ bookId, chapter, onSelect }: BookChapterPick
                 </button>
               ))}
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

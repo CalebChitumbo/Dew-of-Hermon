@@ -64,6 +64,26 @@ export type FollowUpStatus =
 
 export type FollowUpSource = "CAMPUS_MINISTRY" | "LIFE_GROUPS";
 
+export type TalentSubmissionStatus =
+  | "PENDING_REVIEW"
+  | "SHORTLISTED"
+  | "SLOTTED"
+  | "COMPLETED"
+  | "DECLINED"
+  | "WITHDRAWN";
+
+export type TalentCategory =
+  | "SINGING"
+  | "INSTRUMENTS"
+  | "DANCE"
+  | "DRAMA"
+  | "POETRY_SPOKEN_WORD"
+  | "PREACHING_TEACHING"
+  | "MEDIA_CREATIVE"
+  | "ART_DESIGN"
+  | "TECH"
+  | "OTHER";
+
 export type FollowUpReason = "NEW_VISITOR" | "RETURNING_AFTER_ABSENCE" | "NEEDS_PASTORAL_SUPPORT" | "OTHER";
 
 export type EventRoleTier = "CORE" | "DEPARTMENT";
@@ -349,6 +369,65 @@ export interface DepartmentJoinRequest {
   chairComments: string | null;
 
   statusHistory: DepartmentJoinRequestHistoryEntry[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TalentSubmissionHistoryEntry {
+  status: TalentSubmissionStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+/**
+ * A member putting a talent forward so leadership knows it exists and can
+ * decide when to slot them into an opportunity (a service item, an event
+ * slot, a showcase). Lifecycle: the member submits (PENDING_REVIEW),
+ * leadership shortlists them into the talent pool (SHORTLISTED) or declines
+ * with feedback (DECLINED), then slots them into a concrete opportunity
+ * (SLOTTED) and finally marks it done (COMPLETED). The member can withdraw
+ * an unslotted submission (WITHDRAWN).
+ */
+export interface TalentSubmission {
+  id: string;
+
+  userId: string;
+  userName: string;
+  userEmail: string | null;
+
+  category: TalentCategory;
+  /** What the talent is, when category is OTHER. */
+  categoryOther: string | null;
+  /** Short headline, e.g. "Acoustic guitar & lead vocals". */
+  title: string;
+  /** The member's own description of their talent. */
+  description: string;
+  /** Optional background — how long they've done it, where, training. */
+  experience: string | null;
+  /** Optional link to a video/audio sample of them performing. */
+  sampleLink: string | null;
+  /** When they'd be available to showcase (free text). */
+  availabilityNote: string | null;
+
+  status: TalentSubmissionStatus;
+
+  // Leadership review stage
+  reviewedBy: string | null;
+  reviewedByName: string | null;
+  reviewedAt: Date | null;
+  reviewComments: string | null;
+
+  // Opportunity slotting stage
+  opportunityTitle: string | null;
+  opportunityDate: Date | null;
+  opportunityNotes: string | null;
+  slottedBy: string | null;
+  slottedByName: string | null;
+  slottedAt: Date | null;
+
+  statusHistory: TalentSubmissionHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }

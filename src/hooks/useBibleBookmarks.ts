@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   deleteDoc,
   onSnapshot,
-  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -40,24 +39,34 @@ export function useBibleBookmarks() {
       setLoading(false);
       return;
     }
+    // Deliberately no orderBy: filtering + ordering would need a composite
+    // index to be live in the Firebase project, and when it isn't the
+    // listener fails and every bookmark silently disappears. A user's own
+    // bookmarks are few, so sort them here instead.
     const q = query(
       safeCollection("bibleBookmarks"),
-      where("userId", "==", firebaseUser.uid),
-      orderBy("createdAt", "desc")
+      where("userId", "==", firebaseUser.uid)
     );
-    const unsub = onSnapshot(q, (snap) => {
-      setBookmarks(
-        snap.docs.map((d) => {
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const rows = snap.docs.map((d) => {
           const data = d.data();
           return {
             id: d.id,
             ...data,
             createdAt: data.createdAt?.toDate?.() || new Date(),
           } as BibleBookmark;
-        })
-      );
-      setLoading(false);
-    });
+        });
+        rows.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setBookmarks(rows);
+        setLoading(false);
+      },
+      (err) => {
+        console.error("bibleBookmarks listener", err);
+        setLoading(false);
+      }
+    );
     return unsub;
   }, [firebaseUser]);
 
@@ -82,7 +91,8 @@ export function useBibleBookmarks() {
    */
   const save = useCallback(
     async (ref: VerseRef, color: BibleHighlightColor | null = null) => {
-      if (!firebaseUser) return;
+      // Throw rather than silently no-op so callers can show an error toast.
+      if (!firebaseUser) throw new Error("You must be signed in to save verses");
       const id = docIdFor(ref);
       const existing = byVerseKey.get(
         verseKey(ref.translation, ref.bookId, ref.chapter, ref.verse)
@@ -106,7 +116,7 @@ export function useBibleBookmarks() {
 
   const remove = useCallback(
     async (ref: VerseRef) => {
-      if (!firebaseUser) return;
+      if (!firebaseUser) throw new Error("You must be signed in to save verses");
       await deleteDoc(safeDoc("bibleBookmarks", docIdFor(ref)));
     },
     [firebaseUser, docIdFor]

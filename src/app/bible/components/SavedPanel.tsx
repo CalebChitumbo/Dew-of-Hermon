@@ -4,6 +4,7 @@ import { BookmarkX, Bookmark } from "lucide-react";
 import { LoadingSpinner } from "@/components/shared/LoadingSpinner";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import type { useBibleBookmarks, VerseRef } from "@/hooks/useBibleBookmarks";
 import { highlightTint } from "./highlight-colors";
 
@@ -14,6 +15,24 @@ interface SavedPanelProps {
 
 export function SavedPanel({ bookmarks, onOpen }: SavedPanelProps) {
   const { bookmarks: items, loading, remove } = bookmarks;
+  const { toast } = useToast();
+
+  const removeBookmark = async (ref: VerseRef) => {
+    try {
+      await remove(ref);
+      toast({
+        title: "Removed",
+        description: `${ref.bookName} ${ref.chapter}:${ref.verse}`,
+      });
+    } catch (err) {
+      console.error("bible: remove bookmark failed", err);
+      toast({
+        title: "Couldn't remove",
+        description: "Please check your connection and try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -65,7 +84,7 @@ export function SavedPanel({ bookmarks, onOpen }: SavedPanelProps) {
               <p className="text-clay-700">{b.text}</p>
             </button>
             <button
-              onClick={() => remove(ref)}
+              onClick={() => removeBookmark(ref)}
               aria-label="Remove bookmark"
               className="shrink-0 text-clay-300 transition-colors hover:text-rose-500"
             >
