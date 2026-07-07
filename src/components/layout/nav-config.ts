@@ -30,6 +30,8 @@ import {
   ShieldCheck,
   UserPlus,
   BookOpenText,
+  Star,
+  Mic,
 } from "lucide-react";
 import { canAccessPage } from "@/lib/access-control";
 import type { PagePermissions, UserRole } from "@/types";
@@ -113,6 +115,7 @@ const REQUESTS: NavGroup = {
     { label: "Media Requests", href: "/manage/media/requests", icon: Clapperboard, pageKey: "media_requests" },
     { label: "Food Requests", href: "/manage/food/requests", icon: UtensilsCrossed, pageKey: "food_requests" },
     { label: "Accounts Approvals", href: "/manage/finance/approvals", icon: Banknote, pageKey: "accounts_approvals" },
+    { label: "Talent Submissions", href: "/manage/talents", icon: Mic, pageKey: "manage_talents" },
   ],
 };
 
@@ -122,6 +125,7 @@ const MID_ITEMS: NavItem[] = [
   { label: "ROPs Camp", href: "/manage/rops-camp", icon: Tent, pageKey: "rops_camp" },
   { label: "Fundraising", href: "/manage/fundraising", icon: Flame, pageKey: "fundraising" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
+  { label: "Talent Showcase", href: "/talents", icon: Star, pageKey: "talents" },
 ];
 
 /** Admin tooling — shown last. Settings is SUPER_ADMIN only (see shouldShow). */

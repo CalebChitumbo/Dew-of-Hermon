@@ -198,6 +198,19 @@ export async function GET() {
         ]);
         set("accounts_approvals", t + b);
       })(),
+
+      // 10. Talent Submissions — awaiting leadership review.
+      (async () => {
+        if (!isAdminPlus) return;
+        set(
+          "manage_talents",
+          await aggCount(
+            adminDb
+              .collection("talentSubmissions")
+              .where("status", "==", "PENDING_REVIEW")
+          )
+        );
+      })(),
     ]);
 
     // One queue failing (e.g. a missing index) shouldn't blank every badge.

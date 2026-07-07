@@ -333,6 +333,19 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // ─── Talent Submissions ───
+    // A member putting their talent forward for leadership to review and
+    // slot into an opportunity. The submitter can read their own submission;
+    // dept leads and admins can read all so the review queue and talent pool
+    // work. All writes go through the API, which enforces the workflow
+    // transitions and role gating.
+    match /talentSubmissions/{submissionId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isDeptLead()
+      );
+      allow write: if false;
+    }
+
     // ─── Bible Bookmarks & Highlights ───
     // Private to each user: saved/highlighted verses in the Bible reader. A
     // user may only read and write their own bookmarks, and every document

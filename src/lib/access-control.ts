@@ -186,6 +186,22 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     route: "/manage/food/requests",
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
+  {
+    key: "talents",
+    label: "Talent Showcase",
+    description:
+      "Members put their talents forward for leadership to review and slot into opportunities",
+    route: "/talents",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
+  {
+    key: "manage_talents",
+    label: "Talent Submissions",
+    description:
+      "Leadership queue: review talent submissions, build the talent pool, and slot members into opportunities",
+    route: "/manage/talents",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
 ];
 
 /** The default permissions that match the current hardcoded behavior */
@@ -375,6 +391,22 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     MEMBER: "none",
   },
   food_requests: {
+    SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  talents: {
+    SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "edit",
+    ADMIN: "edit",
+    DEPARTMENT_LEAD: "view",
+    YOUTH_LEADER: "view",
+    MEMBER: "view",
+  },
+  manage_talents: {
     SUPER_ADMIN: "edit",
     VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
