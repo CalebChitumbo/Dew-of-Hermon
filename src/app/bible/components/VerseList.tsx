@@ -25,8 +25,8 @@ interface VerseListProps {
   context: ReaderContext;
   isSaved: (verse: number) => boolean;
   savedColor: (verse: number) => BibleHighlightColor | null;
-  onSave: (ref: VerseRef, color: BibleHighlightColor | null) => void;
-  onRemove: (ref: VerseRef) => void;
+  onSave: (ref: VerseRef, color: BibleHighlightColor | null) => Promise<void>;
+  onRemove: (ref: VerseRef) => Promise<void>;
   /** Verse number to scroll to and briefly flash (e.g. from a reference jump). */
   focusVerse?: number;
 }
@@ -66,12 +66,49 @@ export function VerseList({
     text: v.text,
   });
 
+  const labelFor = (v: BibleVerse) =>
+    `${context.bookName} ${context.chapter}:${v.verse}`;
+
   const copyVerse = (v: BibleVerse) => {
-    const label = `${context.bookName} ${context.chapter}:${v.verse}`;
     navigator.clipboard
-      ?.writeText(`"${v.text}" — ${label} (${context.translation})`)
-      .then(() => toast({ title: "Copied", description: label }))
+      ?.writeText(`"${v.text}" — ${labelFor(v)} (${context.translation})`)
+      .then(() => toast({ title: "Copied", description: labelFor(v) }))
       .catch(() => {});
+  };
+
+  // Saving goes to Firestore — confirm it, and surface failures instead of
+  // letting them vanish (the user otherwise can't tell whether it worked).
+  const saveVerse = async (v: BibleVerse, color: BibleHighlightColor | null) => {
+    setSelected(null);
+    try {
+      await onSave(refFor(v), color);
+      toast({
+        title: color ? "Highlighted" : "Saved",
+        description: `${labelFor(v)} added to your Saved verses.`,
+      });
+    } catch (err) {
+      console.error("bible: save verse failed", err);
+      toast({
+        title: "Couldn't save",
+        description: "Please check your connection and try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeVerse = async (v: BibleVerse) => {
+    setSelected(null);
+    try {
+      await onRemove(refFor(v));
+      toast({ title: "Removed", description: labelFor(v) });
+    } catch (err) {
+      console.error("bible: remove verse failed", err);
+      toast({
+        title: "Couldn't remove",
+        description: "Please check your connection and try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -106,10 +143,7 @@ export function VerseList({
                   <button
                     key={c}
                     aria-label={`Highlight ${c}`}
-                    onClick={() => {
-                      onSave(refFor(v), c);
-                      setSelected(null);
-                    }}
+                    onClick={() => saveVerse(v, c)}
                     className={cn(
                       "h-5 w-5 rounded-full ring-offset-1 transition hover:scale-110",
                       highlightSwatch[c],
@@ -120,20 +154,14 @@ export function VerseList({
                 <span className="mx-1 h-4 w-px bg-clay-200" />
                 {saved ? (
                   <button
-                    onClick={() => {
-                      onRemove(refFor(v));
-                      setSelected(null);
-                    }}
+                    onClick={() => removeVerse(v)}
                     className="inline-flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
                   >
                     <X className="h-3.5 w-3.5" /> Remove
                   </button>
                 ) : (
                   <button
-                    onClick={() => {
-                      onSave(refFor(v), null);
-                      setSelected(null);
-                    }}
+                    onClick={() => saveVerse(v, null)}
                     className="inline-flex items-center gap-1 text-xs font-medium text-clay-500 hover:text-clay-700"
                   >
                     <Bookmark className="h-3.5 w-3.5" /> Save
