@@ -13,6 +13,7 @@ import {
   Church,
   CircleDollarSign,
   Flame,
+  HeartHandshake,
   Lock,
   MapPin,
   Sparkles,
@@ -139,6 +140,7 @@ export default function RopsCampPage() {
             onAdminClick={() => setView("admin-gate")}
           />
           <Glimpses />
+          <SponsorCallout />
           <RegistrationForm
             formRef={formRef}
             // Re-read the authoritative count rather than optimistically
@@ -328,6 +330,13 @@ function Hero({
                   className="transition-transform group-hover:translate-x-1"
                 />
               </button>
+              <Link
+                href="/rops-camp/sponsor"
+                className="group inline-flex items-center gap-3 border-[1.5px] border-rops-ink text-rops-ink py-4 px-7 rounded-full font-body text-[13px] uppercase tracking-[0.18em] hover:border-rops-ember hover:text-rops-ember transition-colors"
+              >
+                Sponsor a Youth
+                <HeartHandshake size={16} />
+              </Link>
               <Link
                 href="/rops-camp/my-registrations"
                 className="font-body text-[11px] uppercase tracking-[0.18em] text-rops-ink/70 hover:text-rops-ember transition-colors inline-flex items-center gap-1.5"
@@ -614,6 +623,47 @@ function GalleryTile({
         </span>
       </figcaption>
     </figure>
+  );
+}
+
+// ─── SPONSOR CALLOUT ───────────────────────────────────────────────
+function SponsorCallout() {
+  return (
+    <section className="bg-rops-ink rops-grain py-16 md:py-20 px-6 md:px-10">
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-12 gap-8 items-center">
+        <div className="lg:col-span-8 min-w-0">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-px w-10 bg-rops-ember" />
+            <span className="font-body text-[11px] uppercase tracking-[0.22em] text-rops-ember">
+              Not attending? Carry someone who is.
+            </span>
+          </div>
+          <h2 className="font-display text-rops-cream text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-[1.02]">
+            Sponsor a youth
+            <span className="italic text-rops-ember"> to camp.</span>
+          </h2>
+          <p className="mt-5 font-body text-rops-taupe text-base leading-relaxed max-w-2xl">
+            {`ZMW ${CAMP_FEE_ZMW.toLocaleString()} covers one young person's
+            passage — camp fee, meals, and all. Pledge for as many youth as
+            you wish, or give an amount, and the camp team will allocate your
+            sponsorship to registered campers who need it.`}
+          </p>
+        </div>
+        <div className="lg:col-span-4 flex lg:justify-end">
+          <Link
+            href="/rops-camp/sponsor"
+            className="group inline-flex items-center gap-3 bg-rops-ember text-rops-cream py-4 px-7 rounded-full font-body text-[13px] uppercase tracking-[0.18em] hover:bg-rops-cream hover:text-rops-ink transition-colors ember-glow"
+          >
+            <HeartHandshake size={16} />
+            Pledge sponsorship
+            <ArrowRight
+              size={16}
+              className="transition-transform group-hover:translate-x-1"
+            />
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 

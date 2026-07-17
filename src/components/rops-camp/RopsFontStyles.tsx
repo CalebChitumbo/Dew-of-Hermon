@@ -43,7 +43,9 @@ export function RopsFontStyles() {
 
         .hover\\:bg-rops-ember:hover { background-color: #D14A1F; }
         .hover\\:bg-rops-ember-2:hover { background-color: #B23E18; }
+        .hover\\:bg-rops-cream:hover { background-color: #F4EEE3; }
         .hover\\:border-rops-ink:hover { border-color: #16110D; }
+        .hover\\:border-rops-ember:hover { border-color: #D14A1F; }
         .hover\\:border-rops-cream:hover { border-color: #F4EEE3; }
         .hover\\:text-rops-cream:hover { color: #F4EEE3; }
         .hover\\:text-rops-ink:hover { color: #16110D; }

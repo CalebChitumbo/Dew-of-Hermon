@@ -38,6 +38,12 @@ export function serializeRegistration(
     paymentMarkedBy: data.paymentMarkedBy ?? null,
     paymentMarkedByName: data.paymentMarkedByName ?? null,
     paymentMarkedAt: data.paymentMarkedAt?.toDate?.()?.toISOString() ?? null,
+    sponsorshipId: data.sponsorshipId ?? null,
+    sponsorName: data.sponsorName ?? null,
+    sponsorshipAssignedBy: data.sponsorshipAssignedBy ?? null,
+    sponsorshipAssignedByName: data.sponsorshipAssignedByName ?? null,
+    sponsorshipAssignedAt:
+      data.sponsorshipAssignedAt?.toDate?.()?.toISOString() ?? null,
     createdAt:
       data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
     updatedAt:

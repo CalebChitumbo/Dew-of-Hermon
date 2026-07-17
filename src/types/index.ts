@@ -739,6 +739,55 @@ export interface CampRegistration {
   paymentMarkedBy: string | null;
   paymentMarkedByName: string | null;
   paymentMarkedAt: Date | null;
+  /** Sponsorship pledge this camper is assigned to, if any. */
+  sponsorshipId: string | null;
+  /** Denormalized sponsor name for display in registers. */
+  sponsorName: string | null;
+  sponsorshipAssignedBy: string | null;
+  sponsorshipAssignedByName: string | null;
+  sponsorshipAssignedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── ROPs Camp Sponsorships ───
+
+/** How the sponsor expressed their pledge: a number of youth or a money figure. */
+export type CampSponsorshipPledgeType = "SLOTS" | "AMOUNT";
+
+export type CampSponsorshipPaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
+
+/**
+ * A sponsorship pledge for a camp. Each pledge opens `slotsPledged`
+ * sponsorship slots; admins assign registered campers to a pledge, which
+ * consumes its slots (`slotsAssigned` is the denormalized, transactionally
+ * maintained count of assignments).
+ */
+export interface CampSponsorship {
+  id: string;
+  campId: string;
+  sponsorName: string;
+  organization: string | null;
+  phone: string;
+  email: string | null;
+  pledgeType: CampSponsorshipPledgeType;
+  /** Number of youth this pledge covers (sponsorship slots opened). */
+  slotsPledged: number;
+  /** Money value of the pledge (slots × fee, or the figure as given). */
+  amountPledged: number;
+  /** Slots already consumed by assigned campers. Never exceeds slotsPledged. */
+  slotsAssigned: number;
+  notes: string | null;
+  paymentStatus: CampSponsorshipPaymentStatus;
+  /** Amount actually received from the sponsor so far. */
+  amountReceived: number | null;
+  paymentReference: string | null;
+  paymentNotes: string | null;
+  paymentMarkedBy: string | null;
+  paymentMarkedByName: string | null;
+  paymentMarkedAt: Date | null;
+  submittedByUid: string | null;
+  submittedByEmail: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

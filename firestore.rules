@@ -279,6 +279,19 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // ─── ROPs Camp Sponsorships ───
+    // Sponsorship pledges are submitted through /api/camp-sponsorships
+    // (Admin SDK, which validates the payload and derives slot counts), so
+    // direct client writes are closed off. Reads and updates (payments,
+    // assigning campers to slots) are admin-only; hard-deletion is reserved
+    // for the Chairperson.
+    match /campSponsorships/{sponsorshipId} {
+      allow read: if isAdmin();
+      allow create: if false;
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
     // ─── Fundraising Braai ───
     // Events and assignments for Sunday fundraising braais. Writes always go
     // through the API (which checks the Fundraising department lead rule),

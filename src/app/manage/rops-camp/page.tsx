@@ -45,6 +45,7 @@ import {
   CheckCircle2,
   Clock,
   DollarSign,
+  HeartHandshake,
   Trash2,
   RefreshCw,
   UserPlus,
@@ -84,6 +85,9 @@ interface RegistrationRow {
   paymentNotes: string | null;
   paymentMarkedByName: string | null;
   paymentMarkedAt: string | null;
+  sponsorshipId: string | null;
+  sponsorName: string | null;
+  sponsorshipAssignedAt: string | null;
   createdAt: string;
 }
 
@@ -114,7 +118,9 @@ function RopsCampAdminInner() {
   const [rows, setRows] = useState<RegistrationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | CampPaymentStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | CampPaymentStatus | "SPONSORED" | "UNSPONSORED"
+  >("all");
   const [editing, setEditing] = useState<RegistrationRow | null>(null);
   const [deleting, setDeleting] = useState<RegistrationRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -154,9 +160,15 @@ function RopsCampAdminInner() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((r) => {
-      if (statusFilter !== "all" && r.paymentStatus !== statusFilter) return false;
+      if (statusFilter === "SPONSORED") {
+        if (!r.sponsorshipId) return false;
+      } else if (statusFilter === "UNSPONSORED") {
+        if (r.sponsorshipId) return false;
+      } else if (statusFilter !== "all" && r.paymentStatus !== statusFilter) {
+        return false;
+      }
       if (!q) return true;
-      const hay = `${r.firstName} ${r.lastName} ${r.phone} ${r.email ?? ""} ${r.churchOrSchool} ${r.parentName ?? ""} ${r.parentEmail ?? ""}`.toLowerCase();
+      const hay = `${r.firstName} ${r.lastName} ${r.phone} ${r.email ?? ""} ${r.churchOrSchool} ${r.parentName ?? ""} ${r.parentEmail ?? ""} ${r.sponsorName ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
   }, [rows, search, statusFilter]);
@@ -244,6 +256,12 @@ function RopsCampAdminInner() {
                 </SelectContent>
               </Select>
             )}
+            <Link href="/manage/rops-camp/sponsorships">
+              <Button variant="outline" className="rounded-xl">
+                <HeartHandshake className="mr-2 h-4 w-4" />
+                Sponsorships
+              </Button>
+            </Link>
             <Button variant="outline" className="rounded-xl" onClick={load} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
@@ -338,6 +356,8 @@ function RopsCampAdminInner() {
                 <SelectItem value="PAID">Paid</SelectItem>
                 <SelectItem value="UNPAID">Unpaid</SelectItem>
                 <SelectItem value="REFUNDED">Refunded</SelectItem>
+                <SelectItem value="SPONSORED">Sponsored</SelectItem>
+                <SelectItem value="UNSPONSORED">Not sponsored</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -421,7 +441,19 @@ function RopsCampAdminInner() {
                           : "—"}
                       </td>
                       <td className="px-2 py-3">
-                        <PaymentBadge status={row.paymentStatus} />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <PaymentBadge status={row.paymentStatus} />
+                          {row.sponsorshipId && (
+                            <Badge className="bg-teal/15 text-teal-dark hover:bg-teal/15">
+                              Sponsored
+                            </Badge>
+                          )}
+                        </div>
+                        {row.sponsorName && (
+                          <div className="mt-1 text-[11px] text-clay-500">
+                            by {row.sponsorName}
+                          </div>
+                        )}
                         {row.paymentMarkedAt && row.paymentStatus !== "UNPAID" && (
                           <div className="mt-1 text-[11px] text-clay-500">
                             by {row.paymentMarkedByName ?? "admin"} ·{" "}
