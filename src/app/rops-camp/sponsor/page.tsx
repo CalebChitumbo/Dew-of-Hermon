@@ -12,7 +12,7 @@ import {
   HeartHandshake,
   Users,
 } from "lucide-react";
-import { CAMPS } from "@/lib/camps";
+import { CAMPS, CAMP_CONTACTS } from "@/lib/camps";
 import { buildPaymentReference } from "@/components/rops-camp/PaymentInstructionsCard";
 import { RopsFontStyles } from "@/components/rops-camp/RopsFontStyles";
 
@@ -547,7 +547,7 @@ function PledgeConfirmation({
 function Footer() {
   return (
     <footer className="bg-rops-ink text-rops-cream px-6 md:px-10 py-10">
-      <div className="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div className="max-w-3xl mx-auto flex flex-wrap items-start justify-between gap-6">
         <div className="flex items-center gap-2.5">
           <Flame
             size={16}
@@ -556,12 +556,21 @@ function Footer() {
           />
           <span className="font-display italic text-sm">ROPs X · 2026</span>
         </div>
-        <div className="font-body text-[13px] text-rops-taupe">
-          Questions? Reach the camp team on{" "}
-          <span className="text-rops-cream font-semibold">
-            {PAYMENT_NUMBER}
-          </span>
-          .
+        <div>
+          <div className="font-body text-[10px] uppercase tracking-[0.2em] text-rops-ember mb-3">
+            Questions?
+          </div>
+          <ul className="font-body text-[13px] space-y-2">
+            {CAMP_CONTACTS.map((c) => (
+              <li key={c.phone}>
+                <span className="text-rops-cream">{c.name}</span>
+                <span className="text-rops-taupe">
+                  {" "}
+                  · {c.role} · <span className="number-tag">{c.phone}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </footer>

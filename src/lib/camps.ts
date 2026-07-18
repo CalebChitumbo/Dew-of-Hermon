@@ -23,6 +23,13 @@ export const CAMPS: CampDefinition[] = [
   },
 ];
 
+/** People to contact for camp questions (shown in public page footers). */
+export const CAMP_CONTACTS = [
+  { name: "Caleb Chitumbo", role: "Chairperson", phone: "0979 414 477" },
+  { name: "Joseph Mizinga", role: "ROPs Manager", phone: "0972 894 046" },
+  { name: "Mercy Kosta Kaonda", role: "Vice Chairperson", phone: "0977 806 404" },
+];
+
 export function getCamp(campId: string): CampDefinition | undefined {
   return CAMPS.find((c) => c.id === campId);
 }
