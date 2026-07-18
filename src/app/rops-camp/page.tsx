@@ -20,7 +20,7 @@ import {
   Tent,
   Users,
 } from "lucide-react";
-import { CAMPS } from "@/lib/camps";
+import { CAMPS, CAMP_CONTACTS } from "@/lib/camps";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCampLeadAccess } from "@/hooks/useCampLeadAccess";
 import { PaymentInstructionsCard } from "@/components/rops-camp/PaymentInstructionsCard";
@@ -1476,10 +1476,17 @@ function Footer({ onAdminClick }: { onAdminClick: () => void }) {
             <div className="font-body text-[10px] uppercase tracking-[0.2em] text-rops-ember mb-3">
               Questions?
             </div>
-            <div className="font-body text-sm text-rops-cream">
-              Reach the camp team on{" "}
-              <span className="font-semibold">0975088939</span>.
-            </div>
+            <ul className="font-body text-sm space-y-2.5">
+              {CAMP_CONTACTS.map((c) => (
+                <li key={c.phone}>
+                  <div className="text-rops-cream">
+                    {c.name}
+                    <span className="text-rops-taupe"> · {c.role}</span>
+                  </div>
+                  <div className="text-rops-taupe number-tag">{c.phone}</div>
+                </li>
+              ))}
+            </ul>
             <button
               onClick={onAdminClick}
               className="mt-4 font-body text-[10px] uppercase tracking-[0.2em] text-rops-taupe hover:text-rops-cream inline-flex items-center gap-1.5 transition-colors"
