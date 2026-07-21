@@ -8,6 +8,10 @@ import {
   callerCanManageCampRegistrations,
 } from "./_auth";
 import { serializeRegistration } from "./_serialize";
+import {
+  generateCheckInCode,
+  sendCampRegistrationEmail,
+} from "@/lib/camp-registration-email";
 import type {
   CampDropoffLocation,
   CampGender,
@@ -193,6 +197,14 @@ export async function POST(request: Request) {
       submittedByUid: submitter?.uid ?? null,
       submittedByEmail: submitter?.email?.toLowerCase() ?? null,
       claimToken,
+      checkInCode: generateCheckInCode(),
+      checkedIn: false,
+      checkedInAt: null,
+      checkedInBy: null,
+      checkedInByName: null,
+      qrEmailSentAt: null,
+      qrEmailSentTo: null,
+      qrEmailCount: 0,
       paymentStatus: "UNPAID" as CampPaymentStatus,
       paymentAmount: null,
       paymentReference: null,
@@ -248,11 +260,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Best-effort: email the registrant their details + QR check-in pass.
+    // Failures never fail the registration itself.
+    const emailResult = await sendCampRegistrationEmail(
+      ref.id,
+      registrationData
+    );
+
     return NextResponse.json(
       {
         registration: serializeRegistration(ref.id, registrationData),
         claimToken,
         camp: { id: camp.id, name: camp.name, fee: camp.fee, currency: camp.currency },
+        confirmationEmail: emailResult.queued
+          ? { queued: true, to: emailResult.to }
+          : { queued: false },
       },
       { status: 201 }
     );

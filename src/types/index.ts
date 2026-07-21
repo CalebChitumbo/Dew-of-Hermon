@@ -746,6 +746,21 @@ export interface CampRegistration {
   sponsorshipAssignedBy: string | null;
   sponsorshipAssignedByName: string | null;
   sponsorshipAssignedAt: Date | null;
+  /**
+   * Secret code embedded in the camper's QR pass. Scanning the QR at the
+   * camp gate resolves this code to the registration so admins can see
+   * payment status and mark arrival. Generated at registration time
+   * (backfilled lazily for older rows when a QR email is sent).
+   */
+  checkInCode: string | null;
+  checkedIn: boolean;
+  checkedInAt: Date | null;
+  checkedInBy: string | null;
+  checkedInByName: string | null;
+  /** Tracking for the registration-details + QR email. */
+  qrEmailSentAt: Date | null;
+  qrEmailSentTo: string | null;
+  qrEmailCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -800,6 +815,7 @@ export interface CampDefinition {
   capacity: number;
   fee: number;
   currency: string;
+  venue?: string;
 }
 
 // ─── Access Control ───

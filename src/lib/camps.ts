@@ -20,8 +20,17 @@ export const CAMPS: CampDefinition[] = [
     capacity: 80,
     fee: 400,
     currency: "ZMW",
+    venue: "Crested Crane Academy",
   },
 ];
+
+/** Mobile money number campers send payment + proof of payment to. */
+export const CAMP_PAYMENT_NUMBER = "0975088939";
+
+/** Short payment reference derived from the registration document ID. */
+export function buildCampPaymentReference(registrationId: string): string {
+  return registrationId.toUpperCase().slice(-8);
+}
 
 /** People to contact for camp questions (shown in public page footers). */
 export const CAMP_CONTACTS = [

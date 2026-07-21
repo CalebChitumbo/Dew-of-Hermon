@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  CAMP_PAYMENT_NUMBER,
+  buildCampPaymentReference,
+} from "@/lib/camps";
+
 interface PaymentInstructionsCardProps {
   registrationId: string;
   amount: number;
@@ -7,10 +12,10 @@ interface PaymentInstructionsCardProps {
   camperName: string;
 }
 
-const PAYMENT_NUMBER = "0975088939";
+const PAYMENT_NUMBER = CAMP_PAYMENT_NUMBER;
 
 export function buildPaymentReference(registrationId: string): string {
-  return registrationId.toUpperCase().slice(-8);
+  return buildCampPaymentReference(registrationId);
 }
 
 export function PaymentInstructionsCard({

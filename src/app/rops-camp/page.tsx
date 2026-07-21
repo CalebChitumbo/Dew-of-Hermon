@@ -15,6 +15,7 @@ import {
   Flame,
   HeartHandshake,
   Lock,
+  Mail,
   MapPin,
   Sparkles,
   Tent,
@@ -97,6 +98,7 @@ interface SubmittedRegistration {
   camperName: string;
   parentEmail: string;
   claimToken: string;
+  emailQueuedTo: string | null;
 }
 
 const PENDING_CLAIM_KEY = "ropsPendingClaim";
@@ -792,6 +794,9 @@ function RegistrationForm({
         camperName: form.camperName,
         parentEmail: form.parentEmail,
         claimToken: json.claimToken ?? "",
+        emailQueuedTo: json.confirmationEmail?.queued
+          ? json.confirmationEmail.to ?? null
+          : null,
       });
       onSubmitted();
     } catch {
@@ -1365,6 +1370,20 @@ function Confirmation({
           Your slot has been reserved. Please complete payment within{" "}
           <span className="font-semibold">7 days</span> to confirm.
         </p>
+
+        {reg.emailQueuedTo && (
+          <div className="rise rise-3 mt-6 bg-rops-forest/10 border border-rops-forest/30 rounded-sm p-4">
+            <div className="flex items-center justify-center gap-2">
+              <Mail size={15} className="text-rops-forest" />
+              <p className="font-body text-rops-ink-2 text-sm leading-relaxed">
+                We&rsquo;ve emailed your registration details and{" "}
+                <span className="font-semibold">check-in QR pass</span> to{" "}
+                <span className="font-semibold">{reg.emailQueuedTo}</span>.
+                Keep it — it gets scanned at the camp gate.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="rise rise-3 mt-8 bg-rops-cream-2 border border-rops-ember/30 rounded-sm p-5 md:p-6">
           <div className="flex items-center justify-center gap-2 mb-2">

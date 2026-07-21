@@ -46,8 +46,11 @@ import {
   Clock,
   DollarSign,
   HeartHandshake,
+  Mail,
+  ScanLine,
   Trash2,
   RefreshCw,
+  UserCheck,
   UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -88,7 +91,19 @@ interface RegistrationRow {
   sponsorshipId: string | null;
   sponsorName: string | null;
   sponsorshipAssignedAt: string | null;
+  checkInCode: string | null;
+  checkedIn: boolean;
+  checkedInAt: string | null;
+  checkedInByName: string | null;
+  qrEmailSentAt: string | null;
+  qrEmailSentTo: string | null;
+  qrEmailCount: number;
   createdAt: string;
+}
+
+/** Recipient the QR/details email would go to, mirroring the server rule. */
+function emailRecipient(row: RegistrationRow): string | null {
+  return row.parentEmail ?? row.email ?? null;
 }
 
 export default function RopsCampAdminPage() {
@@ -124,6 +139,10 @@ function RopsCampAdminInner() {
   const [editing, setEditing] = useState<RegistrationRow | null>(null);
   const [deleting, setDeleting] = useState<RegistrationRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkOnlyUnsent, setBulkOnlyUnsent] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -151,11 +170,21 @@ function RopsCampAdminInner() {
     const paid = rows.filter((r) => r.paymentStatus === "PAID").length;
     const unpaid = rows.filter((r) => r.paymentStatus === "UNPAID").length;
     const refunded = rows.filter((r) => r.paymentStatus === "REFUNDED").length;
+    const checkedIn = rows.filter((r) => r.checkedIn).length;
     const revenue = rows
       .filter((r) => r.paymentStatus === "PAID")
       .reduce((sum, r) => sum + (r.paymentAmount ?? camp.fee), 0);
-    return { total: rows.length, paid, unpaid, refunded, revenue };
+    return { total: rows.length, paid, unpaid, refunded, checkedIn, revenue };
   }, [rows, camp.fee]);
+
+  const bulkTargets = useMemo(() => {
+    const withEmail = rows.filter((r) => emailRecipient(r));
+    return {
+      all: withEmail,
+      unsent: withEmail.filter((r) => !r.qrEmailSentAt),
+      noEmail: rows.length - withEmail.length,
+    };
+  }, [rows]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -197,6 +226,83 @@ function RopsCampAdminInner() {
         description: err instanceof Error ? err.message : "Unknown error",
         variant: "destructive",
       });
+    }
+  };
+
+  const sendQrEmail = async (row: RegistrationRow) => {
+    const recipient = emailRecipient(row);
+    if (!recipient) {
+      toast({
+        title: "No email address",
+        description: `${row.firstName} ${row.lastName}'s registration has no email on file. Add one via Details first.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setSendingIds((prev) => new Set(prev).add(row.id));
+    try {
+      const res = await fetchWithAuth(`/api/camp-registrations/send-qr-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [row.id] }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      const outcome = json.outcomes?.[0];
+      if (outcome?.status === "sent") {
+        toast({
+          title: "Email sent",
+          description: `Registration details + QR pass sent to ${outcome.to}`,
+        });
+        await load();
+      } else {
+        throw new Error(outcome?.reason || "Email could not be sent");
+      }
+    } catch (err) {
+      toast({
+        title: "Send failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(row.id);
+        return next;
+      });
+    }
+  };
+
+  const bulkSend = async () => {
+    const targets = bulkOnlyUnsent ? bulkTargets.unsent : bulkTargets.all;
+    if (targets.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const res = await fetchWithAuth(`/api/camp-registrations/send-qr-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: targets.map((r) => r.id) }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed");
+      toast({
+        title: `Emails queued: ${json.sent}`,
+        description:
+          json.failed > 0 || json.skipped > 0
+            ? `${json.skipped} skipped, ${json.failed} failed — see per-camper status in the table.`
+            : "Every camper received their registration details and QR pass.",
+        variant: json.failed > 0 ? "destructive" : undefined,
+      });
+      setBulkOpen(false);
+      await load();
+    } catch (err) {
+      toast({
+        title: "Bulk send failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -256,6 +362,21 @@ function RopsCampAdminInner() {
                 </SelectContent>
               </Select>
             )}
+            <Link href="/manage/rops-camp/check-in">
+              <Button variant="gold" className="rounded-xl">
+                <ScanLine className="mr-2 h-4 w-4" />
+                Check-in
+              </Button>
+            </Link>
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => setBulkOpen(true)}
+              disabled={loading || bulkTargets.all.length === 0}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Email QR passes
+            </Button>
             <Link href="/manage/rops-camp/sponsorships">
               <Button variant="outline" className="rounded-xl">
                 <HeartHandshake className="mr-2 h-4 w-4" />
@@ -288,7 +409,7 @@ function RopsCampAdminInner() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
         <StatCardLux
           icon={Users}
           tone="teal"
@@ -316,6 +437,15 @@ function RopsCampAdminInner() {
           accent="bg-gold"
           highlight={stats.unpaid > 0}
           art={<Clock className="h-24 w-24" strokeWidth={1} />}
+        />
+        <StatCardLux
+          icon={UserCheck}
+          tone="teal"
+          label="In camp"
+          value={stats.checkedIn}
+          hint="checked in at the gate"
+          accent="bg-teal"
+          art={<UserCheck className="h-24 w-24" strokeWidth={1} />}
         />
         <StatCardLux
           icon={DollarSign}
@@ -448,6 +578,12 @@ function RopsCampAdminInner() {
                               Sponsored
                             </Badge>
                           )}
+                          {row.checkedIn && (
+                            <Badge className="bg-green-600 text-white hover:bg-green-600">
+                              <UserCheck className="mr-1 h-3 w-3" />
+                              In camp
+                            </Badge>
+                          )}
                         </div>
                         {row.sponsorName && (
                           <div className="mt-1 text-[11px] text-clay-500">
@@ -463,9 +599,34 @@ function RopsCampAdminInner() {
                       </td>
                       <td className="px-2 py-3 text-xs text-clay-600">
                         {format(new Date(row.createdAt), "MMM d, yyyy")}
+                        {row.qrEmailSentAt && (
+                          <div className="mt-1 flex items-center gap-1 text-[11px] text-clay-500">
+                            <Mail className="h-3 w-3" />
+                            QR sent {format(new Date(row.qrEmailSentAt), "MMM d")}
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-3">
                         <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="rounded-lg"
+                            onClick={() => sendQrEmail(row)}
+                            disabled={sendingIds.has(row.id)}
+                            title={
+                              emailRecipient(row)
+                                ? `Email registration details + QR pass to ${emailRecipient(row)}`
+                                : "No email address on this registration"
+                            }
+                            aria-label={`Email QR pass to ${row.firstName} ${row.lastName}`}
+                          >
+                            {sendingIds.has(row.id) ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Mail className="h-4 w-4" />
+                            )}
+                          </Button>
                           <Button
                             size="sm"
                             variant={row.paymentStatus === "PAID" ? "outline" : "default"}
@@ -509,6 +670,98 @@ function RopsCampAdminInner() {
             await load();
           }}
         />
+      )}
+
+      {bulkOpen && (
+        <Dialog open onOpenChange={(open) => !open && !bulkBusy && setBulkOpen(false)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Email QR passes</DialogTitle>
+              <DialogDescription>
+                Sends each camper (or their parent/guardian) an email with their
+                registration details, payment status, a link to create an
+                account and track the registration, and their QR check-in pass
+                for the camp gate.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setBulkOnlyUnsent(true)}
+                className={cn(
+                  "w-full rounded-xl border p-3 text-left text-sm transition-colors",
+                  bulkOnlyUnsent
+                    ? "border-gold bg-gold/10"
+                    : "border-clay-200 hover:bg-cream/60"
+                )}
+              >
+                <div className="font-medium text-clay-800">
+                  Only campers not yet emailed ({bulkTargets.unsent.length})
+                </div>
+                <div className="text-xs text-clay-500">
+                  Recommended — reaches everyone who registered before this
+                  feature existed.
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkOnlyUnsent(false)}
+                className={cn(
+                  "w-full rounded-xl border p-3 text-left text-sm transition-colors",
+                  !bulkOnlyUnsent
+                    ? "border-gold bg-gold/10"
+                    : "border-clay-200 hover:bg-cream/60"
+                )}
+              >
+                <div className="font-medium text-clay-800">
+                  Everyone with an email ({bulkTargets.all.length})
+                </div>
+                <div className="text-xs text-clay-500">
+                  Resends to campers who already received one, with their
+                  current payment status.
+                </div>
+              </button>
+              {bulkTargets.noEmail > 0 && (
+                <p className="text-xs text-amber-700">
+                  {bulkTargets.noEmail} registration
+                  {bulkTargets.noEmail === 1 ? " has" : "s have"} no email
+                  address and will be skipped.
+                </p>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="outline" onClick={() => setBulkOpen(false)} disabled={bulkBusy}>
+                Cancel
+              </Button>
+              <Button
+                onClick={bulkSend}
+                disabled={
+                  bulkBusy ||
+                  (bulkOnlyUnsent ? bulkTargets.unsent : bulkTargets.all).length === 0
+                }
+              >
+                {bulkBusy ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send{" "}
+                    {(bulkOnlyUnsent ? bulkTargets.unsent : bulkTargets.all).length}{" "}
+                    email
+                    {(bulkOnlyUnsent ? bulkTargets.unsent : bulkTargets.all).length === 1
+                      ? ""
+                      : "s"}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {deleting && (
@@ -686,6 +939,42 @@ function RegistrationDialog({
               />
               <Info label="Consent given" value={row.consentGiven ? "Yes" : "No"} />
               <Info label="Notes" value={row.notes ?? "—"} full />
+            </div>
+          </Section>
+
+          <Section title="Check-in">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <Info
+                label="Status"
+                value={
+                  row.checkedIn
+                    ? `In camp${
+                        row.checkedInAt
+                          ? ` since ${format(new Date(row.checkedInAt), "MMM d, HH:mm")}`
+                          : ""
+                      }${row.checkedInByName ? ` (by ${row.checkedInByName})` : ""}`
+                    : "Not checked in yet"
+                }
+              />
+              <Info
+                label="Pass code"
+                value={
+                  row.checkInCode
+                    ? row.checkInCode.replace(/(.{4})(?=.)/g, "$1-")
+                    : "Generated when the QR email is sent"
+                }
+              />
+              <Info
+                label="QR email"
+                value={
+                  row.qrEmailSentAt
+                    ? `Sent ${format(new Date(row.qrEmailSentAt), "MMM d, yyyy")} to ${
+                        row.qrEmailSentTo ?? "—"
+                      }${row.qrEmailCount > 1 ? ` (${row.qrEmailCount}×)` : ""}`
+                    : "Not sent yet"
+                }
+                full
+              />
             </div>
           </Section>
         </div>
