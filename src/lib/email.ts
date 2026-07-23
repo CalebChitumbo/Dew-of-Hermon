@@ -1,11 +1,25 @@
 import { adminDb } from "@/lib/firebase-admin";
 import type { EmailDeliveryStatus } from "@/types";
 
+/**
+ * Nodemailer-style attachment, passed through to the email extension.
+ * `content` must be a base64 string (Buffers aren't Firestore-serializable).
+ * Set `cid` to reference the attachment inline from HTML (`src="cid:..."`).
+ */
+export interface EmailAttachment {
+  filename: string;
+  content: string;
+  encoding: "base64";
+  contentType?: string;
+  cid?: string;
+}
+
 interface SendEmailParams {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  attachments?: EmailAttachment[];
 }
 
 /**
@@ -26,7 +40,13 @@ export function validateEmailConfig(): string | null {
  *
  * Returns the mail document ID so callers can track delivery status.
  */
-export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
+export async function sendEmail({
+  to,
+  subject,
+  text,
+  html,
+  attachments,
+}: SendEmailParams) {
   if (!process.env.EMAIL_FROM) {
     throw new Error(
       "EMAIL_FROM is not configured. Please set it in your environment variables."
@@ -50,6 +70,7 @@ export async function sendEmail({ to, subject, text, html }: SendEmailParams) {
         subject,
         text,
         html: html || text.replace(/\n/g, "<br/>"),
+        ...(attachments && attachments.length > 0 ? { attachments } : {}),
       },
       createdAt: new Date(),
     });

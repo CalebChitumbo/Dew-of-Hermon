@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { CAMPS } from "@/lib/camps";
 import { PaymentInstructionsCard } from "@/components/rops-camp/PaymentInstructionsCard";
+import { CheckInPassCard } from "@/components/rops-camp/CheckInPassCard";
 import { RopsFontStyles } from "@/components/rops-camp/RopsFontStyles";
 
 const camp = CAMPS[0];
@@ -57,6 +58,8 @@ interface MyRegistration {
   paymentStatus: "UNPAID" | "PAID" | "REFUNDED";
   paymentAmount: number | null;
   paymentMarkedAt: string | null;
+  checkInCode: string | null;
+  checkedIn: boolean;
   createdAt: string;
 }
 
@@ -269,6 +272,16 @@ function RegistrationCard({ reg }: { reg: MyRegistration }) {
           currency={camp.currency}
           camperName={fullName}
         />
+      )}
+
+      {reg.checkInCode && (
+        <div className="mt-6">
+          <CheckInPassCard
+            checkInCode={reg.checkInCode}
+            camperName={reg.firstName}
+            checkedIn={reg.checkedIn}
+          />
+        </div>
       )}
     </article>
   );

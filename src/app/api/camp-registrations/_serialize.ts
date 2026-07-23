@@ -44,6 +44,14 @@ export function serializeRegistration(
     sponsorshipAssignedByName: data.sponsorshipAssignedByName ?? null,
     sponsorshipAssignedAt:
       data.sponsorshipAssignedAt?.toDate?.()?.toISOString() ?? null,
+    checkInCode: data.checkInCode ?? null,
+    checkedIn: data.checkedIn ?? false,
+    checkedInAt: data.checkedInAt?.toDate?.()?.toISOString() ?? null,
+    checkedInBy: data.checkedInBy ?? null,
+    checkedInByName: data.checkedInByName ?? null,
+    qrEmailSentAt: data.qrEmailSentAt?.toDate?.()?.toISOString() ?? null,
+    qrEmailSentTo: data.qrEmailSentTo ?? null,
+    qrEmailCount: data.qrEmailCount ?? 0,
     createdAt:
       data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
     updatedAt:

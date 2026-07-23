@@ -61,6 +61,8 @@ export function RopsFontStyles() {
         .bg-rops-cream\\/5 { background-color: rgba(244, 238, 227, 0.05); }
         .bg-rops-ember\\/5 { background-color: rgba(209, 74, 31, 0.05); }
         .border-rops-ember\\/30 { border-color: rgba(209, 74, 31, 0.3); }
+        .bg-rops-forest\\/10 { background-color: rgba(31, 58, 46, 0.1); }
+        .border-rops-forest\\/30 { border-color: rgba(31, 58, 46, 0.3); }
 
         .text-rops-h1 {
           font-size: 2.75rem;
