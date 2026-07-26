@@ -199,7 +199,39 @@ export async function GET() {
         set("accounts_approvals", t + b);
       })(),
 
-      // 10. Talent Submissions — awaiting leadership review.
+      // 10. ROPs Camp exit passes — the stage(s) this user personally signs off,
+      //     plus anyone overdue back at camp, badged on the ROPs Camp nav item.
+      (async () => {
+        const stages: string[] = [];
+        if (can("camp_pass_admissions")) stages.push("PENDING_ADMISSIONS");
+        if (can("camp_pass_manager")) stages.push("PENDING_MANAGER");
+        if (can("camp_pass_chair")) stages.push("PENDING_CHAIR");
+        if (stages.length === 0 && !can("manage_camp_registrations")) return;
+
+        let n =
+          stages.length > 0
+            ? await aggCount(
+                adminDb.collection("campPasses").where("status", "in", stages)
+              )
+            : 0;
+
+        // Campers past their expected return are the camp team's problem
+        // whether or not they own an approval stage.
+        if (can("manage_camp_registrations") || can("camp_pass_manager")) {
+          const outSnap = await adminDb
+            .collection("campPasses")
+            .where("status", "==", "OUT")
+            .get();
+          const now = Date.now();
+          n += outSnap.docs.filter((doc) => {
+            const due = doc.data().expectedReturnAt?.toDate?.();
+            return due ? due.getTime() < now : false;
+          }).length;
+        }
+        set("rops_camp", n);
+      })(),
+
+      // 11. Talent Submissions — awaiting leadership review.
       (async () => {
         if (!isAdminPlus) return;
         set(
