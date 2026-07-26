@@ -54,7 +54,10 @@ import {
   RefreshCw,
   UserCheck,
   UserPlus,
+  UtensilsCrossed,
+  Printer,
 } from "lucide-react";
+import { downloadCampBadges } from "@/lib/camp-badges";
 import { cn } from "@/lib/utils";
 import type { CampPaymentStatus } from "@/types";
 
@@ -140,6 +143,7 @@ function RopsCampAdminInner() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | CampPaymentStatus | "SPONSORED" | "UNSPONSORED"
   >("all");
+  const [badgesBusy, setBadgesBusy] = useState(false);
   const [editing, setEditing] = useState<RegistrationRow | null>(null);
   const [deleting, setDeleting] = useState<RegistrationRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -190,6 +194,43 @@ function RopsCampAdminInner() {
       noEmail: rows.length - withEmail.length,
     };
   }, [rows]);
+
+  /**
+   * Build the printable badge sheet. These are handed out at gate check-in and
+   * are what campers present at the serving line, so the meal register never
+   * depends on a camper owning a phone.
+   */
+  const printBadges = async () => {
+    setBadgesBusy(true);
+    try {
+      await downloadCampBadges(
+        rows.map((r) => ({
+          id: r.id,
+          firstName: r.firstName,
+          lastName: r.lastName,
+          churchOrSchool: r.churchOrSchool,
+          checkInCode: r.checkInCode,
+        })),
+        camp.name,
+        window.location.origin
+      );
+      const missing = rows.filter((r) => !r.checkInCode).length;
+      toast({
+        title: "Badge sheet downloaded",
+        description: missing
+          ? `${rows.length - missing} badges. ${missing} camper(s) have no code yet — email their QR pass first.`
+          : `${rows.length} badges, 8 per page.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Couldn't build the badges",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setBadgesBusy(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -373,12 +414,27 @@ function RopsCampAdminInner() {
                 Check-in
               </Button>
             </Link>
+            <Link href="/manage/rops-camp/meals">
+              <Button variant="outline" className="rounded-xl">
+                <UtensilsCrossed className="mr-2 h-4 w-4" />
+                Meals
+              </Button>
+            </Link>
             <Link href="/manage/rops-camp/passes">
               <Button variant="outline" className="rounded-xl">
                 <Ticket className="mr-2 h-4 w-4" />
                 Exit passes
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              onClick={printBadges}
+              disabled={loading || badgesBusy || rows.length === 0}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              {badgesBusy ? "Building..." : "Print badges"}
+            </Button>
             <Button
               variant="outline"
               className="rounded-xl"
