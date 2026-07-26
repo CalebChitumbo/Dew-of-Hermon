@@ -18,6 +18,7 @@ import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { CAMPS } from "@/lib/camps";
 import { PaymentInstructionsCard } from "@/components/rops-camp/PaymentInstructionsCard";
 import { CheckInPassCard } from "@/components/rops-camp/CheckInPassCard";
+import { ExitPassPanel, type MyPass } from "@/components/rops-camp/ExitPassPanel";
 import { RopsFontStyles } from "@/components/rops-camp/RopsFontStyles";
 
 const camp = CAMPS[0];
@@ -60,6 +61,7 @@ interface MyRegistration {
   paymentMarkedAt: string | null;
   checkInCode: string | null;
   checkedIn: boolean;
+  onPass: boolean;
   createdAt: string;
 }
 
@@ -69,6 +71,7 @@ export default function MyRegistrationsPage() {
   const [registrations, setRegistrations] = useState<MyRegistration[] | null>(
     null
   );
+  const [passes, setPasses] = useState<MyPass[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadInFlight = useRef(false);
@@ -108,6 +111,18 @@ export default function MyRegistrationsPage() {
       }
       const json = await res.json();
       setRegistrations(json.registrations as MyRegistration[]);
+
+      // Exit passes are a separate collection; a failure here shouldn't hide
+      // the registrations themselves.
+      try {
+        const passRes = await fetchWithAuth("/api/camp-passes?scope=mine");
+        if (passRes.ok) {
+          const passJson = await passRes.json();
+          setPasses(passJson.passes as MyPass[]);
+        }
+      } catch {
+        // leave passes as-is
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -200,7 +215,11 @@ export default function MyRegistrationsPage() {
               <ul className="space-y-8">
                 {registrations.map((r) => (
                   <li key={r.id}>
-                    <RegistrationCard reg={r} />
+                    <RegistrationCard
+                      reg={r}
+                      passes={passes.filter((p) => p.registrationId === r.id)}
+                      onPassesChanged={load}
+                    />
                   </li>
                 ))}
               </ul>
@@ -231,7 +250,15 @@ export default function MyRegistrationsPage() {
   );
 }
 
-function RegistrationCard({ reg }: { reg: MyRegistration }) {
+function RegistrationCard({
+  reg,
+  passes,
+  onPassesChanged,
+}: {
+  reg: MyRegistration;
+  passes: MyPass[];
+  onPassesChanged: () => void;
+}) {
   const fullName = `${reg.firstName} ${reg.lastName}`.trim();
   const submitted = (() => {
     try {
@@ -282,6 +309,16 @@ function RegistrationCard({ reg }: { reg: MyRegistration }) {
             checkedIn={reg.checkedIn}
           />
         </div>
+      )}
+
+      {/* Leaving camp temporarily — only relevant once the camper has arrived. */}
+      {(reg.checkedIn || passes.length > 0) && (
+        <ExitPassPanel
+          registrationId={reg.id}
+          camperFirstName={reg.firstName}
+          passes={passes}
+          onChanged={onPassesChanged}
+        />
       )}
     </article>
   );

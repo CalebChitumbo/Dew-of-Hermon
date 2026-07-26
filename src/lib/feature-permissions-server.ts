@@ -106,6 +106,83 @@ export async function serverHasFeatureMinRole(
   return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[minRole];
 }
 
+export interface FeatureRecipient {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
+/**
+ * Every active user who currently has a feature — the inverse of
+ * `serverCheckFeatureAccess`, for notifying "whoever owns this queue".
+ *
+ * Firestore can't evaluate the role hierarchy or department rules server-side,
+ * so this narrows to the users who could plausibly qualify (by role, by
+ * department membership, by department leadership) and then runs each candidate
+ * through the same `checkFeatureAccess` the pages and APIs use, so a permission
+ * reconfigured in Settings changes who gets notified with no code change.
+ */
+export async function getFeatureRecipients(
+  featureKey: string
+): Promise<FeatureRecipient[]> {
+  const config = await getFeaturePermissionsConfig();
+  const minRole = config.minRoles[featureKey] ?? "SUPER_ADMIN";
+  const qualifyingRoles = (Object.keys(ROLE_HIERARCHY) as UserRole[]).filter(
+    (role) => ROLE_HIERARCHY[role] >= ROLE_HIERARCHY[minRole]
+  );
+
+  const deptNames = config.rules
+    .filter((r) => r.featureKey === featureKey)
+    .map((r) => r.departmentName);
+  const deptMap =
+    deptNames.length > 0 ? await getDepartmentNameToIdMap(deptNames) : {};
+  const deptIds = Array.from(new Set(Object.values(deptMap)));
+
+  const users = adminDb.collection("users");
+  // Single-field filters only (and in-memory isActive filtering) so this needs
+  // no composite indexes. 'in' / 'array-contains-any' cap at 30 values, which
+  // both role lists and per-feature department lists stay well under.
+  const snaps = await Promise.all([
+    qualifyingRoles.length > 0
+      ? users.where("role", "in", qualifyingRoles.slice(0, 30)).get()
+      : null,
+    deptIds.length > 0
+      ? users.where("departmentIds", "array-contains-any", deptIds.slice(0, 30)).get()
+      : null,
+    deptIds.length > 0
+      ? users
+          .where("leadsDepartmentIds", "array-contains-any", deptIds.slice(0, 30))
+          .get()
+      : null,
+  ]);
+
+  const recipients = new Map<string, FeatureRecipient>();
+  for (const snap of snaps) {
+    if (!snap) continue;
+    for (const doc of snap.docs) {
+      if (recipients.has(doc.id)) continue;
+      const data = doc.data();
+      if (data.isActive === false) continue;
+      const allowed = checkFeatureAccess(
+        featureKey,
+        data.role as UserRole,
+        (data.departmentIds as string[] | undefined) ?? [],
+        (data.leadsDepartmentIds as string[] | undefined) ?? [],
+        deptMap,
+        config
+      );
+      if (!allowed) continue;
+      recipients.set(doc.id, {
+        id: doc.id,
+        name: (data.name as string | undefined) || "",
+        email: (data.email as string | undefined) || null,
+      });
+    }
+  }
+
+  return Array.from(recipients.values());
+}
+
 /**
  * High-level server-side check: does this user have access to this feature?
  * Reads config from Firestore and resolves department names automatically.

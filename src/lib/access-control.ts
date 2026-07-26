@@ -700,6 +700,40 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     category: "ROPs Camp",
     supportsDepartmentRules: true,
   },
+  // ROPs Camp exit passes ("PASS system"). Three sign-offs in order, then the
+  // gate scan — each one is its own permission so the chain can't be short-cut.
+  {
+    key: "camp_pass_admissions",
+    label: "Camp Exit Passes — Admissions",
+    description:
+      "Log walk-up requests to leave camp and give the first sign-off before it goes to the Camp Manager",
+    category: "ROPs Camp",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "camp_pass_manager",
+    label: "Camp Exit Passes — Camp Manager",
+    description:
+      "Second sign-off on a camper's request to leave camp, before it reaches the Chairperson",
+    category: "ROPs Camp",
+    supportsDepartmentRules: true,
+  },
+  {
+    key: "camp_pass_chair",
+    label: "Camp Exit Passes — Chairperson",
+    description:
+      "Final approval, which issues the QR gate pass. Nothing scannable exists until this sign-off",
+    category: "ROPs Camp",
+    supportsDepartmentRules: false,
+  },
+  {
+    key: "scan_camp_passes",
+    label: "Scan Camp Passes at the Gate",
+    description:
+      "Scan approved exit passes at the camp gate to sign campers out and back in (scan-only access)",
+    category: "ROPs Camp",
+    supportsDepartmentRules: true,
+  },
   // Departmental Manager scopes — used by the Super Admin per-department UI to
   // grant viewing/management rights to specific department leads and youth
   // leaders. Pages can opt into these checks as they're built out.
@@ -839,6 +873,11 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_settings: "SUPER_ADMIN",
   latreou_access: "ADMIN",
   manage_camp_registrations: "ADMIN",
+  camp_pass_admissions: "ADMIN",
+  camp_pass_manager: "ADMIN",
+  // Only the Chairperson issues a gate pass.
+  camp_pass_chair: "SUPER_ADMIN",
+  scan_camp_passes: "ADMIN",
   manage_communications: "ADMIN",
   view_communications_reports: "ADMIN",
   manage_fundraising: "ADMIN",
@@ -928,6 +967,35 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
     departmentName: "ROPs Camp",
     requiresLeadership: true,
     allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  // Anyone on the ROPs Camp team can staff the admissions desk during camp —
+  // leadership isn't required, since the desk rotates. The Chairperson can
+  // narrow this to named people from Settings → Access Control.
+  {
+    featureKey: "camp_pass_admissions",
+    departmentName: "ROPs Camp",
+    requiresLeadership: false,
+    allowedRoles: [],
+  },
+  // The Camp Manager stage is the ROPs Camp department lead.
+  {
+    featureKey: "camp_pass_manager",
+    departmentName: "ROPs Camp",
+    requiresLeadership: true,
+    allowedRoles: ["DEPARTMENT_LEAD"],
+  },
+  // Gate guards: the camp team and the Ushering & Protocol team, scan-only.
+  {
+    featureKey: "scan_camp_passes",
+    departmentName: "ROPs Camp",
+    requiresLeadership: false,
+    allowedRoles: [],
+  },
+  {
+    featureKey: "scan_camp_passes",
+    departmentName: "Ushering & Protocol",
+    requiresLeadership: false,
+    allowedRoles: [],
   },
   // Defaults for departmental-manager scopes — the lead of each department gets
   // management rights for that department, and youth leaders in the same

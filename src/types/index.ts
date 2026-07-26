@@ -761,6 +761,115 @@ export interface CampRegistration {
   qrEmailSentAt: Date | null;
   qrEmailSentTo: string | null;
   qrEmailCount: number;
+  /**
+   * True while the camper is temporarily off-site on an approved exit pass
+   * (scanned out at the gate, not yet scanned back in). The arrival record
+   * (`checkedIn`) is left untouched so the register keeps both facts.
+   */
+  onPass: boolean;
+  /** The exit pass the camper is currently out on, if any. */
+  activePassId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─── ROPs Camp Exit Passes ───
+
+/**
+ * A camper's request to leave camp temporarily. Three sign-offs in order —
+ * Admissions, Camp Manager, Chairperson — and only the Chairperson's approval
+ * issues the QR pass ticket the gate scans.
+ */
+export type CampPassStatus =
+  | "PENDING_ADMISSIONS"
+  | "PENDING_MANAGER"
+  | "PENDING_CHAIR"
+  /** Chair approved; pass ticket issued and emailed, awaiting the gate scan out. */
+  | "APPROVED"
+  /** Scanned out at the gate — camper is off-site. */
+  | "OUT"
+  /** Scanned back in — the pass is spent and no longer valid. */
+  | "RETURNED"
+  | "REJECTED"
+  | "CANCELLED";
+
+/** The three approval stages, in order. */
+export type CampPassStage = "ADMISSIONS" | "MANAGER" | "CHAIR";
+
+/** Where the request came from: the camper/guardian online, or the desk. */
+export type CampPassRequestSource = "CAMPER" | "ADMISSIONS";
+
+export interface CampPassStatusHistoryEntry {
+  status: CampPassStatus;
+  changedBy: string;
+  changedByName: string;
+  changedAt: Date;
+  comments: string | null;
+}
+
+export interface CampPass {
+  id: string;
+  campId: string;
+  registrationId: string;
+  /** Denormalized camper details so queues and the gate render without joins. */
+  camperName: string;
+  camperFirstName: string;
+  camperPhone: string | null;
+  /** Where the pass ticket is emailed (guardian address preferred). */
+  contactEmail: string | null;
+  /** Why the camper needs to leave camp. */
+  reason: string;
+  destination: string | null;
+  /** Who is collecting/escorting the camper — important for minors. */
+  escortName: string | null;
+  escortPhone: string | null;
+  /** When the camper is expected back in camp. */
+  expectedReturnAt: Date;
+  status: CampPassStatus;
+  requestSource: CampPassRequestSource;
+  requestedByUid: string | null;
+  requestedByName: string;
+
+  admissionsId: string | null;
+  admissionsName: string | null;
+  admissionsDecidedAt: Date | null;
+  admissionsComments: string | null;
+
+  managerId: string | null;
+  managerName: string | null;
+  managerDecidedAt: Date | null;
+  managerComments: string | null;
+
+  chairId: string | null;
+  chairName: string | null;
+  chairDecidedAt: Date | null;
+  chairComments: string | null;
+
+  /** Which stage turned it down, when status is REJECTED. */
+  rejectedStage: CampPassStage | null;
+
+  /**
+   * Secret code embedded in the issued QR ticket. Generated only when the
+   * Chairperson approves — nothing scannable exists before that.
+   */
+  passCode: string | null;
+  passIssuedAt: Date | null;
+  passEmailSentAt: Date | null;
+  passEmailSentTo: string | null;
+  passEmailCount: number;
+
+  /** Gate scan out (first and only permitted out-scan). */
+  checkedOutAt: Date | null;
+  checkedOutBy: string | null;
+  checkedOutByName: string | null;
+  /** Gate scan back in (second and final scan — the pass dies here). */
+  checkedInAt: Date | null;
+  checkedInBy: string | null;
+  checkedInByName: string | null;
+  /** Set when the return scan happened after `expectedReturnAt`. */
+  returnedLate: boolean;
+
+  statusHistory: CampPassStatusHistoryEntry[];
   createdAt: Date;
   updatedAt: Date;
 }

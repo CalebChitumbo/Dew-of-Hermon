@@ -52,6 +52,9 @@ export function serializeRegistration(
     qrEmailSentAt: data.qrEmailSentAt?.toDate?.()?.toISOString() ?? null,
     qrEmailSentTo: data.qrEmailSentTo ?? null,
     qrEmailCount: data.qrEmailCount ?? 0,
+    // Temporarily off-site on an approved exit pass (see /manage/rops-camp/passes).
+    onPass: data.onPass ?? false,
+    activePassId: data.activePassId ?? null,
     createdAt:
       data.createdAt?.toDate?.()?.toISOString() ?? new Date().toISOString(),
     updatedAt:

@@ -292,6 +292,21 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // ─── ROPs Camp Exit Passes ───
+    // The PASS system: a camper's request to leave camp, signed off by
+    // Admissions → Camp Manager → Chairperson, then scanned out and back in at
+    // the gate. EVERY write goes through /api/camp-passes (Admin SDK), which
+    // enforces the stage permissions and applies the gate scan inside a
+    // transaction so a pass can never be used more than once each way. Direct
+    // client writes are closed off completely — a client that could edit a pass
+    // could approve its own exit or reset a spent code. Reads are closed too
+    // (the `passCode` is a bearer token for leaving camp); campers and staff
+    // both read passes through the API, which decides who may see a code.
+    match /campPasses/{passId} {
+      allow read: if false;
+      allow write: if false;
+    }
+
     // ─── Fundraising Braai ───
     // Events and assignments for Sunday fundraising braais. Writes always go
     // through the API (which checks the Fundraising department lead rule),

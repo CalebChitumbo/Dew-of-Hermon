@@ -48,6 +48,8 @@ import {
   HeartHandshake,
   Mail,
   ScanLine,
+  Ticket,
+  DoorOpen,
   Trash2,
   RefreshCw,
   UserCheck,
@@ -95,6 +97,8 @@ interface RegistrationRow {
   checkedIn: boolean;
   checkedInAt: string | null;
   checkedInByName: string | null;
+  /** Temporarily off-site on an approved exit pass. */
+  onPass: boolean;
   qrEmailSentAt: string | null;
   qrEmailSentTo: string | null;
   qrEmailCount: number;
@@ -171,10 +175,11 @@ function RopsCampAdminInner() {
     const unpaid = rows.filter((r) => r.paymentStatus === "UNPAID").length;
     const refunded = rows.filter((r) => r.paymentStatus === "REFUNDED").length;
     const checkedIn = rows.filter((r) => r.checkedIn).length;
+    const onPass = rows.filter((r) => r.onPass).length;
     const revenue = rows
       .filter((r) => r.paymentStatus === "PAID")
       .reduce((sum, r) => sum + (r.paymentAmount ?? camp.fee), 0);
-    return { total: rows.length, paid, unpaid, refunded, checkedIn, revenue };
+    return { total: rows.length, paid, unpaid, refunded, checkedIn, onPass, revenue };
   }, [rows, camp.fee]);
 
   const bulkTargets = useMemo(() => {
@@ -368,6 +373,12 @@ function RopsCampAdminInner() {
                 Check-in
               </Button>
             </Link>
+            <Link href="/manage/rops-camp/passes">
+              <Button variant="outline" className="rounded-xl">
+                <Ticket className="mr-2 h-4 w-4" />
+                Exit passes
+              </Button>
+            </Link>
             <Button
               variant="outline"
               className="rounded-xl"
@@ -409,7 +420,7 @@ function RopsCampAdminInner() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-6">
         <StatCardLux
           icon={Users}
           tone="teal"
@@ -446,6 +457,16 @@ function RopsCampAdminInner() {
           hint="checked in at the gate"
           accent="bg-teal"
           art={<UserCheck className="h-24 w-24" strokeWidth={1} />}
+        />
+        <StatCardLux
+          icon={DoorOpen}
+          tone="clay"
+          label="Out on pass"
+          value={stats.onPass}
+          hint="signed out at the gate"
+          accent="bg-clay-400"
+          href="/manage/rops-camp/passes"
+          art={<DoorOpen className="h-24 w-24" strokeWidth={1} />}
         />
         <StatCardLux
           icon={DollarSign}
@@ -578,12 +599,17 @@ function RopsCampAdminInner() {
                               Sponsored
                             </Badge>
                           )}
-                          {row.checkedIn && (
+                          {row.onPass ? (
+                            <Badge className="bg-clay-800 text-white hover:bg-clay-800">
+                              <DoorOpen className="mr-1 h-3 w-3" />
+                              Out on pass
+                            </Badge>
+                          ) : row.checkedIn ? (
                             <Badge className="bg-green-600 text-white hover:bg-green-600">
                               <UserCheck className="mr-1 h-3 w-3" />
                               In camp
                             </Badge>
-                          )}
+                          ) : null}
                         </div>
                         {row.sponsorName && (
                           <div className="mt-1 text-[11px] text-clay-500">
