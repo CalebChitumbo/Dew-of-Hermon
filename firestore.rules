@@ -307,6 +307,21 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── ROPs Camp Meal Register ───
+    // One document per camper per meal sitting, id'd deterministically as
+    // `${campId}_${date}_${slot}_${registrationId}`. Every write goes through
+    // /api/camp-meals (Admin SDK), which create()s that id so a replayed
+    // offline scan or two serving lines scanning at once can never record a
+    // second helping. Direct client writes are closed off: a client that could
+    // write here could forge or delete its own meal record, and a client that
+    // could pick the document id could sidestep the collision that makes the
+    // whole scheme safe. Reads are admin-only — these rows carry camper names
+    // and allergy notes.
+    match /campMealScans/{scanId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // ─── Fundraising Braai ───
     // Events and assignments for Sunday fundraising braais. Writes always go
     // through the API (which checks the Fundraising department lead rule),

@@ -54,7 +54,10 @@ import {
   RefreshCw,
   UserCheck,
   UserPlus,
+  UtensilsCrossed,
+  Printer,
 } from "lucide-react";
+import { downloadCampQrTags } from "@/lib/camp-qr-tags";
 import { cn } from "@/lib/utils";
 import type { CampPaymentStatus } from "@/types";
 
@@ -140,6 +143,7 @@ function RopsCampAdminInner() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | CampPaymentStatus | "SPONSORED" | "UNSPONSORED"
   >("all");
+  const [tagsBusy, setTagsBusy] = useState(false);
   const [editing, setEditing] = useState<RegistrationRow | null>(null);
   const [deleting, setDeleting] = useState<RegistrationRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -190,6 +194,43 @@ function RopsCampAdminInner() {
       noEmail: rows.length - withEmail.length,
     };
   }, [rows]);
+
+  /**
+   * Build the printable QR tag sheet. The tags are cut out and stuck onto the
+   * camp IDs, so a camper's ID doubles as their gate pass and meal card and the
+   * meal register never depends on a camper owning a phone.
+   */
+  const printQrTags = async () => {
+    setTagsBusy(true);
+    try {
+      await downloadCampQrTags(
+        rows.map((r) => ({
+          id: r.id,
+          firstName: r.firstName,
+          lastName: r.lastName,
+          checkInCode: r.checkInCode,
+        })),
+        camp.name,
+        window.location.origin
+      );
+      const missing = rows.filter((r) => !r.checkInCode).length;
+      const printed = rows.length - missing;
+      toast({
+        title: "QR tag sheet downloaded",
+        description: missing
+          ? `${printed} tags. ${missing} camper(s) have no code yet — email their QR pass first.`
+          : `${printed} tags, 20 per page. Each camper's name prints above the cut line.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Couldn't build the QR tags",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setTagsBusy(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -373,12 +414,27 @@ function RopsCampAdminInner() {
                 Check-in
               </Button>
             </Link>
+            <Link href="/manage/rops-camp/meals">
+              <Button variant="outline" className="rounded-xl">
+                <UtensilsCrossed className="mr-2 h-4 w-4" />
+                Meals
+              </Button>
+            </Link>
             <Link href="/manage/rops-camp/passes">
               <Button variant="outline" className="rounded-xl">
                 <Ticket className="mr-2 h-4 w-4" />
                 Exit passes
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              onClick={printQrTags}
+              disabled={loading || tagsBusy || rows.length === 0}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              {tagsBusy ? "Building..." : "Print QR tags"}
+            </Button>
             <Button
               variant="outline"
               className="rounded-xl"

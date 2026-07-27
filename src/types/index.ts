@@ -927,6 +927,61 @@ export interface CampDefinition {
   venue?: string;
 }
 
+// ─── ROPs Camp Meals ───
+
+export type CampMealSlot = "BREAKFAST" | "LUNCH" | "DINNER";
+
+/**
+ * One serving of one meal on one day — the unit a camper is ticked off
+ * against. Sittings are derived from the camp's static meal plan, never
+ * stored, so the set is identical on every device (including offline ones).
+ */
+export interface CampMealSitting {
+  /** `${campId}_${date}_${slot}` — also the prefix of every scan doc id. */
+  id: string;
+  campId: string;
+  /** yyyy-MM-dd. */
+  date: string;
+  slot: CampMealSlot;
+  /** "Friday lunch" — what the server sees on the sitting picker. */
+  label: string;
+  /** Local HH:mm window used to auto-select the sitting at the serving line. */
+  opensAt: string;
+  closesAt: string;
+}
+
+/**
+ * A camper served at a sitting. The document id is deterministic —
+ * `${sittingId}_${registrationId}` — so a replayed offline scan or two
+ * serving lines scanning at once can never produce a second helping.
+ * Written with create(), never set(): the collision IS the "already served"
+ * answer.
+ */
+export interface CampMealScan {
+  id: string;
+  campId: string;
+  sittingId: string;
+  date: string;
+  slot: CampMealSlot;
+  registrationId: string;
+  /** Denormalized so the register renders without joins. */
+  camperName: string;
+  camperGender: CampGender | null;
+  /** What the kitchen must know at the moment of serving. */
+  dietaryPreference: string | null;
+  allergies: string | null;
+  servedAt: Date;
+  servedBy: string;
+  servedByName: string;
+  /**
+   * True when the camper was neither paid nor sponsored at serving time.
+   * Recorded for the manager — never a reason to refuse food.
+   */
+  paymentFlagged: boolean;
+  /** True when the scan was taken offline and synced later. */
+  queuedOffline: boolean;
+}
+
 // ─── Access Control ───
 
 export type AccessLevel = "edit" | "view" | "none";

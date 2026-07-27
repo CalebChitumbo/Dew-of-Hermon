@@ -734,6 +734,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     category: "ROPs Camp",
     supportsDepartmentRules: true,
   },
+  {
+    key: "serve_camp_meals",
+    label: "Serve Camp Meals",
+    description:
+      "Scan camper meal badges at the serving line to tick them off the meal register (scan-only access)",
+    category: "ROPs Camp",
+    supportsDepartmentRules: true,
+  },
   // Departmental Manager scopes — used by the Super Admin per-department UI to
   // grant viewing/management rights to specific department leads and youth
   // leaders. Pages can opt into these checks as they're built out.
@@ -878,6 +886,7 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   // Only the Chairperson issues a gate pass.
   camp_pass_chair: "SUPER_ADMIN",
   scan_camp_passes: "ADMIN",
+  serve_camp_meals: "ADMIN",
   manage_communications: "ADMIN",
   view_communications_reports: "ADMIN",
   manage_fundraising: "ADMIN",
@@ -994,6 +1003,20 @@ export const DEFAULT_DEPARTMENT_ACCESS_RULES: DepartmentAccessRule[] = [
   {
     featureKey: "scan_camp_passes",
     departmentName: "Ushering & Protocol",
+    requiresLeadership: false,
+    allowedRoles: [],
+  },
+  // Serving line: the camp team and the kitchen (Food Logistics) team,
+  // scan-only — enough to tick a camper off, not to edit registrations.
+  {
+    featureKey: "serve_camp_meals",
+    departmentName: "ROPs Camp",
+    requiresLeadership: false,
+    allowedRoles: [],
+  },
+  {
+    featureKey: "serve_camp_meals",
+    departmentName: "Food Logistics",
     requiresLeadership: false,
     allowedRoles: [],
   },
