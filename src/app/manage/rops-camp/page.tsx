@@ -57,7 +57,7 @@ import {
   UtensilsCrossed,
   Printer,
 } from "lucide-react";
-import { downloadCampBadges } from "@/lib/camp-badges";
+import { downloadCampQrTags } from "@/lib/camp-qr-tags";
 import { cn } from "@/lib/utils";
 import type { CampPaymentStatus } from "@/types";
 
@@ -143,7 +143,7 @@ function RopsCampAdminInner() {
   const [statusFilter, setStatusFilter] = useState<
     "all" | CampPaymentStatus | "SPONSORED" | "UNSPONSORED"
   >("all");
-  const [badgesBusy, setBadgesBusy] = useState(false);
+  const [tagsBusy, setTagsBusy] = useState(false);
   const [editing, setEditing] = useState<RegistrationRow | null>(null);
   const [deleting, setDeleting] = useState<RegistrationRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -196,39 +196,39 @@ function RopsCampAdminInner() {
   }, [rows]);
 
   /**
-   * Build the printable badge sheet. These are handed out at gate check-in and
-   * are what campers present at the serving line, so the meal register never
-   * depends on a camper owning a phone.
+   * Build the printable QR tag sheet. The tags are cut out and stuck onto the
+   * camp IDs, so a camper's ID doubles as their gate pass and meal card and the
+   * meal register never depends on a camper owning a phone.
    */
-  const printBadges = async () => {
-    setBadgesBusy(true);
+  const printQrTags = async () => {
+    setTagsBusy(true);
     try {
-      await downloadCampBadges(
+      await downloadCampQrTags(
         rows.map((r) => ({
           id: r.id,
           firstName: r.firstName,
           lastName: r.lastName,
-          churchOrSchool: r.churchOrSchool,
           checkInCode: r.checkInCode,
         })),
         camp.name,
         window.location.origin
       );
       const missing = rows.filter((r) => !r.checkInCode).length;
+      const printed = rows.length - missing;
       toast({
-        title: "Badge sheet downloaded",
+        title: "QR tag sheet downloaded",
         description: missing
-          ? `${rows.length - missing} badges. ${missing} camper(s) have no code yet — email their QR pass first.`
-          : `${rows.length} badges, 8 per page.`,
+          ? `${printed} tags. ${missing} camper(s) have no code yet — email their QR pass first.`
+          : `${printed} tags, 20 per page. Each camper's name prints above the cut line.`,
       });
     } catch (err) {
       toast({
-        title: "Couldn't build the badges",
+        title: "Couldn't build the QR tags",
         description: err instanceof Error ? err.message : "Unknown error",
         variant: "destructive",
       });
     } finally {
-      setBadgesBusy(false);
+      setTagsBusy(false);
     }
   };
 
@@ -429,11 +429,11 @@ function RopsCampAdminInner() {
             <Button
               variant="outline"
               className="rounded-xl"
-              onClick={printBadges}
-              disabled={loading || badgesBusy || rows.length === 0}
+              onClick={printQrTags}
+              disabled={loading || tagsBusy || rows.length === 0}
             >
               <Printer className="mr-2 h-4 w-4" />
-              {badgesBusy ? "Building..." : "Print badges"}
+              {tagsBusy ? "Building..." : "Print QR tags"}
             </Button>
             <Button
               variant="outline"
