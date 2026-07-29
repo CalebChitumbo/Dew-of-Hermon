@@ -292,6 +292,19 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // ─── ROPs Camp Announcements ───
+    // One document per announcement sent to campers, holding the message as
+    // typed (placeholders unresolved) and the per-camper delivery result.
+    // Everything is written through /api/camp-broadcasts (Admin SDK), which
+    // checks the camp-management permission and does the sending, so direct
+    // client writes are closed off — a client that could write here could
+    // fabricate a send record. Reads are admin-only: the outcomes carry camper
+    // names and the addresses their mail went to.
+    match /campBroadcasts/{broadcastId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // ─── ROPs Camp Exit Passes ───
     // The PASS system: a camper's request to leave camp, signed off by
     // Admissions → Camp Manager → Chairperson, then scanned out and back in at

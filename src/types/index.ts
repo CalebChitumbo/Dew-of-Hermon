@@ -927,6 +927,63 @@ export interface CampDefinition {
   venue?: string;
 }
 
+// ─── ROPs Camp Announcements (broadcast emails) ───
+
+/** Which registrations a broadcast goes to. */
+export type CampBroadcastAudience =
+  | "ALL"
+  | "PAID"
+  | "UNPAID"
+  | "SPONSORED"
+  | "UNSPONSORED"
+  | "CHECKED_IN"
+  | "NOT_CHECKED_IN"
+  | "SELECTED";
+
+export type CampBroadcastOutcomeStatus = "sent" | "skipped" | "failed";
+
+/** What happened to one camper's copy of a broadcast. */
+export interface CampBroadcastOutcome {
+  registrationId: string;
+  /** Camper name at send time — the register can change afterwards. */
+  name: string;
+  to: string | null;
+  status: CampBroadcastOutcomeStatus;
+  reason?: string;
+}
+
+/**
+ * One announcement typed once and delivered as a personalized copy to every
+ * camper in the chosen audience. The body is stored exactly as typed —
+ * `{{placeholders}}` and all — so it can be reused as the starting point for
+ * the next announcement.
+ */
+export interface CampBroadcast {
+  id: string;
+  campId: string;
+  /** Subject line as typed, placeholders unresolved. */
+  subject: string;
+  /** Body as typed, placeholders unresolved. */
+  body: string;
+  audience: CampBroadcastAudience;
+  /** Registration ids picked by hand, when audience is SELECTED. */
+  selectedIds: string[];
+  /** Optional call-to-action button — usually a form to collect information. */
+  ctaLabel: string | null;
+  ctaUrl: string | null;
+  /** Address camper replies are routed to. */
+  replyTo: string | null;
+  sentBy: string;
+  sentByName: string;
+  sentAt: Date;
+  recipientCount: number;
+  sentCount: number;
+  skippedCount: number;
+  failedCount: number;
+  /** Per-camper delivery result, capped to keep the document small. */
+  outcomes: CampBroadcastOutcome[];
+}
+
 // ─── ROPs Camp Meals ───
 
 export type CampMealSlot = "BREAKFAST" | "LUNCH" | "DINNER";
