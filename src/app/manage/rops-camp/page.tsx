@@ -47,6 +47,7 @@ import {
   DollarSign,
   HeartHandshake,
   Mail,
+  Megaphone,
   ScanLine,
   Ticket,
   DoorOpen,
@@ -412,6 +413,12 @@ function RopsCampAdminInner() {
               <Button variant="gold" className="rounded-xl">
                 <ScanLine className="mr-2 h-4 w-4" />
                 Check-in
+              </Button>
+            </Link>
+            <Link href="/manage/rops-camp/announcements">
+              <Button variant="outline" className="rounded-xl">
+                <Megaphone className="mr-2 h-4 w-4" />
+                Announcements
               </Button>
             </Link>
             <Link href="/manage/rops-camp/meals">

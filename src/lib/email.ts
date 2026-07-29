@@ -20,6 +20,11 @@ interface SendEmailParams {
   text: string;
   html?: string;
   attachments?: EmailAttachment[];
+  /**
+   * Address replies should go to instead of EMAIL_FROM. Used when we're asking
+   * campers for information and want their answers to reach a real inbox.
+   */
+  replyTo?: string;
 }
 
 /**
@@ -46,6 +51,7 @@ export async function sendEmail({
   text,
   html,
   attachments,
+  replyTo,
 }: SendEmailParams) {
   if (!process.env.EMAIL_FROM) {
     throw new Error(
@@ -66,6 +72,9 @@ export async function sendEmail({
   try {
     const mailRef = await adminDb.collection("mail").add({
       to: [to],
+      // `replyTo` is a top-level field on the Trigger Email extension's doc,
+      // not part of `message`.
+      ...(replyTo ? { replyTo } : {}),
       message: {
         subject,
         text,
