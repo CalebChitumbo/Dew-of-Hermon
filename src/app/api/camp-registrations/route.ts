@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { randomBytes } from "crypto";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { getCamp, DEFAULT_CAMP_ID } from "@/lib/camps";
+import { campSettingsRef, capacityFromSnapshot } from "@/lib/camp-capacity";
 import {
   getCallerWithDepartments,
   callerCanManageCampRegistrations,
@@ -225,6 +226,13 @@ export async function POST(request: Request) {
     // time it's touched, and the DELETE route decrements it.
     const counterRef = adminDb.collection("campCounters").doc(campId);
     const atCapacity = await adminDb.runTransaction(async (tx) => {
+      // Capacity is read inside the transaction too: an admin raising the cap
+      // mid-transaction then conflicts and we retry against the new value,
+      // rather than turning someone away against a stale cap.
+      const capacity = capacityFromSnapshot(
+        campId,
+        await tx.get(campSettingsRef(campId))
+      );
       const counterSnap = await tx.get(counterRef);
       let current: number;
       if (counterSnap.exists) {
@@ -240,7 +248,7 @@ export async function POST(request: Request) {
         current = countSnap.data().count;
       }
 
-      if (current >= camp.capacity) {
+      if (current >= capacity) {
         return true;
       }
 
