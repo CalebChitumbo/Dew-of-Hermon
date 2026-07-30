@@ -39,6 +39,9 @@ function optionalEmail(value: unknown): string | null {
   return trimmed ? trimmed.toLowerCase() : null;
 }
 
+/** Loose shape check — real delivery is what proves an address, not a regex. */
+const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
+
 /**
  * If a session cookie is present and valid, returns { uid, email } for
  * stamping onto a new registration. Returns null on no cookie or invalid
@@ -128,6 +131,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid gender" }, { status: 400 });
     }
 
+    // An email address is required: it's where the registration details,
+    // payment reference and QR check-in pass are sent. The form posts the one
+    // address it collects as both `email` and `parentEmail`; either satisfies
+    // this, and whichever is present must actually look like an address.
+    const email = optionalEmail(body.email);
+    const parentEmail = optionalEmail(body.parentEmail);
+    if (!email && !parentEmail) {
+      return NextResponse.json(
+        {
+          error:
+            "An email address is required — it's where the camp pass and registration details are sent.",
+        },
+        { status: 400 }
+      );
+    }
+    for (const candidate of [email, parentEmail]) {
+      if (candidate && !EMAIL_PATTERN.test(candidate)) {
+        return NextResponse.json(
+          { error: "Enter a valid email address" },
+          { status: 400 }
+        );
+      }
+    }
+
     let tshirtSize: CampTShirtSize | null = null;
     if (body.tshirtSize) {
       if (!VALID_TSHIRT_SIZES.includes(body.tshirtSize as CampTShirtSize)) {
@@ -177,7 +204,7 @@ export async function POST(request: Request) {
       dateOfBirth: body.dateOfBirth.trim(),
       gender,
       phone: body.phone.trim(),
-      email: optionalEmail(body.email),
+      email,
       churchOrSchool: optionalString(body.churchOrSchool) ?? "",
       emergencyContactName: body.emergencyContactName.trim(),
       emergencyContactPhone: body.emergencyContactPhone.trim(),
@@ -190,7 +217,7 @@ export async function POST(request: Request) {
       parentName: optionalString(body.parentName),
       parentRelationship: optionalString(body.parentRelationship),
       parentAltPhone: optionalString(body.parentAltPhone),
-      parentEmail: optionalEmail(body.parentEmail),
+      parentEmail,
       address: optionalString(body.address),
       dropoffLocation,
       notes: optionalString(body.notes),

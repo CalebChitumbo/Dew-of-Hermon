@@ -712,7 +712,13 @@ function RegistrationForm({
         ? "Your name is required"
         : "Parent/guardian name required";
     if (!form.parentPhone.trim()) err.parentPhone = "Primary phone required";
-    if (form.parentEmail && !/^\S+@\S+\.\S+$/.test(form.parentEmail))
+    // The email is how the registration details, payment reference and QR
+    // check-in pass reach the camper, so it's required rather than optional.
+    if (!form.parentEmail.trim())
+      err.parentEmail = isSelf
+        ? "Your email is required — your QR camp pass is sent there"
+        : "Email required — the camp pass is sent there";
+    else if (!/^\S+@\S+\.\S+$/.test(form.parentEmail.trim()))
       err.parentEmail = "Enter a valid email";
     if (!form.emergencyName.trim())
       err.emergencyName = "Emergency contact required";
@@ -993,7 +999,12 @@ function RegistrationForm({
               />
             </Field>
             <div data-field="parentEmail" className="md:col-span-2">
-              <Field label="Email" error={errors.parentEmail}>
+              <Field
+                label="Email"
+                required
+                help="Registration details & QR camp pass are sent here"
+                error={errors.parentEmail}
+              >
                 <TextInput
                   type="email"
                   value={form.parentEmail}
