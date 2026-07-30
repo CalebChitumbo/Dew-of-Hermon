@@ -279,6 +279,19 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    // ─── ROPs Camp Settings (per-camp capacity override) ───
+    // Holds admin overrides of the static camp catalog — currently the
+    // maximum registration capacity. Written only through
+    // /api/camp-registrations/capacity (Admin SDK), which checks the
+    // camp-management permission and refuses a cap below the campers already
+    // registered; a client that could write here could reopen or close
+    // registration at will. Reads go through the same API (the public
+    // registration page reads the cap from the capacity endpoint).
+    match /campSettings/{campId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // ─── ROPs Camp Sponsorships ───
     // Sponsorship pledges are submitted through /api/camp-sponsorships
     // (Admin SDK, which validates the payload and derives slot counts), so

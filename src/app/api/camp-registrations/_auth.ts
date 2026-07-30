@@ -49,3 +49,24 @@ export async function callerCanManageCampRegistrations(
     caller.leadsDepartmentIds
   );
 }
+
+/**
+ * True for anyone who may see the camp's registration status — every
+ * DEPARTMENT_LEAD by default, plus everyone who can manage the registrations.
+ * This is the read-only tier: the status endpoint it guards returns totals and
+ * camper names only, never medical notes or contact details.
+ */
+export async function callerCanViewCampStatus(
+  caller: CallerInfo
+): Promise<boolean> {
+  const [canView, canManage] = await Promise.all([
+    serverCheckFeatureAccess(
+      "view_camp_registrations",
+      caller.role,
+      caller.departmentIds,
+      caller.leadsDepartmentIds
+    ),
+    callerCanManageCampRegistrations(caller),
+  ]);
+  return canView || canManage;
+}

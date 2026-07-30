@@ -57,6 +57,7 @@ import {
   UserPlus,
   UtensilsCrossed,
   Printer,
+  SlidersHorizontal,
 } from "lucide-react";
 import { downloadCampQrTags } from "@/lib/camp-qr-tags";
 import { cn } from "@/lib/utils";
@@ -109,6 +110,18 @@ interface RegistrationRow {
   createdAt: string;
 }
 
+/** Live registration cap for a camp, as returned by the capacity endpoint. */
+interface CapacitySettings {
+  campId: string;
+  capacity: number;
+  /** Capacity the camp was planned with, before any admin override. */
+  defaultCapacity: number | null;
+  isOverridden: boolean;
+  capacityUpdatedAt: string | null;
+  capacityUpdatedByName: string | null;
+  registered: number;
+}
+
 /** Recipient the QR/details email would go to, mirroring the server rule. */
 function emailRecipient(row: RegistrationRow): string | null {
   return row.parentEmail ?? row.email ?? null;
@@ -152,6 +165,22 @@ function RopsCampAdminInner() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkOnlyUnsent, setBulkOnlyUnsent] = useState(true);
+  const [capacity, setCapacity] = useState<CapacitySettings | null>(null);
+  const [capacityOpen, setCapacityOpen] = useState(false);
+
+  const loadCapacity = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth(
+        `/api/camp-registrations/capacity?campId=${campId}`
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to load capacity");
+      setCapacity(json);
+    } catch {
+      // The cap is a display detail here — the registrations table still loads.
+      setCapacity(null);
+    }
+  }, [campId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,6 +204,10 @@ function RopsCampAdminInner() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    loadCapacity();
+  }, [loadCapacity]);
+
   const stats = useMemo(() => {
     const paid = rows.filter((r) => r.paymentStatus === "PAID").length;
     const unpaid = rows.filter((r) => r.paymentStatus === "UNPAID").length;
@@ -186,6 +219,10 @@ function RopsCampAdminInner() {
       .reduce((sum, r) => sum + (r.paymentAmount ?? camp.fee), 0);
     return { total: rows.length, paid, unpaid, refunded, checkedIn, onPass, revenue };
   }, [rows, camp.fee]);
+
+  /** The cap in force — the live setting, falling back to the catalog value. */
+  const effectiveCapacity = capacity?.capacity ?? camp.capacity;
+  const spotsLeft = Math.max(0, effectiveCapacity - stats.total);
 
   const bulkTargets = useMemo(() => {
     const withEmail = rows.filter((r) => emailRecipient(r));
@@ -457,6 +494,14 @@ function RopsCampAdminInner() {
                 Sponsorships
               </Button>
             </Link>
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => setCapacityOpen(true)}
+            >
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Capacity
+            </Button>
             <Button variant="outline" className="rounded-xl" onClick={load} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
@@ -488,8 +533,13 @@ function RopsCampAdminInner() {
           icon={Users}
           tone="teal"
           label="Registered"
-          value={stats.total}
-          hint="campers signed up"
+          value={`${stats.total} / ${effectiveCapacity}`}
+          hint={
+            spotsLeft > 0
+              ? `${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left`
+              : "camp is full — raise the cap to reopen"
+          }
+          highlight={spotsLeft <= 0}
           accent="bg-teal"
           art={<Users className="h-24 w-24" strokeWidth={1} />}
         />
@@ -878,7 +928,164 @@ function RopsCampAdminInner() {
           </DialogContent>
         </Dialog>
       )}
+
+      {capacityOpen && (
+        <CapacityDialog
+          campId={campId}
+          campName={camp.name}
+          registered={stats.total}
+          settings={capacity}
+          fallbackCapacity={camp.capacity}
+          onClose={() => setCapacityOpen(false)}
+          onSaved={async () => {
+            setCapacityOpen(false);
+            await loadCapacity();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Raise (or lower) the maximum number of campers who may register. The cap
+ * lives in Firestore, so changing it here takes effect on the public
+ * registration page immediately — no deploy.
+ */
+function CapacityDialog({
+  campId,
+  campName,
+  registered,
+  settings,
+  fallbackCapacity,
+  onClose,
+  onSaved,
+}: {
+  campId: string;
+  campName: string;
+  registered: number;
+  settings: CapacitySettings | null;
+  fallbackCapacity: number;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const current = settings?.capacity ?? fallbackCapacity;
+  const [value, setValue] = useState<string>(String(current));
+  const [busy, setBusy] = useState(false);
+
+  const save = async (capacity: number | null) => {
+    setBusy(true);
+    try {
+      const res = await fetchWithAuth(`/api/camp-registrations/capacity`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campId, capacity }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to update capacity");
+      toast({
+        title: "Capacity updated",
+        description:
+          capacity === null
+            ? `${campName} is back to its default of ${json.capacity} campers.`
+            : `${campName} can now take ${json.capacity} campers.`,
+      });
+      onSaved();
+    } catch (err) {
+      toast({
+        title: "Couldn't update capacity",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const parsed = Number(value);
+  const valid =
+    Number.isInteger(parsed) && parsed >= Math.max(1, registered) && parsed <= 5000;
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Registration capacity</DialogTitle>
+          <DialogDescription>
+            The maximum number of campers who can register for {campName}. Once
+            it&rsquo;s reached, the public form turns new registrations away —
+            raise it here to reopen more spots.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-xl border border-clay-200 bg-cream/60 p-3 text-sm text-clay-600">
+            <div className="flex items-center justify-between">
+              <span>Registered so far</span>
+              <span className="font-medium text-clay-800">{registered}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between">
+              <span>Current maximum</span>
+              <span className="font-medium text-clay-800">{current}</span>
+            </div>
+            {settings?.isOverridden && settings.capacityUpdatedByName && (
+              <p className="mt-2 text-xs text-clay-500">
+                Last changed by {settings.capacityUpdatedByName}
+                {settings.capacityUpdatedAt
+                  ? ` on ${format(new Date(settings.capacityUpdatedAt), "MMM d, yyyy")}`
+                  : ""}
+                {settings.defaultCapacity !== null
+                  ? ` · planned capacity was ${settings.defaultCapacity}`
+                  : ""}
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="camp-capacity">New maximum</Label>
+            <Input
+              id="camp-capacity"
+              type="number"
+              min={Math.max(1, registered)}
+              max={5000}
+              step={1}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              disabled={busy}
+            />
+            <p className="text-xs text-clay-500">
+              {registered > 0
+                ? `Must be at least ${registered} — the campers already registered.`
+                : "Whole number between 1 and 5000."}
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          {settings?.isOverridden && settings.defaultCapacity !== null && (
+            <Button
+              variant="outline"
+              onClick={() => save(null)}
+              disabled={busy}
+              className="sm:mr-auto"
+            >
+              Reset to {settings.defaultCapacity}
+            </Button>
+          )}
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            variant="gold"
+            onClick={() => save(parsed)}
+            disabled={busy || !valid || parsed === current}
+          >
+            {busy ? "Saving..." : "Save capacity"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
