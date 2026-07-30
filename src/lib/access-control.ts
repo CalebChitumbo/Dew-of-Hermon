@@ -148,6 +148,14 @@ export const PAGE_DEFINITIONS: PageDefinition[] = [
     lockedRoles: { SUPER_ADMIN: "edit" },
   },
   {
+    key: "rops_camp_status",
+    label: "ROPs Camp Status",
+    description:
+      "Read-only camp numbers and camper list for department leads (no medical or contact details)",
+    route: "/manage/rops-camp/status",
+    lockedRoles: { SUPER_ADMIN: "edit" },
+  },
+  {
     key: "fundraising",
     label: "Fundraising",
     description: "Plan fundraising activities and assign braai responsibilities",
@@ -355,6 +363,19 @@ export const DEFAULT_PAGE_PERMISSIONS: PagePermissions = {
     VICE_CHAIRPERSON: "edit",
     ADMIN: "edit",
     DEPARTMENT_LEAD: "none",
+    YOUTH_LEADER: "none",
+    MEMBER: "none",
+  },
+  // Every department lead can follow how the camp is filling up, without the
+  // camper details the camp team works with. Admins and the Vice Chairperson
+  // are left at "none" on purpose — they already reach everything here (and
+  // more) from the full ROPs Camp page, so this would only double up in their
+  // sidebar. The API still admits them via the feature's role hierarchy.
+  rops_camp_status: {
+    SUPER_ADMIN: "edit",
+    VICE_CHAIRPERSON: "none",
+    ADMIN: "none",
+    DEPARTMENT_LEAD: "view",
     YOUTH_LEADER: "none",
     MEMBER: "none",
   },
@@ -693,6 +714,14 @@ export const FEATURE_DEFINITIONS: FeatureDefinition[] = [
     supportsDepartmentRules: true,
   },
   {
+    key: "view_camp_registrations",
+    label: "View ROPs Camp Registration Status",
+    description:
+      "See how the camp is filling up — totals, payments, spots left, and camper names with their church/school (no medical notes or contact details)",
+    category: "ROPs Camp",
+    supportsDepartmentRules: true,
+  },
+  {
     key: "manage_camp_registrations",
     label: "Manage ROPs Camp Registrations",
     description:
@@ -880,6 +909,9 @@ export const DEFAULT_FEATURE_MIN_ROLES: FeatureMinRoles = {
   manage_institutions: "ADMIN",
   manage_settings: "SUPER_ADMIN",
   latreou_access: "ADMIN",
+  // Any department lead may follow the camp numbers; managing the
+  // registrations themselves stays with admins and the ROPs Camp lead.
+  view_camp_registrations: "DEPARTMENT_LEAD",
   manage_camp_registrations: "ADMIN",
   camp_pass_admissions: "ADMIN",
   camp_pass_manager: "ADMIN",

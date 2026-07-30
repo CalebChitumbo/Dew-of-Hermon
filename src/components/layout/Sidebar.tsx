@@ -19,7 +19,8 @@ import { usePendingCounts } from "@/hooks/usePendingCounts";
 export function Sidebar() {
   const { userData, signOut } = useAuth();
   const { pagePermissions } = useAccessControl();
-  const { canManage: canManageCamp } = useCampLeadAccess();
+  const { canManage: canManageCamp, canViewStatus: canViewCampStatus } =
+    useCampLeadAccess();
   const { canPlanBraai } = useFundraisingAccess();
   const { canManageTransport, canApproveAccounts } = useTransportAccess();
   const { canManageMedia } = useMediaAccess();
@@ -30,12 +31,20 @@ export function Sidebar() {
 
   const extraKeys: string[] = [];
   if (canManageCamp) extraKeys.push("rops_camp");
+  if (canViewCampStatus) extraKeys.push("rops_camp_status");
   if (canPlanBraai) extraKeys.push("fundraising");
   if (canManageTransport) extraKeys.push("transport_requests");
   if (canApproveAccounts) extraKeys.push("accounts_approvals");
   if (canManageMedia) extraKeys.push("media_requests");
   if (canConfirmFood) extraKeys.push("food_requests");
-  const navEntries = getVisibleNavEntries(userData.role, pagePermissions, extraKeys);
+  // The full camp page is a superset of the status page — show one or the other.
+  const hiddenKeys = canManageCamp ? ["rops_camp_status"] : [];
+  const navEntries = getVisibleNavEntries(
+    userData.role,
+    pagePermissions,
+    extraKeys,
+    hiddenKeys
+  );
 
   const handleSignOut = async () => {
     await fetch("/api/auth/session", { method: "DELETE" });

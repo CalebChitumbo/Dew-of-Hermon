@@ -123,6 +123,9 @@ const REQUESTS: NavGroup = {
 const MID_ITEMS: NavItem[] = [
   { label: "Members", href: "/manage/members", icon: Users, pageKey: "members" },
   { label: "ROPs Camp", href: "/manage/rops-camp", icon: Tent, pageKey: "rops_camp" },
+  // Read-only camp numbers for department leads. Hidden from anyone who has
+  // the full camp page above (see Sidebar/Header), so it never doubles up.
+  { label: "Camp Status", href: "/manage/rops-camp/status", icon: Tent, pageKey: "rops_camp_status" },
   { label: "Fundraising", href: "/manage/fundraising", icon: Flame, pageKey: "fundraising" },
   { label: "Affirmations", href: "/affirmations", icon: Sparkles, pageKey: "affirmations" },
   { label: "Talent Showcase", href: "/talents", icon: Star, pageKey: "talents" },
@@ -156,8 +159,14 @@ function shouldShow(
   item: NavItem,
   role: UserRole,
   pagePermissions: PagePermissions,
-  extraSet: Set<string>
+  extraSet: Set<string>,
+  hiddenSet: Set<string>
 ): boolean {
+  // A caller-supplied hide wins over every rule below — it's how a page that
+  // is redundant for this particular user gets dropped (e.g. Camp Status for
+  // someone who already has the full ROPs Camp page).
+  if (item.pageKey && hiddenSet.has(item.pageKey)) return false;
+
   // Settings is always SUPER_ADMIN only.
   if (item.href === "/manage/settings") return role === "SUPER_ADMIN";
 
@@ -183,15 +192,20 @@ function shouldShow(
  * @param extraIncludeKeys Page keys to force-include even if `pagePermissions`
  *   would exclude them (e.g. a DEPARTMENT_LEAD of "ROPs Camp" gaining access to
  *   /manage/rops-camp via department-based feature rules).
+ * @param hiddenKeys Page keys to drop for this user even if they'd otherwise
+ *   be visible (e.g. the read-only Camp Status entry for someone who already
+ *   has the full ROPs Camp page).
  */
 export function getVisibleNavEntries(
   role: UserRole,
   pagePermissions: PagePermissions,
-  extraIncludeKeys: ReadonlyArray<string> = []
+  extraIncludeKeys: ReadonlyArray<string> = [],
+  hiddenKeys: ReadonlyArray<string> = []
 ): NavEntry[] {
   const extraSet = new Set(extraIncludeKeys);
+  const hiddenSet = new Set(hiddenKeys);
   const show = (item: NavItem) =>
-    shouldShow(item, role, pagePermissions, extraSet);
+    shouldShow(item, role, pagePermissions, extraSet, hiddenSet);
 
   const entries: NavEntry[] = [];
 
