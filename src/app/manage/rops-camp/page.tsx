@@ -127,6 +127,11 @@ function emailRecipient(row: RegistrationRow): string | null {
   return row.parentEmail ?? row.email ?? null;
 }
 
+/** Grid cell for a "Camp tools" entry — a full-width tile until the row wraps. */
+const toolShell = "w-full lg:w-auto";
+/** The tool's button face: label pinned left so the strip reads as a list. */
+const toolButton = "w-full justify-start rounded-xl";
+
 export default function RopsCampAdminPage() {
   const { loading, canManage } = useCampLeadAccess();
   if (loading) return <PageLoader />;
@@ -434,7 +439,7 @@ function RopsCampAdminInner() {
           <>
             {CAMPS.length > 1 && (
               <Select value={campId} onValueChange={setCampId}>
-                <SelectTrigger className="w-[220px] rounded-xl">
+                <SelectTrigger className="w-full rounded-xl sm:w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -446,63 +451,18 @@ function RopsCampAdminInner() {
                 </SelectContent>
               </Select>
             )}
-            <Link href="/manage/rops-camp/check-in">
-              <Button variant="gold" className="rounded-xl">
+            <Link href="/manage/rops-camp/check-in" className="flex-1 sm:flex-none">
+              <Button variant="gold" className="w-full rounded-xl">
                 <ScanLine className="mr-2 h-4 w-4" />
                 Check-in
               </Button>
             </Link>
-            <Link href="/manage/rops-camp/announcements">
-              <Button variant="outline" className="rounded-xl">
-                <Megaphone className="mr-2 h-4 w-4" />
-                Announcements
-              </Button>
-            </Link>
-            <Link href="/manage/rops-camp/meals">
-              <Button variant="outline" className="rounded-xl">
-                <UtensilsCrossed className="mr-2 h-4 w-4" />
-                Meals
-              </Button>
-            </Link>
-            <Link href="/manage/rops-camp/passes">
-              <Button variant="outline" className="rounded-xl">
-                <Ticket className="mr-2 h-4 w-4" />
-                Exit passes
-              </Button>
-            </Link>
             <Button
               variant="outline"
-              className="rounded-xl"
-              onClick={printQrTags}
-              disabled={loading || tagsBusy || rows.length === 0}
+              className="flex-1 rounded-xl sm:flex-none"
+              onClick={load}
+              disabled={loading}
             >
-              <Printer className="mr-2 h-4 w-4" />
-              {tagsBusy ? "Building..." : "Print QR tags"}
-            </Button>
-            <Button
-              variant="outline"
-              className="rounded-xl"
-              onClick={() => setBulkOpen(true)}
-              disabled={loading || bulkTargets.all.length === 0}
-            >
-              <Mail className="mr-2 h-4 w-4" />
-              Email QR passes
-            </Button>
-            <Link href="/manage/rops-camp/sponsorships">
-              <Button variant="outline" className="rounded-xl">
-                <HeartHandshake className="mr-2 h-4 w-4" />
-                Sponsorships
-              </Button>
-            </Link>
-            <Button
-              variant="outline"
-              className="rounded-xl"
-              onClick={() => setCapacityOpen(true)}
-            >
-              <SlidersHorizontal className="mr-2 h-4 w-4" />
-              Capacity
-            </Button>
-            <Button variant="outline" className="rounded-xl" onClick={load} disabled={loading}>
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
@@ -527,8 +487,77 @@ function RopsCampAdminInner() {
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 xl:grid-cols-6">
+      {/*
+        Camp tools — the secondary actions live in their own strip rather than
+        the header, so the title keeps its width and nothing overflows sideways.
+        Full-width tiles on phones, a wrapping row from lg up.
+      */}
+      <div className={cn("p-4 sm:p-5", luxSurface)}>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-clay-400">
+          Camp tools
+        </p>
+        {/* One column on the narrowest phones — "Email QR passes" needs ~148px
+            and a half-width tile only offers ~141px below 380px. */}
+        <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap">
+          <Link href="/manage/rops-camp/announcements" className={toolShell}>
+            <Button variant="outline" className={toolButton}>
+              <Megaphone className="mr-2 h-4 w-4 shrink-0" />
+              Announcements
+            </Button>
+          </Link>
+          <Link href="/manage/rops-camp/meals" className={toolShell}>
+            <Button variant="outline" className={toolButton}>
+              <UtensilsCrossed className="mr-2 h-4 w-4 shrink-0" />
+              Meals
+            </Button>
+          </Link>
+          <Link href="/manage/rops-camp/passes" className={toolShell}>
+            <Button variant="outline" className={toolButton}>
+              <Ticket className="mr-2 h-4 w-4 shrink-0" />
+              Exit passes
+            </Button>
+          </Link>
+          <Link href="/manage/rops-camp/sponsorships" className={toolShell}>
+            <Button variant="outline" className={toolButton}>
+              <HeartHandshake className="mr-2 h-4 w-4 shrink-0" />
+              Sponsorships
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            className={cn(toolShell, toolButton)}
+            onClick={printQrTags}
+            disabled={loading || tagsBusy || rows.length === 0}
+          >
+            <Printer className="mr-2 h-4 w-4 shrink-0" />
+            {tagsBusy ? "Building..." : "Print QR tags"}
+          </Button>
+          <Button
+            variant="outline"
+            className={cn(toolShell, toolButton)}
+            onClick={() => setBulkOpen(true)}
+            disabled={loading || bulkTargets.all.length === 0}
+          >
+            <Mail className="mr-2 h-4 w-4 shrink-0" />
+            Email QR passes
+          </Button>
+          <Button
+            variant="outline"
+            className={cn(toolShell, toolButton)}
+            onClick={() => setCapacityOpen(true)}
+          >
+            <SlidersHorizontal className="mr-2 h-4 w-4 shrink-0" />
+            Capacity
+          </Button>
+        </div>
+      </div>
+
+      {/*
+        Stat cards — six across only once the columns are genuinely wide enough.
+        At xl (1280px) minus the sidebar each column is ~145px, which breaks
+        "80 / 200" onto two lines, so the switch waits for ~1400px.
+      */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 [@media(min-width:1400px)]:grid-cols-6">
         <StatCardLux
           icon={Users}
           tone="teal"
@@ -585,8 +614,8 @@ function RopsCampAdminInner() {
           icon={DollarSign}
           tone="gold"
           label="Revenue"
-          value={`${camp.currency} ${stats.revenue.toLocaleString()}`}
-          hint="collected so far"
+          value={stats.revenue.toLocaleString()}
+          hint={`${camp.currency} collected so far`}
           accent="bg-gold"
           art={<DollarSign className="h-24 w-24" strokeWidth={1} />}
         />
@@ -601,18 +630,18 @@ function RopsCampAdminInner() {
             </span>
             <h2 className="font-display text-lg font-semibold text-clay-700">Registrations</h2>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-clay-400" />
               <Input
                 placeholder="Search name, phone, church..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-11 w-[200px] rounded-xl pl-9 sm:w-[260px]"
+                className="h-11 w-full rounded-xl pl-9 sm:w-[240px]"
               />
             </div>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-              <SelectTrigger className="h-11 w-[150px] rounded-xl">
+              <SelectTrigger className="h-11 w-full rounded-xl sm:w-[150px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -662,7 +691,9 @@ function RopsCampAdminInner() {
               />
             </div>
           ) : (
-            <div className="-mx-2 overflow-x-auto">
+            <>
+            {/* Desktop: full table. Phones get the stacked cards below. */}
+            <div className="-mx-2 hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-clay-100 text-left text-xs uppercase tracking-wider text-clay-500">
@@ -795,6 +826,23 @@ function RopsCampAdminInner() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile: one card per camper, same actions as the table row. */}
+            <div className="space-y-3 md:hidden">
+              {filtered.map((row) => (
+                <RegistrationCardLux
+                  key={row.id}
+                  row={row}
+                  sending={sendingIds.has(row.id)}
+                  canDelete={isSuperAdmin}
+                  onEmail={() => sendQrEmail(row)}
+                  onToggle={() => quickToggle(row)}
+                  onDetails={() => setEditing(row)}
+                  onDelete={() => setDeleting(row)}
+                />
+              ))}
+            </div>
+            </>
           )}
         </div>
       </div>
@@ -1095,6 +1143,153 @@ function PaymentBadge({ status }: { status: CampPaymentStatus }) {
   if (status === "REFUNDED")
     return <Badge className="bg-clay-200 text-clay-700 hover:bg-clay-200">Refunded</Badge>;
   return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Unpaid</Badge>;
+}
+
+/**
+ * One registration as a phone card — the table's seven columns stacked into a
+ * readable block, with the same row actions along the bottom.
+ */
+function RegistrationCardLux({
+  row,
+  sending,
+  canDelete,
+  onEmail,
+  onToggle,
+  onDetails,
+  onDelete,
+}: {
+  row: RegistrationRow;
+  sending: boolean;
+  canDelete: boolean;
+  onEmail: () => void;
+  onToggle: () => void;
+  onDetails: () => void;
+  onDelete: () => void;
+}) {
+  const dropoff =
+    row.dropoffLocation === "CHURCH"
+      ? "Church"
+      : row.dropoffLocation === "CAMPSITE"
+      ? "Camp site"
+      : "—";
+
+  return (
+    <div className="rounded-2xl border border-clay-100/80 bg-white/70 p-4">
+      <div className="min-w-0">
+        <div className="truncate font-medium text-clay-800">
+          {row.firstName} {row.lastName}
+        </div>
+        <div className="mt-0.5 text-xs text-clay-500">
+          {row.gender === "MALE" ? "Male" : "Female"} · DOB {row.dateOfBirth}
+        </div>
+      </div>
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <PaymentBadge status={row.paymentStatus} />
+        {row.sponsorshipId && (
+          <Badge className="bg-teal/15 text-teal-dark hover:bg-teal/15">Sponsored</Badge>
+        )}
+        {row.onPass ? (
+          <Badge className="bg-clay-800 text-white hover:bg-clay-800">
+            <DoorOpen className="mr-1 h-3 w-3" />
+            Out on pass
+          </Badge>
+        ) : row.checkedIn ? (
+          <Badge className="bg-green-600 text-white hover:bg-green-600">
+            <UserCheck className="mr-1 h-3 w-3" />
+            In camp
+          </Badge>
+        ) : null}
+      </div>
+
+      <dl className="mt-3 space-y-1.5 text-xs">
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0 text-clay-400">Contact</dt>
+          <dd className="min-w-0 flex-1 break-words text-clay-700">
+            {row.phone}
+            {row.email && <span className="block text-clay-500">{row.email}</span>}
+          </dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0 text-clay-400">Guardian</dt>
+          <dd className="min-w-0 flex-1 break-words text-clay-700">
+            {row.parentName ?? "—"}
+            <span className="block text-clay-500">
+              {row.parentRelationship ?? "Guardian"}
+              {row.parentAltPhone ? ` · ${row.parentAltPhone}` : ""}
+            </span>
+          </dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0 text-clay-400">Drop-off</dt>
+          <dd className="min-w-0 flex-1 text-clay-700">{dropoff}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-24 shrink-0 text-clay-400">Registered</dt>
+          <dd className="min-w-0 flex-1 text-clay-700">
+            {format(new Date(row.createdAt), "MMM d, yyyy")}
+            {row.qrEmailSentAt && (
+              <span className="block text-clay-500">
+                QR sent {format(new Date(row.qrEmailSentAt), "MMM d")}
+              </span>
+            )}
+          </dd>
+        </div>
+        {row.sponsorName && (
+          <div className="flex gap-2">
+            <dt className="w-24 shrink-0 text-clay-400">Sponsor</dt>
+            <dd className="min-w-0 flex-1 break-words text-clay-700">{row.sponsorName}</dd>
+          </div>
+        )}
+      </dl>
+
+      {/* The payment toggle takes its own row on the narrowest phones, where the
+          four actions cannot share a line. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-clay-100/80 pt-3">
+        <Button
+          size="sm"
+          variant={row.paymentStatus === "PAID" ? "outline" : "default"}
+          className="w-full rounded-lg min-[380px]:w-auto min-[380px]:flex-1"
+          onClick={onToggle}
+        >
+          {row.paymentStatus === "PAID" ? "Mark unpaid" : "Mark paid"}
+        </Button>
+        <Button size="sm" variant="ghost" className="rounded-lg" onClick={onDetails}>
+          Details
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="rounded-lg"
+          onClick={onEmail}
+          disabled={sending}
+          title={
+            emailRecipient(row)
+              ? `Email registration details + QR pass to ${emailRecipient(row)}`
+              : "No email address on this registration"
+          }
+          aria-label={`Email QR pass to ${row.firstName} ${row.lastName}`}
+        >
+          {sending ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <Mail className="h-4 w-4" />
+          )}
+        </Button>
+        {canDelete && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700"
+            onClick={onDelete}
+            aria-label={`Delete registration for ${row.firstName} ${row.lastName}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function RegistrationDialog({
