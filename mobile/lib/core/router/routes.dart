@@ -14,6 +14,11 @@ import '../../features/camp_public/camp_register_screen.dart';
 import '../../features/camp_public/camp_sponsor_screen.dart';
 import '../../features/camp_public/camp_track_screen.dart';
 import '../../features/camp_public/my_registrations_screen.dart';
+import '../../features/calendar/calendar_screen.dart';
+import '../../features/schedule/availability_screen.dart';
+import '../../features/schedule/my_schedule_screen.dart';
+import '../../features/services/service_detail_screen.dart';
+import '../../features/services/services_screen.dart';
 
 /// Feature routes.
 ///
@@ -86,6 +91,48 @@ final List<RouteBase> featureRoutes = [
       GoRoute(
         path: 'my-registrations',
         builder: (c, s) => const MyRegistrationsScreen(),
+      ),
+    ],
+  ),
+
+  // ── The weekly rhythm ──
+  GoRoute(
+    path: '/calendar',
+    builder: (c, s) => const CalendarScreen(),
+  ),
+  GoRoute(
+    path: '/my-schedule',
+    builder: (c, s) => const MyScheduleScreen(),
+    routes: [
+      GoRoute(
+        path: 'availability',
+        builder: (c, s) => const AvailabilityScreen(),
+      ),
+      GoRoute(
+        path: 'history',
+        builder: (c, s) => const ScheduleHistoryScreen(),
+      ),
+    ],
+  ),
+  GoRoute(
+    path: '/manage/services',
+    builder: (c, s) => const ServicesScreen(),
+    routes: [
+      GoRoute(
+        path: 'new',
+        builder: (c, s) => const NewServiceScreen(),
+      ),
+      GoRoute(
+        path: ':id',
+        builder: (c, s) =>
+            ServiceDetailScreen(serviceId: s.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: 'checklist',
+            builder: (c, s) =>
+                ServiceChecklistScreen(serviceId: s.pathParameters['id']!),
+          ),
+        ],
       ),
     ],
   ),
