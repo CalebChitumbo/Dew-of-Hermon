@@ -708,8 +708,8 @@ enum CampMealSlot {
 // ─── Fundraising ───
 
 enum BraaiPhase {
-  preparation('PREPARATION', 'Preparation'),
-  eventDay('EVENT_DAY', 'Event day');
+  preparation('PREPARATION', 'Preparations'),
+  eventDay('EVENT_DAY', 'Actual Day');
 
   const BraaiPhase(this.wire, this.label);
   final String wire;
@@ -754,7 +754,7 @@ enum FundraisingPaymentMethod {
 
 enum FundraisingPreparationStatus {
   pending('PENDING', 'Pending'),
-  inPrep('IN_PREP', 'In prep'),
+  inPrep('IN_PREP', 'In preparation'),
   ready('READY', 'Ready'),
   collected('COLLECTED', 'Collected');
 
@@ -770,10 +770,10 @@ enum FundraisingPreparationStatus {
 }
 
 enum FundraisingPickupTimeOption {
-  after1st('after_1st', 'After 1st service'),
-  after2nd('after_2nd', 'After 2nd service'),
+  after1st('after_1st', 'After 1st Service'),
+  after2nd('after_2nd', 'After 2nd Service'),
   lunchHour('lunch_hour', 'Lunch hour'),
-  custom('custom', 'Custom time');
+  custom('custom', 'Specific time');
 
   const FundraisingPickupTimeOption(this.wire, this.label);
   final String wire;

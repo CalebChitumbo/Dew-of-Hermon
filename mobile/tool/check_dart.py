@@ -163,6 +163,58 @@ if PUBSPEC.exists():
 else:
     problems.append("pubspec.yaml not found — cannot check package imports")
 
+# ── 1c. Package symbols have their import ────────────────────────────────────
+# Symbols that only exist if a particular package is imported. Using one
+# without the import is the single easiest mistake to make while hand-authoring
+# Dart, and the compiler is the only other thing that would catch it.
+#
+# Each entry maps a symbol to the import substrings that would provide it —
+# any one of them satisfies the check.
+PACKAGE_SYMBOLS: dict[str, tuple[str, ...]] = {
+    "launchUrl": ("url_launcher",),
+    "launchUrlString": ("url_launcher",),
+    "LaunchMode": ("url_launcher",),
+    "canLaunchUrl": ("url_launcher",),
+    "Timestamp": ("cloud_firestore",),
+    "FieldValue": ("cloud_firestore",),
+    "FirebaseFirestore": ("cloud_firestore",),
+    "QuerySnapshot": ("cloud_firestore",),
+    "DocumentReference": ("cloud_firestore",),
+    "DocumentSnapshot": ("cloud_firestore",),
+    "FirebaseException": ("cloud_firestore", "firebase_core"),
+    "FirebaseAuth": ("firebase_auth",),
+    "rootBundle": ("flutter/services",),
+    "Clipboard": ("flutter/services",),
+    "ClipboardData": ("flutter/services",),
+    "HapticFeedback": ("flutter/services",),
+    "SystemChrome": ("flutter/services",),
+    "FilteringTextInputFormatter": ("flutter/services",),
+    "LengthLimitingTextInputFormatter": ("flutter/services",),
+    "TextInputFormatter": ("flutter/services",),
+    "SharedPreferences": ("shared_preferences",),
+    "DateFormat": ("intl",),
+    "MobileScanner": ("mobile_scanner",),
+    "QrImageView": ("qr_flutter",),
+    "Printing": ("printing",),
+    "PdfColor": ("pdf/pdf",),
+    "PdfPageFormat": ("pdf/pdf",),
+    "Dio": ("dio",),
+}
+for f, src in sources.items():
+    imports = IMPORT_RE.findall(src)
+    body = re.sub(r"^\s*(?:import|export)\s+.*$", "", clean[f], flags=re.M)
+    for symbol, providers in PACKAGE_SYMBOLS.items():
+        if not re.search(rf"\b{symbol}\b", body):
+            continue
+        if any(p in target for target in imports for p in providers):
+            continue
+        # A local declaration of the same name is fine.
+        if re.search(rf"^\s*(?:class|enum|typedef|mixin)\s+{symbol}\b", clean[f], re.M):
+            continue
+        problems.append(
+            f"{rel(f)}: {symbol} is used but no {'/'.join(providers)} import"
+        )
+
 # ── 2. AppIcons / IconTone members exist ─────────────────────────────────────
 def declared_members(path: Path, pattern: str) -> set[str]:
     if not path.exists():
@@ -187,10 +239,32 @@ color_names = declared_members(colors_file, r"^\s*static const (\w+) =") | decla
     colors_file, r"^\s*static List<BoxShadow> get (\w+)"
 )
 
+# `D.medium(...)`, `Money.format(...)` — every static helper class the screens
+# reach for by short name. A typo here compiles to nothing on a real machine.
+STATIC_HELPERS = {
+    "D": LIB / "core/utils/dates.dart",
+    "Money": LIB / "core/utils/money.dart",
+    "Phone": LIB / "core/utils/money.dart",
+}
+helper_names: dict[str, set[str]] = {}
+for label, path in STATIC_HELPERS.items():
+    if not path.exists():
+        continue
+    body = re.search(rf"(?:abstract final class|class) {label} \{{(.*)", path.read_text(), re.S)
+    if not body:
+        continue
+    # Everything from the class opening to the end of the file is close
+    # enough: these files hold one helper class each, or two that do not
+    # share member names.
+    helper_names[label] = set(
+        re.findall(r"^\s*static (?:[\w<>?, ]+ )?(\w+)\s*[(=]", body.group(1), re.M)
+    )
+
 for label, table in (
     ("AppIcons", icon_names),
     ("IconTone", tone_names),
     ("AppColors", color_names),
+    *((k, v) for k, v in helper_names.items()),
 ):
     if not table:
         problems.append(
@@ -208,6 +282,10 @@ for f, src in clean.items():
     for name in set(re.findall(r"\bAppColors\.(\w+)", src)):
         if color_names and name not in color_names:
             problems.append(f"{rel(f)}: AppColors.{name} is not declared")
+    for label, table in helper_names.items():
+        for name in set(re.findall(rf"\b{label}\.(\w+)", src)):
+            if table and name not in table:
+                problems.append(f"{rel(f)}: {label}.{name} is not declared")
 
 # ── 3. Balanced delimiters ───────────────────────────────────────────────────
 PAIRS = {"}": "{", ")": "(", "]": "["}

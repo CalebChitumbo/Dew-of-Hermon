@@ -21,6 +21,10 @@ import '../../features/events/event_approvals_screen.dart';
 import '../../features/events/event_reports_screen.dart';
 import '../../features/events/event_roles_screen.dart';
 import '../../features/events/new_event_screen.dart';
+import '../../features/fundraising/braai_detail_screen.dart';
+import '../../features/fundraising/fundraising_hub_screen.dart';
+import '../../features/fundraising/fundraising_settings_screen.dart';
+import '../../features/fundraising/storefront_screen.dart';
 import '../../features/bible/bible_screen.dart';
 import '../../features/latreuo/latreuo_screen.dart';
 import '../../features/ministries/follow_up_screens.dart';
@@ -289,5 +293,27 @@ final List<RouteBase> featureRoutes = [
   GoRoute(
     path: '/manage/talents',
     builder: (c, s) => const ManageTalentsScreen(),
+  ),
+
+  // ── Fundraising ──
+  // The storefront needs no account: a buyer follows a WhatsApp link straight
+  // to it, exactly as on the web.
+  GoRoute(
+    path: '/fundraising/order',
+    builder: (c, s) => const StorefrontScreen(),
+  ),
+  GoRoute(
+    path: '/manage/fundraising',
+    builder: (c, s) => const FundraisingHubScreen(),
+    routes: [
+      GoRoute(
+        path: 'settings',
+        builder: (c, s) => const FundraisingSettingsScreen(),
+      ),
+      GoRoute(
+        path: 'braai/:id',
+        builder: (c, s) => BraaiDetailScreen(braaiId: s.pathParameters['id']!),
+      ),
+    ],
   ),
 ];
