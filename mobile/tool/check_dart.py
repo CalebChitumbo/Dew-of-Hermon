@@ -31,9 +31,49 @@ def rel(p: Path) -> str:
 
 
 def strip_noise(src: str) -> str:
-    """Remove strings and comments so scans don't trip over their contents."""
-    out = []
+    """Blank out comments and string literals, but KEEP the code inside
+    `${...}` interpolations — that code contains real parentheses that the
+    delimiter check must see, and it can reference AppIcons/AppColors.
+
+    A raw string (r'...') has no interpolation, so its body is dropped whole.
+    """
+    out: list[str] = []
     i, n = 0, len(src)
+
+    def skip_string(start: int, quote: str, raw: bool) -> int:
+        """Consume a string starting after its opening quote, emitting any
+        interpolated code. Returns the index just past the closing quote."""
+        j = start
+        triple = len(quote) == 3
+        while j < n:
+            if src.startswith(quote, j):
+                return j + len(quote)
+            if src[j] == "\\":
+                j += 2
+                continue
+            if not triple and src[j] == "\n":
+                # Unterminated single-line string; bail rather than run away.
+                return j
+            if not raw and src.startswith("${", j):
+                # Emit the interpolated expression as code, tracking brace
+                # depth so nested maps/closures inside it are handled.
+                j += 2
+                depth = 1
+                expr_start = j
+                while j < n and depth > 0:
+                    if src[j] == "{":
+                        depth += 1
+                    elif src[j] == "}":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    j += 1
+                out.append(" " + src[expr_start:j] + " ")
+                j += 1  # past the closing }
+                continue
+            j += 1
+        return j
+
     while i < n:
         c = src[i]
         # Line comment
@@ -48,27 +88,21 @@ def strip_noise(src: str) -> str:
                 i += 1
             i += 2
             continue
+        # A raw-string prefix immediately before a quote.
+        raw = c == "r" and i + 1 < n and src[i + 1] in "'\""
+        if raw:
+            i += 1
+            c = src[i]
         # Triple-quoted string
         if src.startswith("'''", i) or src.startswith('"""', i):
-            q = src[i : i + 3]
-            i += 3
-            while i < n and not src.startswith(q, i):
-                i += 2 if src[i] == "\\" else 1
-            i += 3
-            continue
-        # Single-quoted / double-quoted string
-        if c in "'\"":
-            q = c
-            i += 1
-            while i < n and src[i] != q:
-                if src[i] == "\\":
-                    i += 2
-                    continue
-                if src[i] == "\n":
-                    break
-                i += 1
-            i += 1
+            quote = src[i : i + 3]
             out.append('""')
+            i = skip_string(i + 3, quote, raw)
+            continue
+        # Single- or double-quoted string
+        if c in "'\"":
+            out.append('""')
+            i = skip_string(i + 1, c, raw)
             continue
         out.append(c)
         i += 1

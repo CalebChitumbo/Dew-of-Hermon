@@ -76,9 +76,18 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       if (onAuthScreen) return '/dashboard';
 
-      // Page-level access control, using the same page keys and route
-      // matching as the web (`getPageKeyFromRoute`).
-      final pageKey = getPageKeyFromRoute(path);
+      // Page-level access control, using the same page keys as the web.
+      //
+      // Only an *exact* page route is guarded here. A deeper path guards
+      // itself in-screen, which is what the web does too, and the difference
+      // matters: the meal line lives under /manage/rops-camp but is reached
+      // with `serve_camp_meals`, which the Food Logistics team holds without
+      // any access to the camp register above it. A prefix guard would lock
+      // the kitchen out of the serving line.
+      //
+      // The contract for a new screen under an existing page route: check the
+      // feature you need and render `NoAccessView` when it is missing.
+      final pageKey = exactPageKeyForRoute(path);
       if (pageKey != null && !ref.read(accessProvider).canView(pageKey)) {
         return '/no-access?page=$pageKey';
       }

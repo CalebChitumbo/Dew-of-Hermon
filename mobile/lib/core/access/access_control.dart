@@ -49,6 +49,21 @@ String? getPageKeyFromRoute(String pathname) {
   return best?.key;
 }
 
+/// The page key for a route only when the route *is* that page — never a
+/// prefix match.
+///
+/// [getPageKeyFromRoute] deliberately matches prefixes, because the web uses
+/// it to light up the right sidebar entry for a detail page. Route guarding
+/// needs the stricter question, since a sub-route can legitimately require a
+/// different permission from the page above it (the camp meal line is reached
+/// with `serve_camp_meals`, not with access to the camp register).
+String? exactPageKeyForRoute(String pathname) {
+  for (final p in kPageDefinitions) {
+    if (p.route == pathname) return p.key;
+  }
+  return null;
+}
+
 /// Whether a role can see a page in navigation (view or edit).
 bool canAccessPage(
   String pageKey,
