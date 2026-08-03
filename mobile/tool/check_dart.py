@@ -328,14 +328,51 @@ for name, files in declared_types.items():
         where = ", ".join(rel(p) for p in files)
         problems.append(f"duplicate declaration of {name}: {where}")
 
-# ── 6. Providers referenced but never declared ───────────────────────────────
-provider_decls = set()
+# ── 6. Providers referenced but never declared, or declared out of reach ─────
+# A provider must not only exist somewhere in the tree — the file using it must
+# actually import the file declaring it. Riverpod providers are top-level
+# names, so a missing import is a compile error, not a runtime surprise.
+provider_home: dict[str, Path] = {}
 for f, src in sources.items():
-    provider_decls |= set(re.findall(r"^final (\w+Provider)\s*=", src, re.M))
+    for name in re.findall(r"^final (\w+Provider)\s*=", src, re.M):
+        provider_home.setdefault(name, f)
+
+def imported_files(f: Path) -> set[Path]:
+    """Files reachable from f by relative import, following exports."""
+    out: set[Path] = {f}
+    queue = [f]
+    while queue:
+        current = queue.pop()
+        try:
+            text = current.read_text()
+        except OSError:
+            continue
+        for target in re.findall(r"^\s*(?:import|export)\s+'([^']+)'", text, re.M):
+            if target.startswith(("package:", "dart:")):
+                continue
+            resolved = (current.parent / target).resolve()
+            if resolved.exists() and resolved not in out:
+                out.add(resolved)
+                queue.append(resolved)
+    return out
+
+reachable_cache: dict[Path, set[Path]] = {}
 for f, src in clean.items():
-    for name in set(re.findall(r"\b(?:watch|read|listen|invalidate|refresh)\((\w+Provider)\b", src)):
-        if name not in provider_decls:
+    used = set(
+        re.findall(r"\b(?:watch|read|listen|invalidate|refresh)\((\w+Provider)\b", src)
+    )
+    if not used:
+        continue
+    reachable = reachable_cache.setdefault(f, imported_files(f))
+    for name in used:
+        home = provider_home.get(name)
+        if home is None:
             problems.append(f"{rel(f)}: {name} is used but never declared")
+        elif home not in reachable:
+            problems.append(
+                f"{rel(f)}: {name} is declared in {rel(home)} but that file is "
+                f"not imported"
+            )
 
 # ── 7. Unused relative imports ───────────────────────────────────────────────
 # Approximate but effective: an import earns its place if any top-level name it

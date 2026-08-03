@@ -371,8 +371,7 @@ class _MemberFormState extends ConsumerState<MemberForm> {
   Widget build(BuildContext context) {
     final access = ref.watch(accessProvider);
     final departments = ref.watch(departmentsProvider).valueOrNull ?? const [];
-    final institutions =
-        ref.watch(institutionsProvider).valueOrNull ?? const [];
+    final institutions = ref.watch(activeInstitutionsProvider);
     final roles = assignableRoles(access.role);
     final isNew = widget.existing == null;
 
@@ -501,7 +500,7 @@ class _MemberFormState extends ConsumerState<MemberForm> {
               items: [
                 const DropdownMenuItem<String?>(
                     value: null, child: Text('Not set')),
-                for (final inst in institutions.where((i) => i.isActive))
+                for (final inst in institutions)
                   DropdownMenuItem<String?>(
                       value: inst.id, child: Text(inst.name)),
               ],

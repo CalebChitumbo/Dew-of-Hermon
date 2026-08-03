@@ -9,22 +9,8 @@ import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/icon_tones.dart';
 import '../../core/widgets/common.dart';
-import '../../data/firestore/streams.dart';
 import '../../data/models/enums.dart';
-import '../../data/models/user.dart';
-
-/// Live institution list for the student picker.
-final institutionsProvider = StreamProvider<List<Institution>>((ref) {
-  return collectionStream(
-    db.collection('institutions'),
-    Institution.fromMap,
-    sort: (a, b) {
-      final byOrder = a.order.compareTo(b.order);
-      return byOrder != 0 ? byOrder : a.name.compareTo(b.name);
-    },
-  ).map((list) => list.where((i) => i.isActive).toList())
-      .handleError((_) => <Institution>[]);
-});
+import '../../data/repositories/member_repository.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -88,7 +74,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final institutions = ref.watch(institutionsProvider).valueOrNull ?? const [];
+    final institutions = ref.watch(activeInstitutionsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.cream,

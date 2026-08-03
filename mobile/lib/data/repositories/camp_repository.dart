@@ -69,7 +69,7 @@ class CampRepository {
   }
 
   Future<CampRegistration> setCheckedIn(String id, bool checkedIn) async {
-    final data = await _api.patch('/api/camp-registrations/$id/check-in',
+    final data = await _api.post('/api/camp-registrations/$id/check-in',
         body: {'checkedIn': checkedIn});
     final map = data is Map ? Map<String, dynamic>.from(data) : {};
     final reg = map['registration'];

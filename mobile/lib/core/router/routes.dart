@@ -35,6 +35,10 @@ import '../../features/personal/manage_affirmations_screen.dart';
 import '../../features/personal/manage_talents_screen.dart';
 import '../../features/personal/talents_screen.dart';
 import '../../features/requests/department_requests_screen.dart';
+import '../../features/settings/access_control_screen.dart';
+import '../../features/settings/reports_screen.dart';
+import '../../features/settings/templates_screen.dart';
+import '../../features/settings/settings_screen.dart';
 import '../../features/requests/request_queue_screen.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/icon_tones.dart';
@@ -313,6 +317,30 @@ final List<RouteBase> featureRoutes = [
             MemberDetailScreen(memberId: s.pathParameters['id']!),
       ),
     ],
+  ),
+
+  // ── Settings ──
+  GoRoute(
+    path: '/manage/settings',
+    builder: (c, s) => const SettingsScreen(),
+    routes: [
+      GoRoute(
+        path: 'access-control',
+        builder: (c, s) => const AccessControlScreen(),
+      ),
+      GoRoute(
+        path: 'institutions',
+        builder: (c, s) => const InstitutionsScreen(),
+      ),
+    ],
+  ),
+  GoRoute(
+    path: '/manage/templates',
+    builder: (c, s) => const TemplatesScreen(),
+  ),
+  GoRoute(
+    path: '/manage/reports',
+    builder: (c, s) => const ReportsScreen(),
   ),
 
   // ── Fundraising ──

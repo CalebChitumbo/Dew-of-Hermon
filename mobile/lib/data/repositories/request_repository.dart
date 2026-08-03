@@ -36,7 +36,7 @@ class RequestRepository {
     DateTime? returnTime,
     String? coordinatorNotes,
   }) =>
-      _api.post('/api/transport-requests/$id/submit-details', body: {
+      _api.patch('/api/transport-requests/$id/submit-details', body: {
         'vehicleType': vehicleType,
         'vehicleCount': vehicleCount,
         'estimatedCost': estimatedCost,
@@ -60,7 +60,7 @@ class RequestRepository {
     required String action,
     String? comments,
   }) =>
-      _api.post('/api/transport-requests/$id/treasurer-decision', body: {
+      _api.patch('/api/transport-requests/$id/treasurer-decision', body: {
         'action': action,
         if (comments != null && comments.isNotEmpty) 'comments': comments,
       });
@@ -79,7 +79,7 @@ class RequestRepository {
     String? comments,
     double? approvedAmount,
   }) =>
-      _api.post('/api/budget-requests/$id/treasurer-decision', body: {
+      _api.patch('/api/budget-requests/$id/treasurer-decision', body: {
         'action': action,
         if (comments != null && comments.isNotEmpty) 'comments': comments,
         if (approvedAmount != null) 'approvedAmount': approvedAmount,
@@ -106,7 +106,7 @@ class RequestRepository {
     required String coverageUserName,
     String? comments,
   }) =>
-      _api.post('/api/media-requests/$id/confirm', body: {
+      _api.patch('/api/media-requests/$id/confirm', body: {
         'action': 'CONFIRM',
         'soundUserId': soundUserId,
         'soundUserName': soundUserName,
@@ -118,7 +118,7 @@ class RequestRepository {
       });
 
   Future<void> declineMedia(String id, {required String comments}) =>
-      _api.post('/api/media-requests/$id/confirm',
+      _api.patch('/api/media-requests/$id/confirm',
           body: {'action': 'DECLINE', 'comments': comments});
 
   // ── Food ──
@@ -140,7 +140,7 @@ class RequestRepository {
     String? budgetCurrency,
     String? budgetPurpose,
   }) =>
-      _api.post('/api/food-requests/$id/confirm', body: {
+      _api.patch('/api/food-requests/$id/confirm', body: {
         'action': 'CONFIRM',
         if (headcount != null) 'headcount': headcount,
         if (menuPlan != null && menuPlan.isNotEmpty) 'menuPlan': menuPlan,
@@ -154,7 +154,7 @@ class RequestRepository {
       });
 
   Future<void> declineFood(String id, {required String comments}) =>
-      _api.post('/api/food-requests/$id/confirm',
+      _api.patch('/api/food-requests/$id/confirm',
           body: {'action': 'DECLINE', 'comments': comments});
 
   // ── Department join requests ──
@@ -219,15 +219,17 @@ class RequestRepository {
     return rows.map(EventReport.fromMap).toList();
   }
 
+  /// Save a draft, or submit for the Chairperson's review. The whole
+  /// questionnaire goes in `payload`; the server sanitises it and decides the
+  /// resulting status from `action`.
   Future<void> saveEventReport({
     required String eventId,
     required Map<String, dynamic> body,
     bool submit = false,
   }) =>
-      _api.post('/api/event-reports', body: {
-        'eventId': eventId,
-        ...body,
-        'status': submit ? 'SUBMITTED' : 'DRAFT',
+      _api.put('/api/event-reports/$eventId', body: {
+        'action': submit ? 'SUBMIT' : 'SAVE_DRAFT',
+        'payload': body,
       });
 
   /// Chairperson review: MARK_REVIEWED or REQUEST_CHANGES.
@@ -236,7 +238,7 @@ class RequestRepository {
     required String action,
     String? comments,
   }) =>
-      _api.post('/api/event-reports/$eventId/review', body: {
+      _api.patch('/api/event-reports/$eventId/review', body: {
         'action': action,
         if (comments != null && comments.isNotEmpty) 'comments': comments,
       });

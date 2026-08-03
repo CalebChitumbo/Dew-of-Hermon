@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
@@ -27,12 +26,19 @@ class MemberRepository {
   Stream<AppUser?> memberStream(String id) =>
       documentStream(db.collection('users').doc(id), AppUser.fromMap);
 
+  /// Institutions in the order the Chairperson arranged them, name-sorted
+  /// within an equal `order`.
   Stream<List<Institution>> institutionsStream() {
     return collectionStream(
       db.collection('institutions'),
       Institution.fromMap,
-      sort: (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-    );
+      sort: (a, b) {
+        final byOrder = a.order.compareTo(b.order);
+        return byOrder != 0
+            ? byOrder
+            : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      },
+    ).handleError((_) => <Institution>[]);
   }
 
   /// Create the member record. The server also provisions the Firebase Auth
@@ -110,14 +116,15 @@ final institutionsProvider = StreamProvider<List<Institution>>((ref) {
   return ref.watch(memberRepositoryProvider).institutionsStream();
 });
 
+/// Just the ones still in use — what every picker should offer.
+final activeInstitutionsProvider = Provider<List<Institution>>((ref) {
+  final list = ref.watch(institutionsProvider).valueOrNull ?? const [];
+  return list.where((i) => i.isActive).toList();
+});
+
 /// Institution id → name, for rendering a member's school without a lookup
 /// at every call site.
 final institutionNamesProvider = Provider<Map<String, String>>((ref) {
   final list = ref.watch(institutionsProvider).valueOrNull ?? const [];
   return {for (final i in list) i.id: i.name};
 });
-
-/// The Firestore collection is the write target for institutions the API does
-/// not cover — kept here so the collection name lives in one place.
-CollectionReference<Map<String, dynamic>> get institutionsCollection =>
-    db.collection('institutions');

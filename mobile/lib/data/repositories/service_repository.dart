@@ -40,10 +40,10 @@ class ServiceRepository {
   }
 
   Future<void> update(String serviceId, Map<String, dynamic> updates) =>
-      _api.patch('/api/services/$serviceId', body: updates);
+      _api.put('/api/services/$serviceId', body: updates);
 
   Future<void> archive(String serviceId) =>
-      _api.patch('/api/services/$serviceId', body: {'isArchived': true});
+      _api.put('/api/services/$serviceId', body: {'isArchived': true});
 
   /// Provision the next few Sundays' rotas ahead of time.
   Future<void> ensureUpcoming() =>
@@ -80,7 +80,7 @@ class ServiceRepository {
     required AssignmentStatus status,
     String? notes,
   }) =>
-      _api.patch('/api/services/$serviceId/assignments/$assignmentId', body: {
+      _api.put('/api/services/$serviceId/assignments/$assignmentId', body: {
         'status': status.wire,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
       });
@@ -134,25 +134,23 @@ class EventRepository {
   Future<void> update(String eventId, Map<String, dynamic> updates) =>
       _api.patch('/api/events/$eventId', body: updates);
 
-  Future<void> delete(String eventId) => _api.delete('/api/events/$eventId');
-
   /// Events Lead: send the stakeholder requests this event raised.
   Future<void> dispatch(String eventId) =>
       _api.post('/api/events/$eventId/dispatch');
 
   /// Events Lead sign-off, passing the event up the chain.
   Future<void> approve(String eventId, {String? comments}) =>
-      _api.post('/api/events/$eventId/approve', body: {
+      _api.patch('/api/events/$eventId/approve', body: {
         'action': 'APPROVE',
         if (comments != null && comments.isNotEmpty) 'comments': comments,
       });
 
   Future<void> reject(String eventId, {required String comments}) =>
-      _api.post('/api/events/$eventId/approve',
+      _api.patch('/api/events/$eventId/approve',
           body: {'action': 'REJECT', 'comments': comments});
 
   Future<void> requestChanges(String eventId, {required String comments}) =>
-      _api.post('/api/events/$eventId/approve',
+      _api.patch('/api/events/$eventId/approve',
           body: {'action': 'CHANGES_REQUESTED', 'comments': comments});
 
   /// Vice Chair / Chairperson tier approval.
@@ -161,7 +159,7 @@ class EventRepository {
     required String action,
     String? comments,
   }) =>
-      _api.post('/api/events/$eventId/tier-approve', body: {
+      _api.patch('/api/events/$eventId/tier-approve', body: {
         'action': action,
         if (comments != null && comments.isNotEmpty) 'comments': comments,
       });
