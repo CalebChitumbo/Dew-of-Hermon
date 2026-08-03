@@ -128,3 +128,13 @@ T? parseEnumOrNull<T>(dynamic value, Map<String, T> byName) {
 Map<String, dynamic> withId(DocumentSnapshot<Map<String, dynamic>> doc) {
   return {...(doc.data() ?? const {}), 'id': doc.id};
 }
+
+/// First element matching [test], or null. `Iterable.firstWhere` throws when
+/// nothing matches, and `firstOrNull` lives in package:collection — which is
+/// not worth a dependency for this.
+T? firstWhereOrNull<T>(Iterable<T> items, bool Function(T) test) {
+  for (final item in items) {
+    if (test(item)) return item;
+  }
+  return null;
+}

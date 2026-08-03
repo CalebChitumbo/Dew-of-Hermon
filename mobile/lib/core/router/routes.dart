@@ -15,12 +15,18 @@ import '../../features/camp_public/camp_sponsor_screen.dart';
 import '../../features/camp_public/camp_track_screen.dart';
 import '../../features/camp_public/my_registrations_screen.dart';
 import '../../features/calendar/calendar_screen.dart';
+import '../../features/departments/department_detail_screen.dart';
+import '../../features/departments/departments_screen.dart';
 import '../../features/events/event_approvals_screen.dart';
 import '../../features/events/event_reports_screen.dart';
 import '../../features/events/event_roles_screen.dart';
 import '../../features/events/new_event_screen.dart';
+import '../../features/ministries/follow_up_screens.dart';
 import '../../features/requests/department_requests_screen.dart';
 import '../../features/requests/request_queue_screen.dart';
+import '../../core/theme/app_icons.dart';
+import '../../core/theme/icon_tones.dart';
+import '../../data/models/enums.dart';
 import '../../features/schedule/availability_screen.dart';
 import '../../features/schedule/my_schedule_screen.dart';
 import '../../features/services/service_detail_screen.dart';
@@ -202,5 +208,52 @@ final List<RouteBase> featureRoutes = [
   GoRoute(
     path: '/manage/department-requests',
     builder: (c, s) => const DepartmentRequestsScreen(),
+  ),
+
+  // ── Departments & ministries ──
+  GoRoute(
+    path: '/departments',
+    builder: (c, s) => const DepartmentsScreen(),
+    routes: [
+      GoRoute(
+        path: ':id',
+        builder: (c, s) =>
+            DepartmentDetailScreen(departmentId: s.pathParameters['id']!),
+      ),
+    ],
+  ),
+  GoRoute(
+    path: '/department',
+    builder: (c, s) => const MyDepartmentScreen(),
+    routes: [
+      // Campus Ministry and Life Groups are the same screen with the scope
+      // swapped: a weekly devotional focus plus the contacts from that source.
+      GoRoute(
+        path: 'campus-ministry',
+        builder: (c, s) => const MinistryScreen(
+          scope: DevotionalScope.campusMinistry,
+          title: 'Campus Ministry',
+          pageKey: 'campus_ministry',
+          manageFeature: 'manage_devotionals',
+          icon: AppIcons.graduation,
+          tone: IconTone.lavender,
+        ),
+      ),
+      GoRoute(
+        path: 'life-groups',
+        builder: (c, s) => const MinistryScreen(
+          scope: DevotionalScope.lifeGroups,
+          title: 'Life Groups',
+          pageKey: 'life_groups',
+          manageFeature: 'manage_life_group_devotionals',
+          icon: AppIcons.usersRound,
+          tone: IconTone.sage,
+        ),
+      ),
+      GoRoute(
+        path: 'discipleship',
+        builder: (c, s) => const DiscipleshipScreen(),
+      ),
+    ],
   ),
 ];
