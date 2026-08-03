@@ -15,6 +15,12 @@ import '../../features/camp_public/camp_sponsor_screen.dart';
 import '../../features/camp_public/camp_track_screen.dart';
 import '../../features/camp_public/my_registrations_screen.dart';
 import '../../features/calendar/calendar_screen.dart';
+import '../../features/events/event_approvals_screen.dart';
+import '../../features/events/event_reports_screen.dart';
+import '../../features/events/event_roles_screen.dart';
+import '../../features/events/new_event_screen.dart';
+import '../../features/requests/department_requests_screen.dart';
+import '../../features/requests/request_queue_screen.dart';
 import '../../features/schedule/availability_screen.dart';
 import '../../features/schedule/my_schedule_screen.dart';
 import '../../features/services/service_detail_screen.dart';
@@ -135,5 +141,66 @@ final List<RouteBase> featureRoutes = [
         ],
       ),
     ],
+  ),
+
+  // ── Events pipeline ──
+  GoRoute(
+    path: '/manage/events/new',
+    builder: (c, s) => const NewEventScreen(),
+  ),
+  GoRoute(
+    path: '/manage/events/approvals',
+    builder: (c, s) => const EventApprovalsScreen(),
+  ),
+  GoRoute(
+    path: '/manage/events/:id/roles',
+    builder: (c, s) => EventRolesScreen(eventId: s.pathParameters['id']!),
+  ),
+  GoRoute(
+    path: '/manage/events/reports',
+    builder: (c, s) => const EventReportsScreen(),
+    routes: [
+      // Declared before ':eventId' so the review paths win the match.
+      GoRoute(
+        path: 'review',
+        builder: (c, s) => const EventReportReviewScreen(),
+        routes: [
+          GoRoute(
+            path: ':eventId',
+            builder: (c, s) => EventReportFormScreen(
+              eventId: s.pathParameters['eventId']!,
+              reviewMode: true,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: ':eventId',
+        builder: (c, s) =>
+            EventReportFormScreen(eventId: s.pathParameters['eventId']!),
+      ),
+    ],
+  ),
+
+  // ── Stakeholder queues ──
+  GoRoute(
+    path: '/manage/transport/requests',
+    builder: (c, s) => const TransportQueueScreen(),
+  ),
+  GoRoute(
+    path: '/manage/media/requests',
+    builder: (c, s) => const MediaQueueScreen(),
+  ),
+  GoRoute(
+    path: '/manage/food/requests',
+    builder: (c, s) => const FoodQueueScreen(),
+  ),
+  GoRoute(
+    path: '/manage/finance/approvals',
+    builder: (c, s) => const AccountsQueueScreen(),
+  ),
+  GoRoute(
+    path: '/manage/department-requests',
+    builder: (c, s) => const DepartmentRequestsScreen(),
   ),
 ];
