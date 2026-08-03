@@ -222,6 +222,61 @@ for f, src in clean.items():
         if name not in provider_decls:
             problems.append(f"{rel(f)}: {name} is used but never declared")
 
+# ── 7. Unused relative imports ───────────────────────────────────────────────
+# Approximate but effective: an import earns its place if any top-level name it
+# declares (or re-exports) appears in the importing file.
+# Deliberately permissive: a name this misses would show up as a bogus
+# "unused import", so it errs towards capturing too much rather than too little.
+TOP_LEVEL_PATTERNS = [
+    # class / enum / mixin / extension / typedef
+    re.compile(
+        r"^\s*(?:abstract\s+)?(?:final\s+|base\s+|interface\s+|sealed\s+)?"
+        r"(?:class|enum|mixin|extension|typedef)\s+(\w+)",
+        re.M,
+    ),
+    # top-level `final x =` / `const x =`
+    re.compile(r"^(?:final|const)\s+(?:[\w<>,\s?\[\]]+?\s+)?(\w+)\s*=", re.M),
+    # top-level getter: `Foo get bar =>`
+    re.compile(r"^[\w<>,\s?\[\]]+\s+get\s+(\w+)", re.M),
+    # top-level function, including generics: `List<T> mapDocs<T>(`
+    re.compile(r"^(?:[\w<>,\s?\[\]]+\s+)?(\w+)\s*(?:<[^>(]*>)?\s*\(", re.M),
+]
+
+def exported_names(path: Path, seen: set[Path] | None = None) -> set[str]:
+    """Top-level names a file declares, following `export` one level."""
+    seen = seen or set()
+    if path in seen or not path.exists():
+        return set()
+    seen.add(path)
+    text = path.read_text()
+    names: set[str] = set()
+    for pattern in TOP_LEVEL_PATTERNS:
+        names |= {m for m in pattern.findall(text) if m}
+    # Dart keywords that the permissive function pattern can pick up.
+    names -= {"if", "for", "while", "switch", "catch", "return", "assert"}
+    for target in re.findall(r"^\s*export\s+'([^']+)'", text, re.M):
+        if target.startswith(("package:", "dart:")):
+            continue
+        names |= exported_names((path.parent / target).resolve(), seen)
+    return names
+
+
+for f, src in sources.items():
+    body = clean[f]
+    # Strip the import block itself so an import cannot justify itself.
+    body = re.sub(r"^\s*(?:import|export)\s+.*$", "", body, flags=re.M)
+    for target in IMPORT_RE.findall(src):
+        if target.startswith(("package:", "dart:")):
+            continue
+        resolved = (f.parent / target).resolve()
+        if not resolved.exists():
+            continue  # already reported above
+        names = exported_names(resolved)
+        if not names:
+            continue
+        if not any(re.search(rf"\b{re.escape(n)}\b", body) for n in names):
+            problems.append(f"{rel(f)}: import '{target}' appears unused")
+
 # ── Report ───────────────────────────────────────────────────────────────────
 print(f"Checked {len(dart_files)} Dart files under {rel(LIB)}")
 if problems:

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/access/access_providers.dart';
-import '../../core/api/api_client.dart';
+import '../../core/pdf/camp_tags_pdf.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
@@ -63,6 +63,24 @@ class _CampHubScreenState extends ConsumerState<CampHubScreen> {
     }).toList();
   }
 
+  Future<void> _printTags(
+      List<CampRegistration> campers, String campName) async {
+    final printable =
+        campers.where((c) => (c.checkInCode ?? '').isNotEmpty).toList();
+    if (printable.isEmpty) {
+      context.showInfo(
+        'No camper has a badge code yet — codes are minted when the '
+        'registration email goes out.',
+      );
+      return;
+    }
+    try {
+      await CampTagsPdf.printTags(campers: printable, campName: campName);
+    } catch (e) {
+      if (mounted) context.showError('Could not build the tag sheet: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final access = ref.watch(accessProvider);
@@ -83,6 +101,14 @@ class _CampHubScreenState extends ConsumerState<CampHubScreen> {
     return AppScaffold(
       title: 'ROPs Camp',
       subtitle: camp?.name,
+      actions: [
+        IconButton(
+          icon: const Icon(AppIcons.printer),
+          tooltip: 'Print camper tags',
+          onPressed: () => _printTags(async.valueOrNull ?? const [],
+              camp?.name ?? 'ROPs Camp'),
+        ),
+      ],
       onRefresh: () async {
         ref.invalidate(campRegistrationsProvider);
         ref.invalidate(campCapacityProvider);
