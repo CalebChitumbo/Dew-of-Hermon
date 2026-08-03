@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
+import '../firestore/streams.dart';
 import '../models/requests.dart';
 
 /// The five stakeholder queues and the department join chain.
@@ -158,10 +159,15 @@ class RequestRepository {
 
   // ── Department join requests ──
 
-  Future<List<DepartmentJoinRequest>> departmentJoinRequests() async {
-    final rows =
-        await _api.getList('/api/department-join-requests', key: 'requests');
-    return rows.map(DepartmentJoinRequest.fromMap).toList();
+  /// `/api/department-join-requests` only accepts writes, so the queue is read
+  /// straight from Firestore the way the web page does. The rules scope the
+  /// collection to the requester or a department lead.
+  Stream<List<DepartmentJoinRequest>> departmentJoinRequestsStream() {
+    return collectionStream(
+      db.collection('departmentJoinRequests'),
+      DepartmentJoinRequest.fromMap,
+      sort: (a, b) => b.createdAt.compareTo(a.createdAt),
+    );
   }
 
   /// A member asking to join a department.

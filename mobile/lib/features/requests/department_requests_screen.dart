@@ -17,8 +17,8 @@ import '../../data/models/requests.dart';
 import '../../data/repositories/request_repository.dart';
 
 final departmentJoinRequestsProvider =
-    FutureProvider<List<DepartmentJoinRequest>>((ref) {
-  return ref.watch(requestRepositoryProvider).departmentJoinRequests();
+    StreamProvider<List<DepartmentJoinRequest>>((ref) {
+  return ref.watch(requestRepositoryProvider).departmentJoinRequestsStream();
 });
 
 /// Members asking to join a department. Two sign-offs: the department Manager

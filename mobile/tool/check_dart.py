@@ -126,6 +126,43 @@ for f, src in sources.items():
         if not resolved.exists():
             problems.append(f"{rel(f)}: import '{target}' does not resolve")
 
+# ── 1b. Every package: import is a declared dependency ───────────────────────
+# `flutter pub get` cannot run here, so this stands in for the resolver: an
+# import of a package nobody added to pubspec.yaml fails the build on a real
+# machine, and this is the cheapest place to notice.
+PUBSPEC = LIB.parent / "pubspec.yaml"
+declared_packages: set[str] = set()
+if PUBSPEC.exists():
+    pubspec = PUBSPEC.read_text()
+    in_deps = False
+    for line in pubspec.splitlines():
+        if re.match(r"^(dependencies|dev_dependencies):\s*$", line):
+            in_deps = True
+            continue
+        if re.match(r"^[a-zA-Z_]", line):
+            in_deps = False
+            continue
+        m = re.match(r"^  ([a-z0-9_]+):", line)
+        if in_deps and m:
+            declared_packages.add(m.group(1))
+    m = re.search(r"^name:\s*([a-z0-9_]+)", pubspec, re.M)
+    if m:
+        declared_packages.add(m.group(1))
+    # Bundled with the SDK, never listed as a dependency.
+    declared_packages |= {"flutter", "flutter_test", "flutter_localizations"}
+
+    for f, src in sources.items():
+        for target in IMPORT_RE.findall(src):
+            if not target.startswith("package:"):
+                continue
+            pkg = target[len("package:") :].split("/", 1)[0]
+            if pkg not in declared_packages:
+                problems.append(
+                    f"{rel(f)}: package '{pkg}' is imported but not in pubspec.yaml"
+                )
+else:
+    problems.append("pubspec.yaml not found — cannot check package imports")
+
 # ── 2. AppIcons / IconTone members exist ─────────────────────────────────────
 def declared_members(path: Path, pattern: str) -> set[str]:
     if not path.exists():

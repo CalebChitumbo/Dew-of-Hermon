@@ -21,7 +21,13 @@ import '../../features/events/event_approvals_screen.dart';
 import '../../features/events/event_reports_screen.dart';
 import '../../features/events/event_roles_screen.dart';
 import '../../features/events/new_event_screen.dart';
+import '../../features/bible/bible_screen.dart';
+import '../../features/latreuo/latreuo_screen.dart';
 import '../../features/ministries/follow_up_screens.dart';
+import '../../features/personal/affirmations_screen.dart';
+import '../../features/personal/manage_affirmations_screen.dart';
+import '../../features/personal/manage_talents_screen.dart';
+import '../../features/personal/talents_screen.dart';
 import '../../features/requests/department_requests_screen.dart';
 import '../../features/requests/request_queue_screen.dart';
 import '../../core/theme/app_icons.dart';
@@ -255,5 +261,33 @@ final List<RouteBase> featureRoutes = [
         builder: (c, s) => const DiscipleshipScreen(),
       ),
     ],
+  ),
+
+  // ── Personal tools ──
+  GoRoute(
+    path: '/bible',
+    builder: (c, s) => const BibleScreen(),
+  ),
+  // `/latreou` matches the web URL, spelling and all — changing it here would
+  // break every notification link and bookmark already in the wild.
+  GoRoute(
+    path: '/latreou',
+    builder: (c, s) => const LatreuoScreen(),
+  ),
+  GoRoute(
+    path: '/affirmations',
+    builder: (c, s) => const AffirmationsScreen(),
+  ),
+  GoRoute(
+    path: '/manage/affirmations',
+    builder: (c, s) => const ManageAffirmationsScreen(),
+  ),
+  GoRoute(
+    path: '/talents',
+    builder: (c, s) => const TalentsScreen(),
+  ),
+  GoRoute(
+    path: '/manage/talents',
+    builder: (c, s) => const ManageTalentsScreen(),
   ),
 ];

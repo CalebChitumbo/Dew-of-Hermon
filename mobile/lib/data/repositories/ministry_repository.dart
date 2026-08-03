@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/utils/dates.dart';
+import '../firestore/streams.dart';
 import '../models/enums.dart';
 import '../models/ministry.dart';
 
@@ -169,9 +171,18 @@ class MinistryRepository {
 
   // ── Talents ──
 
-  Future<List<TalentSubmission>> talents() async {
-    final rows = await _api.getList('/api/talents', key: 'submissions');
-    return rows.map(TalentSubmission.fromMap).toList();
+  /// `/api/talents` is write-only, so submissions are read straight from
+  /// Firestore — exactly as the web pages do. The rules scope the collection
+  /// to the submitter or a department lead, so a member sees only their own
+  /// rows and leadership sees the whole queue from the same stream.
+  Stream<List<TalentSubmission>> talentsStream({String? userId}) {
+    Query<Map<String, dynamic>> q = db.collection('talentSubmissions');
+    if (userId != null) q = q.where('userId', isEqualTo: userId);
+    return collectionStream(
+      q,
+      TalentSubmission.fromMap,
+      sort: (a, b) => b.createdAt.compareTo(a.createdAt),
+    );
   }
 
   Future<void> submitTalent({
@@ -198,7 +209,8 @@ class MinistryRepository {
       });
 
   /// Leadership moves a submission along, or the member withdraws it.
-  /// [action] is SHORTLIST | DECLINE | SLOT | COMPLETE | WITHDRAW.
+  /// [action] is SHORTLIST | DECLINE | SLOT | RETURN_TO_POOL | COMPLETE |
+  /// WITHDRAW.
   Future<void> decideTalent(
     String id, {
     required String action,
@@ -207,7 +219,7 @@ class MinistryRepository {
     DateTime? opportunityDate,
     String? opportunityNotes,
   }) =>
-      _api.patch('/api/talents/$id/decision', body: {
+      _api.post('/api/talents/$id/decision', body: {
         'action': action,
         if (comments != null && comments.isNotEmpty) 'comments': comments,
         if (opportunityTitle != null && opportunityTitle.isNotEmpty)

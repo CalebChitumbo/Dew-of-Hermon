@@ -68,6 +68,9 @@ class StatusBadge extends StatelessWidget {
   final IconData? icon;
   final bool dense;
 
+  /// `PENDING_LEAD_APPROVAL` → `Pending lead approval`.
+  static String humanise(String wire) => _humanise(wire);
+
   static String _humanise(String wire) {
     if (wire.isEmpty) return wire;
     return wire

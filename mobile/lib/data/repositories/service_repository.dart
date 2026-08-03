@@ -166,10 +166,21 @@ class EventRepository {
         if (comments != null && comments.isNotEmpty) 'comments': comments,
       });
 
-  /// How each stakeholder request on an event is doing.
-  Future<Map<String, dynamic>> stakeholderStatuses(List<String> eventIds) =>
-      _api.getMap('/api/events/stakeholder-statuses',
-          query: {'eventIds': eventIds.join(',')});
+  /// How each stakeholder request on an event is doing. Resolved server-side
+  /// with the Admin SDK — a POST, because it takes a list of event ids — so
+  /// the approvals screen never depends on client read rules for the four
+  /// request collections. Returns `{ eventId: {transport, budget, media,
+  /// food} }`.
+  Future<Map<String, dynamic>> stakeholderStatuses(
+      List<String> eventIds) async {
+    if (eventIds.isEmpty) return <String, dynamic>{};
+    final data = await _api.post('/api/events/stakeholder-statuses',
+        body: {'eventIds': eventIds});
+    final statuses = data is Map ? data['statuses'] : null;
+    return statuses is Map
+        ? Map<String, dynamic>.from(statuses)
+        : <String, dynamic>{};
+  }
 
   // ── Event roles ──
 

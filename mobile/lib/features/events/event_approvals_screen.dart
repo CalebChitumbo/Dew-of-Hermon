@@ -36,6 +36,87 @@ final pendingEventsProvider = StreamProvider<List<AppEvent>>((ref) {
   ).handleError((_) => <AppEvent>[]);
 });
 
+/// Each pending event's linked transport / budget / media / food request
+/// status, resolved server-side with the Admin SDK. Keyed by event id, then by
+/// kind: `{ eventId: {transport: 'APPROVED', …} }`.
+final stakeholderStatusesProvider =
+    FutureProvider<Map<String, dynamic>>((ref) async {
+  final events = await ref.watch(pendingEventsProvider.future);
+  final ids = events.map((e) => e.id).toList();
+  if (ids.isEmpty) return <String, dynamic>{};
+  try {
+    return await ref.read(eventRepositoryProvider).stakeholderStatuses(ids);
+  } on ApiException {
+    // A viewer without the approvals feature gets a 403 here; the cards just
+    // fall back to showing the needs without live readiness.
+    return <String, dynamic>{};
+  }
+});
+
+/// One resource an event asked for, and whether it has landed.
+class _Resource {
+  const _Resource({
+    required this.label,
+    required this.icon,
+    required this.status,
+    required this.ready,
+  });
+
+  final String label;
+  final IconData icon;
+  final String? status;
+  final bool ready;
+}
+
+/// What counts as "settled" for each queue — the same rules as
+/// `RESOURCE_READY` on the web. Accounts turning a budget down still unblocks
+/// the event: the answer came back, it was just a no.
+List<_Resource> _resourcesFor(AppEvent e, dynamic statuses) {
+  String? at(String key) {
+    final value = statuses is Map ? statuses[key] : null;
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
+  final rows = <_Resource>[];
+  if (e.transportRequired) {
+    final s = at('transport');
+    rows.add(_Resource(
+      label: 'Transport',
+      icon: AppIcons.transport,
+      status: s,
+      ready: s == 'APPROVED',
+    ));
+  }
+  if (e.budgetRequested) {
+    final s = at('budget');
+    rows.add(_Resource(
+      label: 'Funds',
+      icon: AppIcons.money,
+      status: s,
+      ready: s == 'APPROVED' || s == 'REJECTED',
+    ));
+  }
+  if (e.mediaRequired) {
+    final s = at('media');
+    rows.add(_Resource(
+      label: 'Media',
+      icon: AppIcons.media,
+      status: s,
+      ready: s == 'CONFIRMED',
+    ));
+  }
+  if (e.foodRequired) {
+    final s = at('food');
+    rows.add(_Resource(
+      label: 'Food',
+      icon: AppIcons.food,
+      status: s,
+      ready: s == 'CONFIRMED',
+    ));
+  }
+  return rows;
+}
+
 /// The approval chain: Events Lead dispatches the stakeholder requests and
 /// passes the event up, the Vice Chairperson signs, then the Chairperson —
 /// whose approval publishes it to the calendar.
@@ -233,6 +314,18 @@ class _ApprovalCardState extends ConsumerState<_ApprovalCard> {
       _ => false,
     };
 
+    // The Events Lead may only pass an event up once every resource it asked
+    // for has come back. The two tiers above are not gated on this — by then
+    // the answers are in.
+    final resources = _resourcesFor(
+      e,
+      ref.watch(stakeholderStatusesProvider).valueOrNull?[e.id],
+    );
+    final approveBlocked = isLeadStage &&
+        resources.isNotEmpty &&
+        (status == EventApprovalStatus.pendingDispatch ||
+            !resources.every((r) => r.ready));
+
     return LuxCard(
       onTap: () => showEventDetail(context, e),
       child: Column(
@@ -280,7 +373,28 @@ class _ApprovalCardState extends ConsumerState<_ApprovalCard> {
           const SizedBox(height: 12),
           _ChainStrip(status: status),
 
-          if (e.stakeholderNeeds.isNotEmpty) ...[
+          if (resources.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [
+                for (final r in resources)
+                  StatusBadge(
+                    r.status == null
+                        ? '${r.label} — not sent'
+                        : '${r.label} — ${StatusBadge.humanise(r.status!)}',
+                    tone: r.ready
+                        ? IconTone.emerald
+                        : r.status == null
+                            ? IconTone.clay
+                            : IconTone.amber,
+                    icon: r.ready ? AppIcons.check : r.icon,
+                    dense: true,
+                  ),
+              ],
+            ),
+          ] else if (e.stakeholderNeeds.isNotEmpty) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 7,
@@ -324,12 +438,23 @@ class _ApprovalCardState extends ConsumerState<_ApprovalCard> {
             else
               Column(
                 children: [
+                  if (approveBlocked) ...[
+                    NoticeCard(
+                      tone: IconTone.amber,
+                      icon: AppIcons.clock,
+                      message: 'Waiting on '
+                          '${resources.where((r) => !r.ready).map((r) => r.label.toLowerCase()).join(', ')}'
+                          ' before this can move up the chain.',
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   DecisionRow(
                     busy: _busy,
                     approveLabel: status == EventApprovalStatus.pendingChair
                         ? 'Approve & publish'
                         : 'Approve',
-                    onApprove: () => _approve(isTierStage),
+                    onApprove:
+                        approveBlocked ? null : () => _approve(isTierStage),
                     onDecline: () =>
                         _reject(isTierStage, changesOnly: false),
                   ),
@@ -375,7 +500,10 @@ class DecisionRow extends StatelessWidget {
     this.busy = false,
   });
 
-  final VoidCallback onApprove;
+  /// Null disables the approve button — used when a gate upstream has not
+  /// been cleared yet (an event still waiting on transport, say).
+  final VoidCallback? onApprove;
+
   final VoidCallback onDecline;
   final String approveLabel;
   final String declineLabel;

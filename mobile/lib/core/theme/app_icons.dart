@@ -15,6 +15,7 @@ abstract final class AppIcons {
   static const calendarDays = LucideIcons.calendarDays;
   static const calendarPlus = LucideIcons.calendarPlus;
   static const calendarRange = LucideIcons.calendarRange;
+  static const calendarCheck = LucideIcons.calendarCheck;
   static const bible = LucideIcons.bookOpenText;
   static const profile = LucideIcons.circleUser;
   static const church = LucideIcons.church;

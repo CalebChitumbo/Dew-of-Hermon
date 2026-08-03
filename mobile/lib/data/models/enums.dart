@@ -276,10 +276,10 @@ enum FollowUpReason {
 }
 
 enum TalentSubmissionStatus {
-  pendingReview('PENDING_REVIEW', 'Pending review'),
-  shortlisted('SHORTLISTED', 'Shortlisted'),
-  slotted('SLOTTED', 'Slotted'),
-  completed('COMPLETED', 'Completed'),
+  pendingReview('PENDING_REVIEW', 'Awaiting review'),
+  shortlisted('SHORTLISTED', 'In the pool'),
+  slotted('SLOTTED', 'Slotted in'),
+  completed('COMPLETED', 'Showcased'),
   declined('DECLINED', 'Declined'),
   withdrawn('WITHDRAWN', 'Withdrawn');
 
@@ -294,17 +294,19 @@ enum TalentSubmissionStatus {
       parseEnum(v, _byWire, TalentSubmissionStatus.pendingReview);
 }
 
+/// Labels match `TALENT_CATEGORY_OPTIONS` in `src/lib/talents.ts`, and the
+/// declaration order is the order the picker shows them in.
 enum TalentCategory {
-  singing('SINGING', 'Singing'),
-  instruments('INSTRUMENTS', 'Instruments'),
+  singing('SINGING', 'Singing / Vocals'),
+  instruments('INSTRUMENTS', 'Musical Instruments'),
   dance('DANCE', 'Dance'),
-  drama('DRAMA', 'Drama'),
-  poetrySpokenWord('POETRY_SPOKEN_WORD', 'Poetry / spoken word'),
-  preachingTeaching('PREACHING_TEACHING', 'Preaching / teaching'),
-  mediaCreative('MEDIA_CREATIVE', 'Media / creative'),
-  artDesign('ART_DESIGN', 'Art & design'),
-  tech('TECH', 'Tech'),
-  other('OTHER', 'Other');
+  drama('DRAMA', 'Drama / Acting'),
+  poetrySpokenWord('POETRY_SPOKEN_WORD', 'Poetry / Spoken Word'),
+  preachingTeaching('PREACHING_TEACHING', 'Preaching / Teaching'),
+  mediaCreative('MEDIA_CREATIVE', 'Media / Photography / Video'),
+  artDesign('ART_DESIGN', 'Art / Design'),
+  tech('TECH', 'Tech / Sound / Livestream'),
+  other('OTHER', 'Something else');
 
   const TalentCategory(this.wire, this.label);
   final String wire;
