@@ -11,6 +11,7 @@ import '../../core/theme/app_icons.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/icon_tones.dart';
 import '../../core/utils/dates.dart';
+import '../../core/utils/firestore_parse.dart';
 import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/lux.dart';
@@ -31,12 +32,49 @@ final manageAffirmationsProvider = StreamProvider<List<Affirmation>>((ref) {
 });
 
 /// Manage Affirmations — write, edit, and (for the Chairperson) remove.
-/// Mirrors `/manage/affirmations`.
-class ManageAffirmationsScreen extends ConsumerWidget {
-  const ManageAffirmationsScreen({super.key});
+/// Mirrors `/manage/affirmations`, plus its `new` and `<id>` pages, which on
+/// mobile open as a sheet over this list.
+class ManageAffirmationsScreen extends ConsumerStatefulWidget {
+  const ManageAffirmationsScreen({
+    super.key,
+    this.composing = false,
+    this.editingId,
+  });
+
+  /// Deep-linked from `/manage/affirmations/new`.
+  final bool composing;
+
+  /// Deep-linked from `/manage/affirmations/<id>`.
+  final String? editingId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ManageAffirmationsScreen> createState() =>
+      _ManageAffirmationsScreenState();
+}
+
+class _ManageAffirmationsScreenState
+    extends ConsumerState<ManageAffirmationsScreen> {
+  /// A deep link opens its sheet once, after the first frame — reopening it
+  /// on every rebuild would trap the user in it.
+  bool _deepLinkHandled = false;
+
+  void _handleDeepLink(List<Affirmation> list) {
+    if (_deepLinkHandled) return;
+    if (!widget.composing && widget.editingId == null) return;
+    _deepLinkHandled = true;
+
+    final target = widget.editingId == null
+        ? null
+        : firstWhereOrNull(list, (a) => a.id == widget.editingId);
+    if (widget.editingId != null && target == null) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _edit(context, ref, target);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(manageAffirmationsProvider);
     final canDelete = ref.watch(accessProvider).role == UserRole.superAdmin;
 
@@ -52,6 +90,8 @@ class ManageAffirmationsScreen extends ConsumerWidget {
         loading: () => const LoadingView(),
         error: (e, _) => ErrorView(message: '$e'),
         data: (list) {
+          _handleDeepLink(list);
+
           if (list.isEmpty) {
             return EmptyStateLux(
               icon: AppIcons.sparkles,

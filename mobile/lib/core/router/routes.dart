@@ -17,6 +17,8 @@ import '../../features/camp_public/my_registrations_screen.dart';
 import '../../features/calendar/calendar_screen.dart';
 import '../../features/departments/department_detail_screen.dart';
 import '../../features/departments/departments_screen.dart';
+import '../../features/departments/join_department_screen.dart';
+import '../../features/departments/recommend_screen.dart';
 import '../../features/events/event_approvals_screen.dart';
 import '../../features/events/event_reports_screen.dart';
 import '../../features/events/event_roles_screen.dart';
@@ -40,6 +42,7 @@ import '../../features/settings/reports_screen.dart';
 import '../../features/settings/templates_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/requests/request_queue_screen.dart';
+import '../../features/requests/transport_detail_screen.dart';
 import '../../core/theme/app_icons.dart';
 import '../../core/theme/icon_tones.dart';
 import '../../data/models/enums.dart';
@@ -208,6 +211,13 @@ final List<RouteBase> featureRoutes = [
   GoRoute(
     path: '/manage/transport/requests',
     builder: (c, s) => const TransportQueueScreen(),
+    routes: [
+      GoRoute(
+        path: ':id',
+        builder: (c, s) =>
+            TransportDetailScreen(requestId: s.pathParameters['id']!),
+      ),
+    ],
   ),
   GoRoute(
     path: '/manage/media/requests',
@@ -270,6 +280,14 @@ final List<RouteBase> featureRoutes = [
         path: 'discipleship',
         builder: (c, s) => const DiscipleshipScreen(),
       ),
+      GoRoute(
+        path: 'join',
+        builder: (c, s) => const JoinDepartmentScreen(),
+      ),
+      GoRoute(
+        path: 'recommend',
+        builder: (c, s) => const RecommendScreen(),
+      ),
     ],
   ),
 
@@ -291,6 +309,20 @@ final List<RouteBase> featureRoutes = [
   GoRoute(
     path: '/manage/affirmations',
     builder: (c, s) => const ManageAffirmationsScreen(),
+    routes: [
+      // The web gives `new` and `<id>` their own pages; on mobile both are a
+      // sheet over the list. These exist so an emailed link still lands
+      // somewhere sensible rather than 404ing.
+      GoRoute(
+        path: 'new',
+        builder: (c, s) => const ManageAffirmationsScreen(composing: true),
+      ),
+      GoRoute(
+        path: ':id',
+        builder: (c, s) =>
+            ManageAffirmationsScreen(editingId: s.pathParameters['id']),
+      ),
+    ],
   ),
   GoRoute(
     path: '/talents',

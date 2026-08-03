@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/access/access_providers.dart';
 import '../../core/api/api_client.dart';
@@ -429,22 +430,35 @@ class _TransportCardState extends ConsumerState<_TransportCard> {
           ),
       ],
       history: historyLines(r.statusHistory),
-      actions: r.awaitingDetails && canCost
-          ? PrimaryButton(
+      actions: Column(
+        children: [
+          if (r.awaitingDetails && canCost)
+            PrimaryButton(
               label: 'Price this job',
               icon: AppIcons.edit,
               loading: _busy,
               onPressed: _price,
             )
-          : r.status == TransportRequestStatus.pendingTreasurer && canDecide
-              ? DecisionButtons(
-                  busy: _busy,
-                  approveLabel: 'Funds available',
-                  declineLabel: 'Turn down',
-                  onApprove: () => _decide('APPROVE'),
-                  onDecline: () => _decide('REJECT'),
-                )
-              : null,
+          else if (r.status == TransportRequestStatus.pendingTreasurer &&
+              canDecide)
+            DecisionButtons(
+              busy: _busy,
+              approveLabel: 'Funds available',
+              declineLabel: 'Turn down',
+              onApprove: () => _decide('APPROVE'),
+              onDecline: () => _decide('REJECT'),
+            ),
+          // The full page carries the event details and the whole history —
+          // the same screen a notification link opens.
+          TextButton.icon(
+            onPressed: () =>
+                context.push('/manage/transport/requests/${r.id}'),
+            icon: const Icon(AppIcons.externalLink, size: 14),
+            label: const Text('Open the full request'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.clay500),
+          ),
+        ],
+      ),
     );
   }
 
