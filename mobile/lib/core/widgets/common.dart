@@ -355,6 +355,10 @@ class FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A field can legitimately have no label — a search box, say — and should
+    // not pay for the gap where one would have gone.
+    if (text.isEmpty && !required) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 7),
       child: RichText(

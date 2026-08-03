@@ -27,6 +27,8 @@ import '../../features/fundraising/fundraising_settings_screen.dart';
 import '../../features/fundraising/storefront_screen.dart';
 import '../../features/bible/bible_screen.dart';
 import '../../features/latreuo/latreuo_screen.dart';
+import '../../features/members/member_detail_screen.dart';
+import '../../features/members/members_screen.dart';
 import '../../features/ministries/follow_up_screens.dart';
 import '../../features/personal/affirmations_screen.dart';
 import '../../features/personal/manage_affirmations_screen.dart';
@@ -293,6 +295,24 @@ final List<RouteBase> featureRoutes = [
   GoRoute(
     path: '/manage/talents',
     builder: (c, s) => const ManageTalentsScreen(),
+  ),
+
+  // ── The member roll ──
+  GoRoute(
+    path: '/manage/members',
+    builder: (c, s) => const MembersScreen(),
+    routes: [
+      // Declared before ':id' so `new` is not read as a member id.
+      GoRoute(
+        path: 'new',
+        builder: (c, s) => const NewMemberScreen(),
+      ),
+      GoRoute(
+        path: ':id',
+        builder: (c, s) =>
+            MemberDetailScreen(memberId: s.pathParameters['id']!),
+      ),
+    ],
   ),
 
   // ── Fundraising ──
