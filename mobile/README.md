@@ -178,10 +178,50 @@ survive it:
 - **Firestore's own cache.** Reads come from the local cache when offline, so
   registers and rosters still render.
 
+## Checking the port
+
+The environment this was written in could not reach pub.dev, so nothing here
+has been through `dart analyze`. Three purpose-built checkers stand in for the
+parts of it that matter most across the web/Flutter boundary. All three are
+plain Python with no dependencies, and all three exit non-zero on a finding:
+
+```bash
+bash mobile/tool/check_all.sh   # all of them, plus a generated-file staleness check
+```
+
+Individually:
+
+```bash
+python3 mobile/tool/check_dart.py          # the Dart tree itself
+python3 mobile/tool/check_api_contract.py  # every API call vs the real routes
+python3 mobile/tool/route_coverage.py      # every web URL has a screen
+```
+
+**`check_dart.py`** — relative imports resolve; `package:` imports are declared
+in `pubspec.yaml`; `AppIcons`/`IconTone`/`AppColors`/`D`/`Money`/`Phone` members
+exist; delimiters balance; router-referenced screens exist; no duplicate
+top-level declarations; every provider is declared *and imported* by the file
+using it; no unused relative imports; and package symbols (`launchUrl`,
+`Timestamp`, `Clipboard`…) have the import that provides them.
+
+**`check_api_contract.py`** — walks every `_api.get/post/patch/put/delete()`
+call and resolves it against `src/app/api/**/route.ts`, comparing both the path
+and the verb. This is the one that cannot be replaced by a Dart analyzer: the
+two sides never compile together, so a POST at a PATCH-only route is invisible
+until it 405s in someone's hand. It found seven such calls on its first run.
+
+**`route_coverage.py`** — compares the Next.js page tree with the go_router
+tree, so a web URL with no mobile screen shows up as a finding rather than as a
+gap nobody noticed.
+
+Re-run all three after any change that touches a repository, a route, or a
+theme token. They are fast (well under a second) and have no setup.
+
 ## Verifying a build
 
 ```bash
 cd mobile
+flutter pub get      # first run — this needs network access to pub.dev
 flutter analyze
 flutter test
 ```
@@ -196,3 +236,24 @@ Then on a device, walk the paths that matter:
    pass and a third is refused.
 5. Approve a pass through the three-stage chain and confirm the QR ticket is
    issued only at the Chairperson step.
+6. Open the storefront at `/fundraising/order` signed out, place an order, and
+   confirm it appears on the braai's Orders tab.
+
+## Generated files
+
+Two Dart files are generated from the TypeScript rather than transcribed, so a
+change on the web side cannot silently drift from the app:
+
+| Generated file | Source | Generator |
+| --- | --- | --- |
+| `lib/core/access/access_tables.dart` | `src/lib/access-control.ts` | `tool/gen_access.py` |
+| `lib/core/fundraising/fundraising_menu.dart` | `src/lib/fundraising-menu.ts`, `src/lib/braai.ts` | `tool/gen_fundraising.py` |
+
+Re-run the generator when its source changes; do not hand-edit the output.
+
+## Known gap on the server side
+
+`recommendations` has no rule in `firestore.rules`, so writing one is denied for
+every caller — on the web as well as here. `/department/recommend` says so
+plainly rather than failing silently. Adding a rule for the collection fixes
+both clients at once.

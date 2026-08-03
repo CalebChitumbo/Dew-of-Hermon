@@ -259,10 +259,10 @@ class MyDepartmentScreen extends ConsumerWidget {
           description: 'Departments are how the ministry organises its work — '
               'rotas, event roles, and who is asked to do what.',
           action: PrimaryButton(
-            label: 'Browse departments',
+            label: 'Ask to join one',
             expand: false,
-            icon: AppIcons.forward,
-            onPressed: () => context.push('/departments'),
+            icon: AppIcons.userPlus,
+            onPressed: () => context.push('/department/join'),
           ),
         ),
       );
@@ -315,6 +315,26 @@ class MyDepartmentScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          const SizedBox(height: 14),
+          LuxTile(
+            title: 'Join another department',
+            subtitle: 'Your Manager recommends, the Chairperson approves',
+            icon: AppIcons.userPlus,
+            tone: IconTone.lavender,
+            dense: true,
+            onTap: () => context.push('/department/join'),
+          ),
+          if (mine.any((d) => user.leads(d.id))) ...[
+            const SizedBox(height: 8),
+            LuxTile(
+              title: 'Recommend a member',
+              subtitle: 'Put someone forward for a service role',
+              icon: AppIcons.star,
+              tone: IconTone.gold,
+              dense: true,
+              onTap: () => context.push('/department/recommend'),
+            ),
+          ],
         ],
       ),
     );

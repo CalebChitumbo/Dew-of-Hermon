@@ -156,7 +156,11 @@ class DashboardScreen extends ConsumerWidget {
             tone: IconTone.lavender,
           ),
           const SizedBox(height: 12),
-          _QuickActions(access: access),
+          _QuickActions(
+            access: access,
+            leadsAnything:
+                (user?.leadsDepartmentIds ?? const []).isNotEmpty,
+          ),
         ],
       ),
     );
@@ -496,9 +500,12 @@ class _EventTile extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.access});
+  const _QuickActions({required this.access, required this.leadsAnything});
 
   final Access access;
+
+  /// Whether this person leads a department, which gates the recommend tile.
+  final bool leadsAnything;
 
   @override
   Widget build(BuildContext context) {
@@ -533,6 +540,15 @@ class _QuickActions extends StatelessWidget {
         when: access.canView('latreou'));
     add('Talents', '/talents', AppIcons.star, IconTone.rose,
         when: access.canView('talents'));
+    // A member with one department lands straight on its board, so this is
+    // the only place the two self-service department routes are offered.
+    add('Join a department', '/department/join', AppIcons.userPlus,
+        IconTone.lavender);
+    add('Recommend', '/department/recommend', AppIcons.handshake,
+        IconTone.teal,
+        when: leadsAnything);
+    add('Fundraising', '/manage/fundraising', AppIcons.flame, IconTone.gold,
+        when: access.canView('fundraising'));
 
     return GridView.count(
       crossAxisCount: 2,
