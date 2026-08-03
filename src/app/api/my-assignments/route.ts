@@ -1,39 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
-import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { adminDb } from "@/lib/firebase-admin";
+import { getCallerUid } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
-async function getAuthUid(request: NextRequest): Promise<string | null> {
-  // Try Bearer token first
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    try {
-      const decoded = await adminAuth.verifyIdToken(authHeader.slice(7));
-      return decoded.uid;
-    } catch {
-      // fall through to session cookie
-    }
-  }
-
-  // Fall back to session cookie
-  const cookieStore = await cookies();
-  const session = cookieStore.get("session");
-  if (session?.value) {
-    try {
-      const decoded = await adminAuth.verifySessionCookie(session.value);
-      return decoded.uid;
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
-}
-
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const uid = await getAuthUid(request);
+    const uid = await getCallerUid();
     if (!uid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

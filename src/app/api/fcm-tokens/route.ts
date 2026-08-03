@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getCallerUid } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +19,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the session cookie to ensure the caller owns this userId
-    const sessionCookie = request.cookies.get("session")?.value;
-    if (!sessionCookie) {
+    // Verify the caller's credential to ensure they own this userId
+    const callerUid = await getCallerUid();
+    if (!callerUid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    if (decoded.uid !== userId) {
+    if (callerUid !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -74,13 +73,11 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const sessionCookie = request.cookies.get("session")?.value;
-    if (!sessionCookie) {
+    const callerUid = await getCallerUid();
+    if (!callerUid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    if (decoded.uid !== userId) {
+    if (callerUid !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

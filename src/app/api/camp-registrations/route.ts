@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { randomBytes } from "crypto";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getCallerToken } from "@/lib/server-auth";
 import { getCamp, DEFAULT_CAMP_ID } from "@/lib/camps";
 import { campSettingsRef, capacityFromSnapshot } from "@/lib/camp-capacity";
 import {
@@ -40,22 +40,15 @@ function optionalEmail(value: unknown): string | null {
 }
 
 /**
- * If a session cookie is present and valid, returns { uid, email } for
- * stamping onto a new registration. Returns null on no cookie or invalid
- * cookie — anonymous submission is still allowed.
+ * If the caller presented a valid credential, returns { uid, email } for
+ * stamping onto a new registration. Returns null when they did not —
+ * anonymous submission is still allowed.
  */
 async function getOptionalSubmitter(): Promise<
   { uid: string; email: string | null } | null
 > {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    return { uid: decoded.uid, email: decoded.email ?? null };
-  } catch {
-    return null;
-  }
+  const token = await getCallerToken();
+  return token ? { uid: token.uid, email: token.email } : null;
 }
 
 // GET: List camp registrations (ADMIN+ only). Optional ?campId filter.

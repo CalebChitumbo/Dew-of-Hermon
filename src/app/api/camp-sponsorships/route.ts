@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getCallerToken } from "@/lib/server-auth";
 import { getCamp, DEFAULT_CAMP_ID } from "@/lib/camps";
 import {
   getCallerWithDepartments,
@@ -27,22 +27,15 @@ function optionalEmail(value: unknown): string | null {
 }
 
 /**
- * If a session cookie is present and valid, returns { uid, email } for
- * stamping onto a new pledge. Returns null on no cookie or invalid cookie —
+ * If the caller presented a valid credential, returns { uid, email } for
+ * stamping onto a new pledge. Returns null when they did not —
  * anonymous pledges are allowed, sponsors are often not app users.
  */
 async function getOptionalSubmitter(): Promise<
   { uid: string; email: string | null } | null
 > {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    return { uid: decoded.uid, email: decoded.email ?? null };
-  } catch {
-    return null;
-  }
+  const token = await getCallerToken();
+  return token ? { uid: token.uid, email: token.email } : null;
 }
 
 // GET: List sponsorship pledges (camp managers only). Optional ?campId filter.

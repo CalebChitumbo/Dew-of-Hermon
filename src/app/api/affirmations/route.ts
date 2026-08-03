@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, adminAuth } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getCallerUid } from "@/lib/server-auth";
 import { Affirmation } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -7,33 +8,8 @@ export const dynamic = "force-dynamic";
 // GET /api/affirmations - List affirmations
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication via session cookie or Authorization header
-    const authHeader = request.headers.get("Authorization");
-    let uid: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      try {
-        const decoded = await adminAuth.verifyIdToken(token);
-        uid = decoded.uid;
-      } catch {
-        return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-      }
-    }
-
-    if (!uid) {
-      // Try session cookie
-      const sessionCookie = request.cookies.get("session")?.value;
-      if (sessionCookie) {
-        try {
-          const decoded = await adminAuth.verifySessionCookie(sessionCookie);
-          uid = decoded.uid;
-        } catch {
-          return NextResponse.json({ error: "Invalid session" }, { status: 401 });
-        }
-      }
-    }
-
+    // Verify authentication via session cookie or Bearer ID token
+    const uid = await getCallerUid();
     if (!uid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -75,32 +51,8 @@ export async function GET(request: NextRequest) {
 // POST /api/affirmations - Create a new affirmation
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const authHeader = request.headers.get("Authorization");
-    let uid: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      try {
-        const decoded = await adminAuth.verifyIdToken(token);
-        uid = decoded.uid;
-      } catch {
-        return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-      }
-    }
-
-    if (!uid) {
-      const sessionCookie = request.cookies.get("session")?.value;
-      if (sessionCookie) {
-        try {
-          const decoded = await adminAuth.verifySessionCookie(sessionCookie);
-          uid = decoded.uid;
-        } catch {
-          return NextResponse.json({ error: "Invalid session" }, { status: 401 });
-        }
-      }
-    }
-
+    // Verify authentication via session cookie or Bearer ID token
+    const uid = await getCallerUid();
     if (!uid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

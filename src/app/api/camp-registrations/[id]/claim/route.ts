@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getCallerToken } from "@/lib/server-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -16,27 +16,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) {
+    const caller = await getCallerToken();
+    if (!caller) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
-
-    let uid: string;
-    let tokenEmail: string | null = null;
-    try {
-      const decoded = await adminAuth.verifySessionCookie(session.value);
-      uid = decoded.uid;
-      tokenEmail = decoded.email ?? null;
-    } catch {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
+    const uid = caller.uid;
+    const tokenEmail = caller.email;
 
     const { id } = await params;
     const body = await request.json().catch(() => ({}));

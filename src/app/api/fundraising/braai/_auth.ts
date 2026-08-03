@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
+import { getCallerUid } from "@/lib/server-auth";
 import type { UserRole } from "@/types";
 
 interface AuthedCaller {
@@ -11,36 +11,12 @@ interface AuthedCaller {
   leadsDepartmentIds: string[];
 }
 
-async function getUidFromRequest(
-  request: NextRequest
-): Promise<string | null> {
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    try {
-      const decoded = await adminAuth.verifyIdToken(authHeader.slice(7));
-      return decoded.uid;
-    } catch {
-      // fall through to session cookie
-    }
-  }
-
-  const cookieStore = await cookies();
-  const session = cookieStore.get("session");
-  if (session?.value) {
-    try {
-      const decoded = await adminAuth.verifySessionCookie(session.value);
-      return decoded.uid;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
 export async function getCaller(
-  request: NextRequest
+  // Kept in the signature so every call site stays unchanged; the credential
+  // is now read from the ambient request context by getCallerUid().
+  _request?: NextRequest
 ): Promise<AuthedCaller | null> {
-  const uid = await getUidFromRequest(request);
+  const uid = await getCallerUid();
   if (!uid) return null;
   const userDoc = await adminDb.collection("users").doc(uid).get();
   if (!userDoc.exists) return null;

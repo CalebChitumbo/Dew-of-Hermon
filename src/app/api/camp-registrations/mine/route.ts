@@ -1,35 +1,22 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getCallerToken } from "@/lib/server-auth";
 import { serializeRegistration } from "../_serialize";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) {
+    const caller = await getCallerToken();
+    if (!caller) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
-
-    let uid: string;
-    let tokenEmail: string | null = null;
-    let emailVerified = false;
-    try {
-      const decoded = await adminAuth.verifySessionCookie(session.value);
-      uid = decoded.uid;
-      tokenEmail = decoded.email ?? null;
-      emailVerified = decoded.email_verified === true;
-    } catch {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
+    const uid = caller.uid;
+    const tokenEmail = caller.email;
+    const emailVerified = caller.emailVerified;
 
     const userDoc = await adminDb.collection("users").doc(uid).get();
     const profileEmail = (userDoc.exists

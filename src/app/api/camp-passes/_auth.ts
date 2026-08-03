@@ -1,7 +1,10 @@
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { serverCheckFeatureAccess } from "@/lib/feature-permissions-server";
-import { getSessionCaller, type SessionCaller } from "@/lib/server-auth";
+import {
+  getCallerToken,
+  getSessionCaller,
+  type SessionCaller,
+} from "@/lib/server-auth";
 import { REGISTRATIONS_COLLECTION } from "@/lib/camp-passes";
 import {
   PASS_FEATURE_ADMISSIONS,
@@ -35,24 +38,17 @@ export interface PassCaller extends SessionCaller {
   verifiedEmails: string[];
 }
 
-/** Emails from the session cookie, only when Firebase has verified them. */
+/** Emails from the caller's credential, only when Firebase has verified them. */
 async function getVerifiedEmails(profileEmail: string | null): Promise<string[]> {
-  try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return [];
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    if (decoded.email_verified !== true) return [];
-    return Array.from(
-      new Set(
-        [decoded.email ?? null, profileEmail]
-          .filter((e): e is string => !!e)
-          .map((e) => e.toLowerCase())
-      )
-    );
-  } catch {
-    return [];
-  }
+  const token = await getCallerToken();
+  if (!token?.emailVerified) return [];
+  return Array.from(
+    new Set(
+      [token.email, profileEmail]
+        .filter((e): e is string => !!e)
+        .map((e) => e.toLowerCase())
+    )
+  );
 }
 
 /** Resolve the caller plus everything they're allowed to do with passes. */

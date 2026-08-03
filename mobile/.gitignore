@@ -1,0 +1,37 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Android
+android/local.properties
+android/.gradle/
+android/app/google-services.json
+android/key.properties
+*.keystore
+*.jks
+
+# iOS
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Pods/
+ios/Podfile.lock
+ios/.symlinks/
+ios/Runner/GoogleService-Info.plist
+*.xcuserstate
+**/xcuserdata/
+
+# Fonts fetched by tool/fetch_fonts.sh — not checked in
+assets/fonts/*.ttf

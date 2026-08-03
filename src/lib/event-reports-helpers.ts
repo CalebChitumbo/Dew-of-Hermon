@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
+import { getCallerUid } from "@/lib/server-auth";
 import {
   AppEvent,
   EventReport,
@@ -20,17 +20,15 @@ export interface CallerInfo {
 
 export async function getCallerFromSession(): Promise<CallerInfo | null> {
   try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("session");
-    if (!session?.value) return null;
+    const uid = await getCallerUid();
+    if (!uid) return null;
 
-    const decoded = await adminAuth.verifySessionCookie(session.value);
-    const userDoc = await adminDb.collection("users").doc(decoded.uid).get();
+    const userDoc = await adminDb.collection("users").doc(uid).get();
     if (!userDoc.exists) return null;
 
     const data = userDoc.data()!;
     return {
-      uid: decoded.uid,
+      uid,
       role: data.role as UserRole,
       name: data.name || "",
       email: data.email || null,
