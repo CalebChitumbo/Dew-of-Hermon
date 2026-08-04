@@ -217,6 +217,26 @@ gap nobody noticed.
 Re-run all three after any change that touches a repository, a route, or a
 theme token. They are fast (well under a second) and have no setup.
 
+## Getting an APK
+
+`.github/workflows/mobile-apk.yml` builds a sideloadable release APK on GitHub's
+runners and attaches it to the run as a downloadable artifact. It needs the two
+files `flutterfire configure` produces — see the header of that file for the
+one-time setup. The APK is signed with the debug key, which is what you want for
+handing builds to the team; swap `signingConfigs.debug` in
+`android/app/build.gradle` for a real upload key before any Play Store release.
+
+Locally, the same thing is four commands:
+
+```bash
+cd mobile
+flutter create --platforms=android,ios --org zm.tabernacleofdavid \
+  --project-name dew_of_hermon .      # fills in the Gradle wrapper etc.
+flutterfire configure --project=potterswheel --platforms=android,ios \
+  --out=lib/firebase_options.dart
+flutter build apk --release           # build/app/outputs/flutter-apk/
+```
+
 ## Verifying a build
 
 ```bash

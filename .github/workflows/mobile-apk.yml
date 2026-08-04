@@ -1,0 +1,194 @@
+name: Build mobile APK
+
+# Produces a sideloadable Android APK and attaches it to the run as a
+# downloadable artifact. GitHub's runners have the network access that the
+# Claude Code environment does not, so this is where the Flutter toolchain and
+# the Android SDK actually get installed.
+#
+# ── Before the first run ──────────────────────────────────────────────────────
+# The build needs two files that only a `flutterfire configure` against the
+# `potterswheel` Firebase project can produce. Run this once on your machine:
+#
+#   cd mobile
+#   dart pub global activate flutterfire_cli
+#   flutterfire configure --project=potterswheel \
+#     --platforms=android,ios --out=lib/firebase_options.dart
+#
+# That writes `mobile/lib/firebase_options.dart` and
+# `mobile/android/app/google-services.json`. Then either:
+#
+#   (a) commit both — neither is a secret. `google-services.json` ships inside
+#       every APK and is meant to be readable; Firebase security comes from
+#       firestore.rules and App Check, not from hiding it. This is the simpler
+#       route and what most projects do; or
+#
+#   (b) if you would rather keep them out of the repo, add two repository
+#       secrets and this workflow will write them at build time:
+#         GOOGLE_SERVICES_JSON   — base64 of android/app/google-services.json
+#         FIREBASE_OPTIONS_DART  — base64 of lib/firebase_options.dart
+#       Produce them with:  base64 -w0 <file>
+#
+# Committed files win; the secrets are only a fallback.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/flutter-mobile-port-eswlnu
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-apk.yml'
+
+# Cancel an in-flight build when a newer commit lands on the same branch.
+concurrency:
+  group: mobile-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The three checkers that run without a Flutter toolchain. Fast, and they
+  # catch the web/Flutter contract drift that `dart analyze` cannot see.
+  checks:
+    name: Static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the mobile checkers
+        run: bash mobile/tool/check_all.sh
+
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    # Deliberately not `needs: checks` — a checker finding should not stop you
+    # getting a build onto a phone. Both jobs report independently.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Report toolchain
+        run: |
+          flutter --version
+          java -version
+
+      # `flutter create` fills in what a hand-authored tree is missing: the
+      # Gradle wrapper (including gradle-wrapper.jar, a binary that could not
+      # be fetched offline), local.properties, and the generated plugin
+      # registrant. It only adds missing files, but to be certain it has not
+      # touched the hand-authored manifests and build.gradle, every tracked
+      # file under android/ and ios/ is restored from git straight afterwards.
+      # Newly created untracked files are kept.
+      - name: Fill in the platform scaffolding
+        working-directory: mobile
+        run: |
+          flutter create \
+            --platforms=android,ios \
+            --org zm.tabernacleofdavid \
+            --project-name dew_of_hermon \
+            .
+          git checkout -- android ios
+          git status --short
+
+      - name: Provide the Firebase configuration
+        working-directory: mobile
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -f android/app/google-services.json ]; then
+            if [ -n "${GOOGLE_SERVICES_JSON}" ]; then
+              echo "${GOOGLE_SERVICES_JSON}" | base64 -d > android/app/google-services.json
+              echo "Wrote android/app/google-services.json from the repository secret."
+            else
+              echo "::error::android/app/google-services.json is missing and the GOOGLE_SERVICES_JSON secret is not set."
+              echo "Run 'flutterfire configure --project=potterswheel' and commit the result, or add the secret."
+              echo "See the header of .github/workflows/mobile-apk.yml."
+              exit 1
+            fi
+          else
+            echo "Using the committed android/app/google-services.json."
+          fi
+
+          # The placeholder throws at startup by design, so a build carrying it
+          # would install and then immediately crash. Catch that here instead.
+          if grep -q 'PLACEHOLDER' lib/firebase_options.dart; then
+            if [ -n "${FIREBASE_OPTIONS_DART}" ]; then
+              echo "${FIREBASE_OPTIONS_DART}" | base64 -d > lib/firebase_options.dart
+              echo "Wrote lib/firebase_options.dart from the repository secret."
+            else
+              echo "::error::lib/firebase_options.dart is still the placeholder, which throws on launch."
+              echo "Run 'flutterfire configure --project=potterswheel' and commit the result, or set FIREBASE_OPTIONS_DART."
+              exit 1
+            fi
+          else
+            echo "Using the committed lib/firebase_options.dart."
+          fi
+
+      - name: Fetch packages
+        working-directory: mobile
+        run: flutter pub get
+
+      # The first analyze this tree has ever had. Reported, but not allowed to
+      # block the build — a genuine compile error fails the build step below
+      # anyway, and everything else is worth seeing without losing the APK.
+      - name: Analyze
+        id: analyze
+        working-directory: mobile
+        continue-on-error: true
+        run: flutter analyze --no-fatal-infos
+
+      - name: Launcher icon and splash
+        working-directory: mobile
+        continue-on-error: true
+        run: |
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+
+      - name: Build the APK
+        working-directory: mobile
+        run: flutter build apk --release
+
+      - name: Name the artifact
+        id: name
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dew-of-hermon-${{ steps.name.outputs.sha }}
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Dew of Hermon — Android build"
+            echo
+            if [ -f mobile/build/app/outputs/flutter-apk/app-release.apk ]; then
+              size=$(du -h mobile/build/app/outputs/flutter-apk/app-release.apk | cut -f1)
+              echo "APK built (\`$size\`). Download it from the **Artifacts** section of this run."
+              echo
+              echo "It is signed with the debug key, which is fine for sideloading."
+              echo "On the phone: allow install from unknown sources, then open the file."
+            else
+              echo "No APK was produced — see the build step above."
+            fi
+            echo
+            if [ "${{ steps.analyze.outcome }}" = "failure" ]; then
+              echo "\`flutter analyze\` reported findings. They did not block this build."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
