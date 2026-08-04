@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -111,8 +113,9 @@ class _CampRegisterScreenState extends ConsumerState<CampRegisterScreen> {
     setState(() => _error = null);
 
     if (!(_formKey.currentState?.validate() ?? false)) {
-      _scroll.animateTo(0,
-          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      unawaited(_scroll.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut));
       return;
     }
     if (_dob == null) {
@@ -215,8 +218,9 @@ class _CampRegisterScreenState extends ConsumerState<CampRegisterScreen> {
         _submitting = false;
         _error = e.message;
       });
-      _scroll.animateTo(0,
-          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      unawaited(_scroll.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut));
     }
   }
 

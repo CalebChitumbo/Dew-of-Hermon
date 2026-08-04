@@ -87,8 +87,8 @@ class _BraaiDetailScreenState extends ConsumerState<BraaiDetailScreen> {
             icon: const Icon(AppIcons.menu, size: 20),
             color: Colors.white,
             onSelected: (value) => switch (value) {
-              'archive' => _archive(context),
-              'delete' => _delete(context),
+              'archive' => _archive(),
+              'delete' => _delete(),
               _ => null,
             },
             itemBuilder: (_) => [
@@ -167,7 +167,7 @@ class _BraaiDetailScreenState extends ConsumerState<BraaiDetailScreen> {
     );
   }
 
-  Future<void> _archive(BuildContext context) async {
+  Future<void> _archive() async {
     final ok = await confirmAction(
       context,
       title: 'Archive this braai?',
@@ -188,7 +188,7 @@ class _BraaiDetailScreenState extends ConsumerState<BraaiDetailScreen> {
     }
   }
 
-  Future<void> _delete(BuildContext context) async {
+  Future<void> _delete() async {
     final ok = await confirmAction(
       context,
       title: 'Delete this braai?',
@@ -202,8 +202,8 @@ class _BraaiDetailScreenState extends ConsumerState<BraaiDetailScreen> {
       await ref.read(fundraisingRepositoryProvider).deleteBraai(widget.braaiId);
       ref.invalidate(braaisProvider);
       if (mounted) {
-        Navigator.of(context).pop();
         context.showSuccess('Deleted.');
+        Navigator.of(context).pop();
       }
     } on ApiException catch (e) {
       if (mounted) context.showError(e.message);

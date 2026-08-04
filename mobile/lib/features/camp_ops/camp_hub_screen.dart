@@ -16,7 +16,6 @@ import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/lux.dart';
 import '../../data/models/camp.dart';
-import '../../data/models/enums.dart';
 import '../../data/repositories/camp_repository.dart';
 import 'camper_detail_screen.dart';
 

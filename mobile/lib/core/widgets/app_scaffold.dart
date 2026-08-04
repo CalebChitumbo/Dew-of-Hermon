@@ -11,7 +11,6 @@ import '../theme/app_theme.dart';
 import '../theme/icon_tones.dart';
 import '../../data/firestore/streams.dart';
 import 'app_drawer.dart';
-import 'common.dart';
 import 'lux.dart';
 
 /// The signed-in shell: a 56px app bar, the grouped drawer, and the

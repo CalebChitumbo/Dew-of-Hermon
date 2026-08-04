@@ -92,7 +92,8 @@ class _CamperDetailScreenState extends ConsumerState<CamperDetailScreen> {
             ? CampPaymentStatus.paid.wire
             : CampPaymentStatus.unpaid.wire,
         if (markingPaid) 'paymentAmount': camp?.fee,
-        if (markingPaid && reference.isNotEmpty) 'paymentReference': reference,
+        if (markingPaid && (reference ?? '').isNotEmpty)
+          'paymentReference': reference,
       }),
       markingPaid ? '${reg.firstName} marked paid.' : 'Payment cleared.',
     );

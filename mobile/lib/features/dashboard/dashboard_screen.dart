@@ -158,8 +158,7 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           _QuickActions(
             access: access,
-            leadsAnything:
-                (user?.leadsDepartmentIds ?? const []).isNotEmpty,
+            leadsAnything: user.leadsDepartmentIds.isNotEmpty,
           ),
         ],
       ),
