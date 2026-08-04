@@ -2,7 +2,11 @@
 two can never drift by a transcription slip."""
 import json, re, pathlib
 
-src = pathlib.Path("src/lib/access-control.ts").read_text()
+# Resolved from this file, not the working directory, so the generator runs
+# the same from the repo root, from mobile/, or on a CI runner.
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+src = (ROOT / "src/lib/access-control.ts").read_text()
 
 def block(name, open_ch, close_ch):
     """Extract the balanced literal assigned to `name`."""
@@ -232,6 +236,6 @@ for m in DEPT_MGRS:
         w(f"  DepartmentalManager({q(m['departmentName'])}),")
 w("];")
 
-pathlib.Path("mobile/lib/core/access/access_tables.dart").write_text("\n".join(out) + "\n")
+(ROOT / "mobile/lib/core/access/access_tables.dart").write_text("\n".join(out) + "\n")
 print(f"pages={len(PAGE_DEFS)} perms={len(PAGE_PERMS)} features={len(FEAT_DEFS)} "
       f"minRoles={len(FEAT_MIN)} rules={len(DEPT_RULES)} managers={len(DEPT_MGRS)}")

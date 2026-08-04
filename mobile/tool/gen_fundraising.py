@@ -1,7 +1,9 @@
 """Generate mobile/lib/core/fundraising/fundraising_menu.dart from the TS."""
 import json, re, pathlib
 
-ROOT = pathlib.Path('/home/user/Dew-of-Hermon')
+# Resolved from this file, not a hardcoded path, so the generator runs
+# anywhere — including a CI runner's checkout.
+ROOT = pathlib.Path(__file__).resolve().parents[2]
 menu_src = (ROOT / 'src/lib/fundraising-menu.ts').read_text()
 braai_src = (ROOT / 'src/lib/braai.ts').read_text()
 
