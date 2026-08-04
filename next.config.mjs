@@ -6,7 +6,9 @@ const nextConfig = {
   },
   transpilePackages: ["firebase", "@firebase"],
   experimental: {
-    serverComponentsExternalPackages: ["firebase-admin"],
+    // exceljs (camp register export) reaches for Node built-ins and dynamic
+    // requires that webpack can't follow — leave it to the Node runtime.
+    serverComponentsExternalPackages: ["firebase-admin", "exceljs"],
   },
 };
 

@@ -58,6 +58,7 @@ import {
   UtensilsCrossed,
   Printer,
   SlidersHorizontal,
+  FileSpreadsheet,
 } from "lucide-react";
 import { downloadCampQrTags } from "@/lib/camp-qr-tags";
 import { cn } from "@/lib/utils";
@@ -163,6 +164,7 @@ function RopsCampAdminInner() {
     "all" | CampPaymentStatus | "SPONSORED" | "UNSPONSORED"
   >("all");
   const [tagsBusy, setTagsBusy] = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
   const [editing, setEditing] = useState<RegistrationRow | null>(null);
   const [deleting, setDeleting] = useState<RegistrationRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -272,6 +274,52 @@ function RopsCampAdminInner() {
       });
     } finally {
       setTagsBusy(false);
+    }
+  };
+
+  /**
+   * Download the camper register as a spreadsheet. Built server-side so the
+   * sheet carries every stored field — including the ones this table never
+   * loads — rather than only what's on screen. Always the whole camp, not the
+   * current search/filter.
+   */
+  const exportToExcel = async () => {
+    setExportBusy(true);
+    try {
+      const res = await fetchWithAuth(
+        `/api/camp-registrations/export?campId=${campId}`
+      );
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || "Failed to build the spreadsheet");
+      }
+      const blob = await res.blob();
+      // Filename comes from the server's Content-Disposition; fall back to a
+      // sensible one if a proxy strips the header.
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = /filename="?([^"]+)"?/.exec(disposition);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = match?.[1] ?? "campers.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      // Deferred — Safari cancels the download if the blob URL is revoked in
+      // the same tick as the click.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast({
+        title: "Register exported",
+        description: `${rows.length} camper${rows.length === 1 ? "" : "s"}, every field, plus a summary sheet. Contains medical and guardian details — handle it accordingly.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Export failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setExportBusy(false);
     }
   };
 
@@ -523,6 +571,15 @@ function RopsCampAdminInner() {
               Sponsorships
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            className={cn(toolShell, toolButton)}
+            onClick={exportToExcel}
+            disabled={loading || exportBusy || rows.length === 0}
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4 shrink-0" />
+            {exportBusy ? "Exporting..." : "Export to Excel"}
+          </Button>
           <Button
             variant="outline"
             className={cn(toolShell, toolButton)}
