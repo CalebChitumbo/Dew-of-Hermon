@@ -72,7 +72,7 @@ class ParchmentThemeScope extends StatelessWidget {
         thickness: 1,
         space: 1,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: const Color(0xFFFBF5E9),
         surfaceTintColor: Colors.transparent,
         elevation: 0,

@@ -30,7 +30,9 @@ linter:
     - prefer_final_fields
     - prefer_final_locals
     - prefer_single_quotes
-    - require_trailing_commas
+    # require_trailing_commas is deliberately off: it produced ~1400 of
+    # 1669 analyzer issues on a codebase that does not follow it, which
+    # buries the findings that matter. `dart format` owns this.
     - sized_box_for_whitespace
     - sort_child_properties_last
     - unawaited_futures

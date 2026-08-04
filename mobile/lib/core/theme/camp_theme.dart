@@ -117,7 +117,7 @@ class RopsThemeScope extends StatelessWidget {
         errorBorder: _border(const Color(0xFFFF6B6B)),
         focusedErrorBorder: _border(const Color(0xFFFF6B6B), width: 1.6),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: RopsColors.inkSoft,
         surfaceTintColor: Colors.transparent,
         elevation: 0,

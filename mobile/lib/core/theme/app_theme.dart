@@ -118,7 +118,7 @@ abstract final class AppTheme {
         thickness: 1,
         space: 1,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -229,7 +229,7 @@ abstract final class AppTheme {
         elevation: 0,
         width: 300,
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
@@ -301,7 +301,7 @@ abstract final class AppTheme {
         linearTrackColor: AppColors.clay100,
         circularTrackColor: Colors.transparent,
       ),
-      tabBarTheme: TabBarTheme(
+      tabBarTheme: TabBarThemeData(
         labelColor: AppColors.clay700,
         unselectedLabelColor: AppColors.clay400,
         indicatorColor: AppColors.gold,
