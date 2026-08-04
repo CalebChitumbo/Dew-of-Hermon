@@ -337,23 +337,43 @@ for f, src in sources.items():
     for name in re.findall(r"^final (\w+Provider)\s*=", src, re.M):
         provider_home.setdefault(name, f)
 
-def imported_files(f: Path) -> set[Path]:
-    """Files reachable from f by relative import, following exports."""
-    out: set[Path] = {f}
-    queue = [f]
-    while queue:
-        current = queue.pop()
-        try:
-            text = current.read_text()
-        except OSError:
+def _reexported(path: Path, seen: set[Path]) -> set[Path]:
+    """Files whose symbols `path` passes on, by `export`, transitively."""
+    if path in seen or not path.exists():
+        return set()
+    seen.add(path)
+    out = {path}
+    try:
+        text = path.read_text()
+    except OSError:
+        return out
+    for target in re.findall(r"^\s*export\s+'([^']+)'", text, re.M):
+        if target.startswith(("package:", "dart:")):
             continue
-        for target in re.findall(r"^\s*(?:import|export)\s+'([^']+)'", text, re.M):
-            if target.startswith(("package:", "dart:")):
-                continue
-            resolved = (current.parent / target).resolve()
-            if resolved.exists() and resolved not in out:
-                out.add(resolved)
-                queue.append(resolved)
+        out |= _reexported((path.parent / target).resolve(), seen)
+    return out
+
+
+def imported_files(f: Path) -> set[Path]:
+    """Files whose top-level symbols are in scope inside f.
+
+    Dart imports are NOT transitive: importing A, which itself imports B, does
+    not bring B's symbols into scope. Only `export` passes symbols along. This
+    used to walk imports transitively, which made the provider check unsound —
+    it silently accepted a provider that was two imports away and would not
+    actually compile.
+    """
+    out: set[Path] = {f}
+    try:
+        text = f.read_text()
+    except OSError:
+        return out
+    for target in re.findall(r"^\s*(?:import|export)\s+'([^']+)'", text, re.M):
+        if target.startswith(("package:", "dart:")):
+            continue
+        resolved = (f.parent / target).resolve()
+        if resolved.exists():
+            out |= _reexported(resolved, set())
     return out
 
 reachable_cache: dict[Path, set[Path]] = {}

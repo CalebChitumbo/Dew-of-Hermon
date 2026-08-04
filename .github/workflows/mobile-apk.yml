@@ -112,6 +112,14 @@ jobs:
         continue-on-error: true
         run: flutter analyze --no-fatal-infos
 
+      # Pure-logic tests: the access-control port and the meal-line code
+      # handling. Neither needs Firebase, so they run before the gate too.
+      - name: Test
+        id: test
+        working-directory: mobile
+        continue-on-error: true
+        run: flutter test
+
       # Gated after analyze on purpose: a run with no Firebase config still
       # produces a full analyzer report, which is worth having on its own.
       - name: Provide the Firebase configuration
@@ -192,5 +200,8 @@ jobs:
             echo
             if [ "${{ steps.analyze.outcome }}" = "failure" ]; then
               echo "\`flutter analyze\` reported findings. They did not block this build."
+            fi
+            if [ "${{ steps.test.outcome }}" = "failure" ]; then
+              echo "\`flutter test\` reported failures. They did not block this build."
             fi
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +14,7 @@ import '../../core/widgets/lux.dart';
 import '../../data/firestore/streams.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/event.dart';
+import '../../data/models/user.dart';
 import '../services/service_detail_screen.dart' show serviceRolesProvider;
 
 /// The tokens a template may use, and what each stands for.

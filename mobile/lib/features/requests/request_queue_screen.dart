@@ -46,7 +46,6 @@ class _QueueShell extends StatefulWidget {
     required this.emptyBody,
     required this.icon,
     required this.tone,
-    this.onRefresh,
   });
 
   final String title;
@@ -56,7 +55,6 @@ class _QueueShell extends StatefulWidget {
   final String emptyBody;
   final IconData icon;
   final IconTone tone;
-  final Future<void> Function()? onRefresh;
 
   @override
   State<_QueueShell> createState() => _QueueShellState();

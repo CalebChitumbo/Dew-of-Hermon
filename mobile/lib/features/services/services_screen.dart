@@ -14,7 +14,6 @@ import '../../core/widgets/app_scaffold.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/lux.dart';
 import '../../data/firestore/streams.dart';
-import '../../data/models/enums.dart';
 import '../../data/models/event.dart';
 import '../../data/repositories/service_repository.dart';
 
