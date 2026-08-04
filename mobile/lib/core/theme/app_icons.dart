@@ -122,7 +122,10 @@ abstract final class AppIcons {
   static const bookmark = LucideIcons.bookmark;
   static const highlighter = LucideIcons.highlighter;
   static const noteText = LucideIcons.notebookPen;
-  static const google = LucideIcons.chrome;
+  // Lucide dropped its brand glyphs, so there is no Google mark to use
+  // here. The sign-in button carries the word "Google" in its label; this
+  // is just the affordance next to it.
+  static const google = LucideIcons.logIn;
 
   /// Resolve a Firestore-stored lucide icon name (departments carry one) to a
   /// glyph, falling back to a neutral people icon.
