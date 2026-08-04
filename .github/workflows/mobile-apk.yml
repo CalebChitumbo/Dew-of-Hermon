@@ -99,6 +99,21 @@ jobs:
           git checkout -- android ios
           git status --short
 
+      - name: Fetch packages
+        working-directory: mobile
+        run: flutter pub get
+
+      # The first analyze this tree has ever had. Reported, but not allowed to
+      # block the build — a genuine compile error fails the build step below
+      # anyway, and everything else is worth seeing without losing the APK.
+      - name: Analyze
+        id: analyze
+        working-directory: mobile
+        continue-on-error: true
+        run: flutter analyze --no-fatal-infos
+
+      # Gated after analyze on purpose: a run with no Firebase config still
+      # produces a full analyzer report, which is worth having on its own.
       - name: Provide the Firebase configuration
         working-directory: mobile
         env:
@@ -135,19 +150,6 @@ jobs:
           else
             echo "Using the committed lib/firebase_options.dart."
           fi
-
-      - name: Fetch packages
-        working-directory: mobile
-        run: flutter pub get
-
-      # The first analyze this tree has ever had. Reported, but not allowed to
-      # block the build — a genuine compile error fails the build step below
-      # anyway, and everything else is worth seeing without losing the APK.
-      - name: Analyze
-        id: analyze
-        working-directory: mobile
-        continue-on-error: true
-        run: flutter analyze --no-fatal-infos
 
       - name: Launcher icon and splash
         working-directory: mobile
