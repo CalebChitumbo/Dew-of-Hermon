@@ -6,6 +6,7 @@ import 'package:dew_of_hermon/core/theme/app_theme.dart';
 import 'package:dew_of_hermon/core/theme/icon_tones.dart';
 import 'package:dew_of_hermon/core/widgets/common.dart';
 import 'package:dew_of_hermon/core/widgets/lux.dart';
+import 'package:dew_of_hermon/data/models/enums.dart';
 
 /// Widget-level cover for the shared design-system pieces.
 ///
@@ -33,6 +34,16 @@ void main() {
       StatusBadge.forStatus('PENDING_LEAD_APPROVAL'),
     ));
     expect(find.text('Pending lead approval'), findsOneWidget);
+  });
+
+  test('the humanised fallback matches how the enums label themselves', () {
+    // A raw wire with no enum behind it still has to read like its
+    // neighbours — sentence case, not title case.
+    expect(StatusBadge.humanise('NO_RESPONSE'), AssignmentStatus.noResponse.label);
+    expect(StatusBadge.humanise('CHANGES_REQUESTED'),
+        EventApprovalStatus.changesRequested.label);
+    expect(StatusBadge.humanise('CONFIRMED'), AssignmentStatus.confirmed.label);
+    expect(StatusBadge.humanise(''), '');
   });
 
   testWidgets('EmptyStateLux shows its title, body and action',

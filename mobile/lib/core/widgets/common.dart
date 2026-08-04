@@ -71,14 +71,18 @@ class StatusBadge extends StatelessWidget {
   /// `PENDING_LEAD_APPROVAL` → `Pending lead approval`.
   static String humanise(String wire) => _humanise(wire);
 
+  /// Sentence case, not title case: every enum in `data/models/enums.dart`
+  /// labels itself "Pending lead approval", so a raw wire falling back to
+  /// "Pending Lead Approval" would read wrong beside them.
   static String _humanise(String wire) {
     if (wire.isEmpty) return wire;
-    return wire
-        .split('_')
-        .map((w) => w.isEmpty
-            ? w
-            : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
-        .join(' ');
+    final words = wire.split('_').where((w) => w.isNotEmpty).toList();
+    if (words.isEmpty) return wire;
+    final first = words.first.toLowerCase();
+    return [
+      '${first[0].toUpperCase()}${first.substring(1)}',
+      ...words.skip(1).map((w) => w.toLowerCase()),
+    ].join(' ');
   }
 
   @override
