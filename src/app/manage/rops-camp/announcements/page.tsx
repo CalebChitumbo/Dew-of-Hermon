@@ -32,8 +32,11 @@ import {
 import { format } from "date-fns";
 import {
   AlertTriangle,
+  CheckCircle2,
+  Clock,
   Copy,
   Eye,
+  Layers,
   Mail,
   MailWarning,
   Megaphone,
@@ -110,6 +113,37 @@ Please reply to this email with anything we should know before camp — allergie
 See you soon!
 The ROPs Camp Team`;
 
+/** Default campers per group when sending in batches. Small enough to clear
+ *  Gmail's per-burst rate limit; large enough that a 150-camper list is a
+ *  handful of clicks, not dozens. */
+const DEFAULT_GROUP_SIZE = 40;
+/** Enforced pause between group sends, so the bursts don't run into each other
+ *  and trip the very rate limit the groups exist to avoid. */
+const GROUP_COOLDOWN_SECONDS = 60;
+
+/** A, B, … Z, then 27, 28 … so even a tiny group size still labels cleanly. */
+function groupLabel(index: number): string {
+  return index < 26 ? String.fromCharCode(65 + index) : String(index + 1);
+}
+
+interface GroupResult {
+  status: "sending" | "done";
+  sent: number;
+  skipped: number;
+  failed: number;
+  outcomes: CampBroadcastOutcome[];
+}
+
+/** The one send in flight, awaiting confirmation or delivery. `groupIndex` is
+ *  null for a normal whole-audience send, or the group's index for a batch. */
+interface PendingSend {
+  audience: CampBroadcastAudience;
+  registrationIds: string[];
+  count: number;
+  label: string | null;
+  groupIndex: number | null;
+}
+
 export default function CampAnnouncementsPage() {
   const { loading, canManage } = useCampLeadAccess();
   if (loading) return <PageLoader />;
@@ -147,14 +181,21 @@ function CampAnnouncementsInner() {
 
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"email" | "text">("email");
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [pendingSend, setPendingSend] = useState<PendingSend | null>(null);
   const [lastResult, setLastResult] = useState<{
     sent: number;
     skipped: number;
     failed: number;
     outcomes: CampBroadcastOutcome[];
   } | null>(null);
+
+  // ─── Batch (grouped) sending ───
+  const [batchMode, setBatchMode] = useState(false);
+  const [groupSize, setGroupSize] = useState(DEFAULT_GROUP_SIZE);
+  const [groupResults, setGroupResults] = useState<Record<number, GroupResult>>({});
+  const [cooldownUntil, setCooldownUntil] = useState<number | null>(null);
+  const [nowTick, setNowTick] = useState(0);
 
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -188,6 +229,18 @@ function CampAnnouncementsInner() {
     load();
   }, [load]);
 
+  /** Refresh only the sent-announcements list. Used after a group send so the
+   *  camper roster — and therefore the group split — stays put mid-batch. */
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth(`/api/camp-broadcasts?campId=${campId}`);
+      const json = await res.json();
+      if (res.ok) setHistory(json.broadcasts);
+    } catch {
+      /* best-effort — a stale history list is harmless */
+    }
+  }, [campId]);
+
   /** How many campers each audience would reach, for the labels on the picker. */
   const audienceCounts = useMemo(() => {
     const counts: Partial<Record<CampBroadcastAudience, number>> = {};
@@ -210,6 +263,64 @@ function CampAnnouncementsInner() {
     [audienceRows]
   );
   const noEmailCount = audienceRows.length - recipients.length;
+
+  // The reachable audience split into Group A, B, C… of `groupSize` each. Built
+  // only from campers who have an email, so each group is that many real sends.
+  const groups = useMemo(() => {
+    const size = Math.max(1, Math.floor(groupSize) || 1);
+    const chunks: { index: number; label: string; ids: string[]; count: number }[] = [];
+    for (let i = 0; i < recipients.length; i += size) {
+      const slice = recipients.slice(i, i + size);
+      chunks.push({
+        index: chunks.length,
+        label: groupLabel(chunks.length),
+        ids: slice.map((r) => r.id),
+        count: slice.length,
+      });
+    }
+    return chunks;
+  }, [recipients, groupSize]);
+
+  // A new plan — different audience, roster or group size — clears any progress
+  // so the group indexes never point at stale results.
+  useEffect(() => {
+    setGroupResults({});
+    setCooldownUntil(null);
+  }, [audience, groupSize, rows, selectedIds]);
+
+  // Tick once a second while a cooldown is counting down, and clear it at zero.
+  useEffect(() => {
+    if (cooldownUntil == null) return;
+    if (Date.now() >= cooldownUntil) {
+      setCooldownUntil(null);
+      return;
+    }
+    const id = setInterval(() => {
+      setNowTick((t) => t + 1);
+      if (Date.now() >= cooldownUntil) setCooldownUntil(null);
+    }, 500);
+    return () => clearInterval(id);
+  }, [cooldownUntil]);
+
+  const cooldownRemaining = useMemo(() => {
+    void nowTick; // re-derive each tick
+    return cooldownUntil
+      ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000))
+      : 0;
+  }, [cooldownUntil, nowTick]);
+
+  const sentGroupCount = useMemo(
+    () => Object.values(groupResults).filter((r) => r.status === "done").length,
+    [groupResults]
+  );
+  const deliveredAcrossGroups = useMemo(
+    () =>
+      Object.values(groupResults).reduce(
+        (sum, r) => sum + (r.status === "done" ? r.sent : 0),
+        0
+      ),
+    [groupResults]
+  );
 
   // Keep the preview pinned to a camper who is actually in the audience.
   useEffect(() => {
@@ -293,15 +404,39 @@ function CampAnnouncementsInner() {
     });
   };
 
-  const canSend =
-    !!subject.trim() &&
-    !!body.trim() &&
-    unknownTokens.length === 0 &&
-    recipients.length > 0 &&
-    !sending;
+  // Compose validity is shared by the whole-audience send and every group send;
+  // only the recipient count differs between them.
+  const composeValid =
+    !!subject.trim() && !!body.trim() && unknownTokens.length === 0;
+  const canSend = composeValid && recipients.length > 0 && !sending;
 
-  const send = async () => {
+  const requestFullSend = () =>
+    setPendingSend({
+      audience,
+      registrationIds: Array.from(selectedIds),
+      count: recipients.length,
+      label: null,
+      groupIndex: null,
+    });
+
+  const requestGroupSend = (g: (typeof groups)[number]) =>
+    setPendingSend({
+      audience: "SELECTED",
+      registrationIds: g.ids,
+      count: g.count,
+      label: `Group ${g.label}`,
+      groupIndex: g.index,
+    });
+
+  const runSend = async (target: PendingSend) => {
+    const { groupIndex } = target;
     setSending(true);
+    if (groupIndex != null) {
+      setGroupResults((prev) => ({
+        ...prev,
+        [groupIndex]: { status: "sending", sent: 0, skipped: 0, failed: 0, outcomes: [] },
+      }));
+    }
     try {
       const res = await fetchWithAuth("/api/camp-broadcasts", {
         method: "POST",
@@ -310,8 +445,8 @@ function CampAnnouncementsInner() {
           campId,
           subject,
           body,
-          audience,
-          registrationIds: Array.from(selectedIds),
+          audience: target.audience,
+          registrationIds: target.registrationIds,
           ctaLabel: ctaLabel.trim() || null,
           ctaUrl: ctaUrl.trim() || null,
           replyTo: replyTo.trim() || null,
@@ -320,23 +455,50 @@ function CampAnnouncementsInner() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to send");
 
-      setLastResult({
-        sent: json.sent,
-        skipped: json.skipped,
-        failed: json.failed,
-        outcomes: json.outcomes ?? [],
-      });
-      setConfirmOpen(false);
+      if (groupIndex != null) {
+        setGroupResults((prev) => ({
+          ...prev,
+          [groupIndex]: {
+            status: "done",
+            sent: json.sent,
+            skipped: json.skipped,
+            failed: json.failed,
+            outcomes: json.outcomes ?? [],
+          },
+        }));
+        // Space the next group out so the bursts don't merge into one.
+        setCooldownUntil(Date.now() + GROUP_COOLDOWN_SECONDS * 1000);
+      } else {
+        setLastResult({
+          sent: json.sent,
+          skipped: json.skipped,
+          failed: json.failed,
+          outcomes: json.outcomes ?? [],
+        });
+      }
+      setPendingSend(null);
       toast({
-        title: `Announcement sent to ${json.sent} camper${json.sent === 1 ? "" : "s"}`,
+        title: target.label
+          ? `${target.label} sent to ${json.sent} camper${json.sent === 1 ? "" : "s"}`
+          : `Announcement sent to ${json.sent} camper${json.sent === 1 ? "" : "s"}`,
         description:
           json.failed > 0 || json.skipped > 0
             ? `${json.skipped} skipped (no email), ${json.failed} failed.`
-            : "Every camper in the audience got their own personalized copy.",
+            : "Every camper got their own personalized copy.",
         variant: json.failed > 0 ? "destructive" : undefined,
       });
-      await load();
+      // Group sends refresh history only, so the group split stays put.
+      if (groupIndex != null) await loadHistory();
+      else await load();
     } catch (err) {
+      if (groupIndex != null) {
+        // Drop the failed group back to un-sent so it can be retried.
+        setGroupResults((prev) => {
+          const next = { ...prev };
+          delete next[groupIndex];
+          return next;
+        });
+      }
       toast({
         title: "Send failed",
         description: err instanceof Error ? err.message : "Unknown error",
@@ -812,15 +974,174 @@ function CampAnnouncementsInner() {
               </p>
             </div>
 
-            <Button
-              variant="gold"
-              className="mt-4 w-full rounded-xl"
-              disabled={!canSend}
-              onClick={() => setConfirmOpen(true)}
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Send to {recipients.length} camper{recipients.length === 1 ? "" : "s"}
-            </Button>
+            {/* Delivery mode: all at once, or split into groups */}
+            <div className="mt-4 rounded-xl border border-clay-200 p-3">
+              <label className="flex cursor-pointer items-start gap-2.5">
+                <Checkbox
+                  checked={batchMode}
+                  onCheckedChange={(v) => setBatchMode(!!v)}
+                  className="mt-0.5"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-clay-800">
+                    <Layers className="h-4 w-4 text-gold-dark" />
+                    Send in smaller groups
+                  </span>
+                  <span className="mt-0.5 block text-xs text-clay-500">
+                    Large sends can hit the mail provider&rsquo;s rate limit and
+                    silently fail. Split the list and send one group at a time.
+                  </span>
+                </span>
+              </label>
+
+              {batchMode && (
+                <div className="mt-3 space-y-3 border-t border-clay-100 pt-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Label htmlFor="groupSize" className="text-xs text-clay-600">
+                      Campers per group
+                    </Label>
+                    <Input
+                      id="groupSize"
+                      type="number"
+                      min={10}
+                      max={100}
+                      value={groupSize}
+                      disabled={sentGroupCount > 0 || sending}
+                      onChange={(e) =>
+                        setGroupSize(
+                          Math.min(100, Math.max(10, Number(e.target.value) || DEFAULT_GROUP_SIZE))
+                        )
+                      }
+                      className="h-9 w-20 rounded-lg"
+                    />
+                    <span className="text-xs text-clay-500">
+                      {groups.length} group{groups.length === 1 ? "" : "s"} ·{" "}
+                      {recipients.length} reachable
+                    </span>
+                  </div>
+
+                  {sentGroupCount > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-clay-600">
+                        {sentGroupCount}/{groups.length} groups sent ·{" "}
+                        {deliveredAcrossGroups} delivered
+                      </span>
+                      <button
+                        type="button"
+                        className="text-clay-500 underline hover:text-clay-700"
+                        onClick={() => {
+                          setGroupResults({});
+                          setCooldownUntil(null);
+                        }}
+                        disabled={sending}
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  )}
+
+                  {!composeValid && (
+                    <p className="text-xs text-amber-700">
+                      Add a subject and message (and fix any unknown placeholders)
+                      before sending a group.
+                    </p>
+                  )}
+
+                  <div className="space-y-2">
+                    {groups.map((g) => {
+                      const result = groupResults[g.index];
+                      const isSending = result?.status === "sending";
+                      const done = result?.status === "done";
+                      const isNext =
+                        !done &&
+                        groups
+                          .slice(0, g.index)
+                          .every((p) => groupResults[p.index]?.status === "done");
+                      const blocked = sending || cooldownRemaining > 0;
+                      return (
+                        <div
+                          key={g.index}
+                          className={cn(
+                            "rounded-xl border p-3",
+                            done ? "border-green-200 bg-green-50/60" : "border-clay-200"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 text-sm font-medium text-clay-800">
+                                {done && (
+                                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                                )}
+                                Group {g.label}
+                                <span className="text-xs font-normal text-clay-500">
+                                  · {g.count} camper{g.count === 1 ? "" : "s"}
+                                </span>
+                              </div>
+                              {done && (
+                                <div className="mt-0.5 text-xs text-clay-500">
+                                  {result.sent} sent
+                                  {result.failed > 0 ? ` · ${result.failed} failed` : ""}
+                                  {result.skipped > 0 ? ` · ${result.skipped} skipped` : ""}
+                                </div>
+                              )}
+                            </div>
+                            {done ? (
+                              <Badge className="shrink-0 bg-green-100 text-green-700 hover:bg-green-100">
+                                Sent
+                              </Badge>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant={isNext ? "gold" : "outline"}
+                                className="shrink-0 rounded-lg"
+                                disabled={!composeValid || blocked}
+                                onClick={() => requestGroupSend(g)}
+                              >
+                                {isSending ? (
+                                  <>
+                                    <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                    Sending
+                                  </>
+                                ) : cooldownRemaining > 0 && isNext ? (
+                                  <>
+                                    <Clock className="mr-1.5 h-3.5 w-3.5" />
+                                    {cooldownRemaining}s
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send className="mr-1.5 h-3.5 w-3.5" />
+                                    Send
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {cooldownRemaining > 0 && (
+                    <p className="text-xs text-clay-500">
+                      Pausing {cooldownRemaining}s before the next group keeps you
+                      under the rate limit.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {!batchMode && (
+              <Button
+                variant="gold"
+                className="mt-4 w-full rounded-xl"
+                disabled={!canSend}
+                onClick={requestFullSend}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Send to {recipients.length} camper{recipients.length === 1 ? "" : "s"}
+              </Button>
+            )}
           </div>
 
           {/* History */}
@@ -877,17 +1198,22 @@ function CampAnnouncementsInner() {
         </div>
       </div>
 
-      <Dialog open={confirmOpen} onOpenChange={(open) => !sending && setConfirmOpen(open)}>
+      <Dialog
+        open={pendingSend != null}
+        onOpenChange={(open) => !sending && !open && setPendingSend(null)}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Send this announcement?</DialogTitle>
+            <DialogTitle>
+              {pendingSend?.label ? `Send ${pendingSend.label}?` : "Send this announcement?"}
+            </DialogTitle>
             <DialogDescription>
-              {recipients.length} camper{recipients.length === 1 ? "" : "s"} will each
-              get their own copy of &ldquo;{subject}&rdquo;, with their name and details
-              filled in. Emails can&rsquo;t be recalled once sent.
+              {pendingSend?.count ?? 0} camper{(pendingSend?.count ?? 0) === 1 ? "" : "s"}{" "}
+              will each get their own copy of &ldquo;{subject}&rdquo;, with their name
+              and details filled in. Emails can&rsquo;t be recalled once sent.
             </DialogDescription>
           </DialogHeader>
-          {noEmailCount > 0 && (
+          {pendingSend?.groupIndex == null && noEmailCount > 0 && (
             <p className="text-sm text-amber-700">
               {noEmailCount} camper{noEmailCount === 1 ? "" : "s"} in this audience{" "}
               {noEmailCount === 1 ? "has" : "have"} no email address and will be skipped.
@@ -896,12 +1222,15 @@ function CampAnnouncementsInner() {
           <DialogFooter className="gap-2 sm:gap-2">
             <Button
               variant="outline"
-              onClick={() => setConfirmOpen(false)}
+              onClick={() => setPendingSend(null)}
               disabled={sending}
             >
               Cancel
             </Button>
-            <Button onClick={send} disabled={sending}>
+            <Button
+              onClick={() => pendingSend && runSend(pendingSend)}
+              disabled={sending}
+            >
               {sending ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
