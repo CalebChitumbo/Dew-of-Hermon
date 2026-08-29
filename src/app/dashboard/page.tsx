@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PageLoader } from "@/components/shared/LoadingSpinner";
+import { PendingRemindersCard } from "@/components/shared/PendingRemindersCard";
 import {
   CalendarDays,
   MapPin,
@@ -1652,6 +1653,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </section>
+
+      {/* ── Pending-action reminders (admins only; self-hides when empty) ── */}
+      <PendingRemindersCard />
 
       {/* ── Ministry Pulse ──────────────────────────────────────────── */}
       <section className="space-y-4">
