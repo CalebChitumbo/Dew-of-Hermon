@@ -53,23 +53,32 @@ function initFirebase(config) {
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage((payload) => {
-    const { title, body, icon, link } = payload.notification || {};
-    const data = payload.data || {};
+    // Messages with a `notification` block (everything our server sends) are
+    // already displayed by the Firebase SDK before this handler runs, and its
+    // own click handler opens webpush.fcmOptions.link. Showing it again here
+    // produced duplicate notifications, so only handle data-only messages.
+    if (payload.notification) return;
 
-    const notificationTitle = title || "Dew of Hermon";
+    const data = payload.data || {};
+    const notificationTitle = data.title || "Dew of Hermon";
     const notificationOptions = {
-      body: body || "You have a new notification",
-      icon: icon || "/icons/icon-192.png",
+      body: data.body || "You have a new notification",
+      icon: data.icon || "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
-      tag: data.notificationId || "default",
+      tag: data.notificationId || undefined,
       data: {
         url: data.link || "/notifications",
       },
     };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    return self.registration.showNotification(notificationTitle, notificationOptions);
   });
 }
+
+// Take over immediately on install/update so a new worker doesn't sit
+// "waiting" (which can stall navigator.serviceWorker.ready on first enable).
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
 // Handle notification click — open the app at the relevant URL
 self.addEventListener("notificationclick", (event) => {

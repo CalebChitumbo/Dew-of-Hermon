@@ -19,6 +19,10 @@ const ACTIVE_STATUSES: DepartmentJoinRequestStatus[] = [
 // manager(s) for a recommendation, or straight to the Chairperson when the
 // department has no manager assigned.
 export async function POST(request: Request) {
+  // Notifications (push + email) still being sent. Awaited before responding:
+  // on Vercel the function is frozen once the response is sent, which cut
+  // fire-and-forget pushes off.
+  const pendingNotifications: Promise<unknown>[] = [];
   try {
     const caller = await getCaller();
     if (!caller) {
@@ -124,7 +128,7 @@ export async function POST(request: Request) {
     // Notify the right approvers.
     if (hasManager) {
       for (const managerDoc of managers) {
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: managerDoc.id,
           title: "New Department Join Request",
           message: `${caller.name} has requested to join ${departmentName}. Review and recommend their request.`,
@@ -137,7 +141,7 @@ export async function POST(request: Request) {
               message ? `\n\nTheir note: "${message}"` : ""
             }\n\nReview and recommend the request in the Join Requests queue.`,
           },
-        }).catch(console.error);
+        }).catch(console.error));
       }
     } else {
       const chairsSnap = await adminDb
@@ -146,7 +150,7 @@ export async function POST(request: Request) {
         .get();
       for (const chairDoc of chairsSnap.docs) {
         if (chairDoc.data().isActive === false) continue;
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: chairDoc.id,
           title: "New Department Join Request",
           message: `${caller.name} has requested to join ${departmentName}, which has no manager assigned. It awaits your final approval.`,
@@ -157,10 +161,11 @@ export async function POST(request: Request) {
             subject: `Join request for ${departmentName}`,
             text: `${caller.name} has requested to join ${departmentName}. This department has no manager assigned, so the request has come straight to you for final approval.`,
           },
-        }).catch(console.error);
+        }).catch(console.error));
       }
     }
 
+    await Promise.allSettled(pendingNotifications);
     return NextResponse.json({ success: true, id: ref.id, status });
   } catch (error) {
     console.error("POST /api/department-join-requests error:", error);

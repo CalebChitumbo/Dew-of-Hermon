@@ -110,6 +110,10 @@ export async function GET(request: Request) {
 
 // POST /api/devotionals — Campus Ministry coordinator (or admins) only.
 export async function POST(request: Request) {
+  // Notifications (push + email) still being sent. Awaited before responding:
+  // on Vercel the function is frozen once the response is sent, which cut
+  // fire-and-forget pushes off.
+  const pendingNotifications: Promise<unknown>[] = [];
   try {
     const caller = await getCaller();
     if (!caller) {
@@ -179,7 +183,7 @@ export async function POST(request: Request) {
 
       for (const memberDoc of membersSnap.docs) {
         if (memberDoc.id === caller.uid) continue;
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: memberDoc.id,
           title: `This week's devotional focus: ${devData.title}`,
           message: devData.content.slice(0, 240),
@@ -190,10 +194,11 @@ export async function POST(request: Request) {
             subject: `${config.audienceLabel} Devotional Focus: ${devData.title}`,
             text: `${devData.title}\n\n${devData.content}\n\nPosted by ${caller.name}.`,
           },
-        }).catch(console.error);
+        }).catch(console.error));
       }
     }
 
+    await Promise.allSettled(pendingNotifications);
     return NextResponse.json(
       {
         id: docRef.id,

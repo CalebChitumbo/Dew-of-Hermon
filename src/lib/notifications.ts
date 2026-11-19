@@ -68,8 +68,11 @@ export async function createNotificationWithEmail({
     createdAt: new Date(),
   });
 
-  // 2. Send push notification (fire-and-forget; don't block email flow)
-  sendPushToUser(userId, {
+  // 2. Send push notification in parallel with the email work. It must be
+  //    awaited before returning: on serverless hosting (Vercel) the function is
+  //    frozen as soon as the response is sent, so a fire-and-forget push often
+  //    never left the server.
+  const pushDone = sendPushToUser(userId, {
     title,
     body: message,
     link: link || undefined,
@@ -78,90 +81,94 @@ export async function createNotificationWithEmail({
     console.error(`Push failed for notification ${notificationRef.id}:`, err)
   );
 
-  // 3. Check email config
-  const configError = validateEmailConfig();
-  if (configError) {
-    console.warn(
-      `Skipping email for notification ${notificationRef.id}: ${configError}`
-    );
-    await notificationRef.update({
-      emailStatus: "skipped" as EmailDeliveryStatus,
-      emailError: configError,
-    });
-    return { notificationId: notificationRef.id, emailSent: false };
-  }
-
-  // 4. Resolve recipient email
-  let userEmail: string | null = recipientEmail || null;
-  if (!userEmail) {
-    try {
-      const userDoc = await adminDb.collection("users").doc(userId).get();
-      userEmail = userDoc.data()?.email || null;
-    } catch (err) {
-      console.error(`Failed to fetch user ${userId} for email:`, err);
-    }
-  }
-
-  if (!userEmail) {
-    const reason = `No email address on file for user ${userId}`;
-    console.warn(
-      `${reason}, skipping email for notification ${notificationRef.id}`
-    );
-    await notificationRef.update({
-      emailStatus: "skipped" as EmailDeliveryStatus,
-      emailError: reason,
-    });
-    return { notificationId: notificationRef.id, emailSent: false };
-  }
-
-  // 5. Build email content
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "https://dew-of-hermon-xy9h.vercel.app";
-  const linkUrl = link ? `${appUrl}${link}` : appUrl;
-
-  const emailSubject = email?.subject || title;
-  const emailText = email?.text || `${message}\n\nView details: ${linkUrl}`;
-  const emailHtml =
-    email?.html ||
-    `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #5C4033;">${escapeHtml(title)}</h2>
-      <p>${escapeHtml(message)}</p>
-      <a href="${linkUrl}" style="display: inline-block; padding: 10px 24px; background-color: #14b8a6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">View Details</a>
-      <p style="margin-top: 24px; color: #888;">Blessings,<br/>Potter's Wheel Team</p>
-    </div>
-  `;
-
-  // 6. Send email and track result
   try {
-    const { id: mailDocId } = await sendEmail({
-      to: userEmail,
-      subject: emailSubject,
-      text: emailText,
-      html: emailHtml,
-    });
+    // 3. Check email config
+    const configError = validateEmailConfig();
+    if (configError) {
+      console.warn(
+        `Skipping email for notification ${notificationRef.id}: ${configError}`
+      );
+      await notificationRef.update({
+        emailStatus: "skipped" as EmailDeliveryStatus,
+        emailError: configError,
+      });
+      return { notificationId: notificationRef.id, emailSent: false };
+    }
 
-    await notificationRef.update({
-      emailStatus: "queued" as EmailDeliveryStatus,
-      emailDocId: mailDocId,
-      emailError: null,
-    });
+    // 4. Resolve recipient email
+    let userEmail: string | null = recipientEmail || null;
+    if (!userEmail) {
+      try {
+        const userDoc = await adminDb.collection("users").doc(userId).get();
+        userEmail = userDoc.data()?.email || null;
+      } catch (err) {
+        console.error(`Failed to fetch user ${userId} for email:`, err);
+      }
+    }
 
-    return { notificationId: notificationRef.id, emailSent: true, mailDocId };
-  } catch (err) {
-    const errorMsg =
-      err instanceof Error ? err.message : "Unknown email error";
-    console.error(
-      `Email failed for notification ${notificationRef.id} to ${userEmail}:`,
-      err
-    );
+    if (!userEmail) {
+      const reason = `No email address on file for user ${userId}`;
+      console.warn(
+        `${reason}, skipping email for notification ${notificationRef.id}`
+      );
+      await notificationRef.update({
+        emailStatus: "skipped" as EmailDeliveryStatus,
+        emailError: reason,
+      });
+      return { notificationId: notificationRef.id, emailSent: false };
+    }
 
-    await notificationRef.update({
-      emailStatus: "failed" as EmailDeliveryStatus,
-      emailError: errorMsg,
-    });
+    // 5. Build email content
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://dew-of-hermon-xy9h.vercel.app";
+    const linkUrl = link ? `${appUrl}${link}` : appUrl;
 
-    return { notificationId: notificationRef.id, emailSent: false };
+    const emailSubject = email?.subject || title;
+    const emailText = email?.text || `${message}\n\nView details: ${linkUrl}`;
+    const emailHtml =
+      email?.html ||
+      `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #5C4033;">${escapeHtml(title)}</h2>
+        <p>${escapeHtml(message)}</p>
+        <a href="${linkUrl}" style="display: inline-block; padding: 10px 24px; background-color: #14b8a6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">View Details</a>
+        <p style="margin-top: 24px; color: #888;">Blessings,<br/>Potter's Wheel Team</p>
+      </div>
+    `;
+
+    // 6. Send email and track result
+    try {
+      const { id: mailDocId } = await sendEmail({
+        to: userEmail,
+        subject: emailSubject,
+        text: emailText,
+        html: emailHtml,
+      });
+
+      await notificationRef.update({
+        emailStatus: "queued" as EmailDeliveryStatus,
+        emailDocId: mailDocId,
+        emailError: null,
+      });
+
+      return { notificationId: notificationRef.id, emailSent: true, mailDocId };
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : "Unknown email error";
+      console.error(
+        `Email failed for notification ${notificationRef.id} to ${userEmail}:`,
+        err
+      );
+
+      await notificationRef.update({
+        emailStatus: "failed" as EmailDeliveryStatus,
+        emailError: errorMsg,
+      });
+
+      return { notificationId: notificationRef.id, emailSent: false };
+    }
+  } finally {
+    await pushDone;
   }
 }
 

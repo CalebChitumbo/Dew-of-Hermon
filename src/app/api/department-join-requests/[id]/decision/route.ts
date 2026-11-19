@@ -24,6 +24,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Notifications (push + email) still being sent. Awaited before responding:
+  // on Vercel the function is frozen once the response is sent, which cut
+  // fire-and-forget pushes off.
+  const pendingNotifications: Promise<unknown>[] = [];
   try {
     const caller = await getCaller();
     if (!caller) {
@@ -114,7 +118,7 @@ export async function POST(
           .get();
         for (const chairDoc of chairsSnap.docs) {
           if (chairDoc.data().isActive === false) continue;
-          createNotificationWithEmail({
+          pendingNotifications.push(createNotificationWithEmail({
             userId: chairDoc.id,
             title: "Join Request Awaiting Your Approval",
             message: `${caller.name} recommended ${requesterName} to join ${departmentName}. It awaits your final approval.`,
@@ -127,20 +131,20 @@ export async function POST(
                 comments ? `\n\nManager note: "${comments}"` : ""
               }\n\nGive the final decision in the Join Requests queue.`,
             },
-          }).catch(console.error);
+          }).catch(console.error));
         }
         // Let the requester know it advanced.
         if (requesterId !== caller.uid) {
-          createNotificationWithEmail({
+          pendingNotifications.push(createNotificationWithEmail({
             userId: requesterId,
             title: "Join Request Recommended",
             message: `${caller.name} recommended your request to join ${departmentName}. It's now with the Chairperson for final approval.`,
             type: "announcement",
             link: MEMBER_LINK,
-          }).catch(console.error);
+          }).catch(console.error));
         }
       } else if (requesterId !== caller.uid) {
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: requesterId,
           title: "Join Request Declined",
           message: `${caller.name} declined your request to join ${departmentName}.${
@@ -148,9 +152,10 @@ export async function POST(
           }`,
           type: "announcement",
           link: MEMBER_LINK,
-        }).catch(console.error);
+        }).catch(console.error));
       }
 
+      await Promise.allSettled(pendingNotifications);
       return NextResponse.json({ success: true, status: newStatus });
     }
 
@@ -217,7 +222,7 @@ export async function POST(
       }
 
       // Notify the requester of the final outcome.
-      createNotificationWithEmail({
+      pendingNotifications.push(createNotificationWithEmail({
         userId: requesterId,
         title:
           action === "APPROVE"
@@ -235,19 +240,20 @@ export async function POST(
               }`,
         type: "announcement",
         link: MEMBER_LINK,
-      }).catch(console.error);
+      }).catch(console.error));
 
       // On approval, let the manager who recommended it know it's done.
       if (action === "APPROVE" && req.managerId && req.managerId !== caller.uid) {
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: req.managerId as string,
           title: "Join Request Approved",
           message: `The Chairperson approved ${requesterName} to join ${departmentName}.`,
           type: "announcement",
           link: QUEUE_LINK,
-        }).catch(console.error);
+        }).catch(console.error));
       }
 
+      await Promise.allSettled(pendingNotifications);
       return NextResponse.json({ success: true, status: newStatus });
     }
 

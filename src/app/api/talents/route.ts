@@ -36,6 +36,10 @@ const LEADERSHIP_ROLES = ["SUPER_ADMIN", "VICE_CHAIRPERSON", "ADMIN"];
 // A member puts a talent forward for leadership to review and slot into an
 // opportunity. Notifies the leadership team that a new submission is waiting.
 export async function POST(request: Request) {
+  // Notifications (push + email) still being sent. Awaited before responding:
+  // on Vercel the function is frozen once the response is sent, which cut
+  // fire-and-forget pushes off.
+  const pendingNotifications: Promise<unknown>[] = [];
   try {
     const caller = await getCaller();
     if (!caller) {
@@ -149,7 +153,7 @@ export async function POST(request: Request) {
     for (const leaderDoc of leadersSnap.docs) {
       if (leaderDoc.data().isActive === false) continue;
       if (leaderDoc.id === caller.uid) continue;
-      createNotificationWithEmail({
+      pendingNotifications.push(createNotificationWithEmail({
         userId: leaderDoc.id,
         title: "New Talent Submission",
         message: `${caller.name} has put forward a talent: "${title}". Review it and decide when to slot them in.`,
@@ -160,9 +164,10 @@ export async function POST(request: Request) {
           subject: `New talent submission from ${caller.name}`,
           text: `${caller.name} has put forward a talent for review: "${title}".\n\n${description}\n\nReview it in the Talent Submissions queue and decide when to give them an opportunity.`,
         },
-      }).catch(console.error);
+      }).catch(console.error));
     }
 
+    await Promise.allSettled(pendingNotifications);
     return NextResponse.json({ success: true, id: ref.id, status });
   } catch (error) {
     console.error("POST /api/talents error:", error);

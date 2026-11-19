@@ -4,6 +4,36 @@ import { adminDb, adminAuth } from "@/lib/firebase-admin";
 export const dynamic = "force-dynamic";
 
 /**
+ * Work out which user is calling. Prefers a Firebase ID token in the
+ * Authorization header (always fresh on the client) and falls back to the
+ * session cookie. The cookie alone isn't enough: it expires after 7 days while
+ * an installed web app keeps the user signed in to Firebase indefinitely.
+ */
+async function getCallerUid(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get("authorization") || "";
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (match) {
+    try {
+      const decoded = await adminAuth.verifyIdToken(match[1]);
+      return decoded.uid;
+    } catch {
+      // Fall through to the session cookie.
+    }
+  }
+
+  const sessionCookie = request.cookies.get("session")?.value;
+  if (sessionCookie) {
+    try {
+      const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+      return decoded.uid;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
  * POST /api/fcm-tokens — Save an FCM token for the authenticated user.
  * Body: { token: string; userId: string }
  */
@@ -18,14 +48,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the session cookie to ensure the caller owns this userId
-    const sessionCookie = request.cookies.get("session")?.value;
-    if (!sessionCookie) {
+    // Ensure the caller owns this userId
+    const callerUid = await getCallerUid(request);
+    if (!callerUid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    if (decoded.uid !== userId) {
+    if (callerUid !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -44,10 +72,12 @@ export async function POST(request: NextRequest) {
         userAgent: request.headers.get("user-agent") || null,
       });
 
-    // Also mark that the user has push enabled on their profile
-    await adminDb.collection("users").doc(userId).update({
-      pushEnabled: true,
-    });
+    // Also mark that the user has push enabled on their profile. merge (not
+    // update) so this can't fail with NOT_FOUND.
+    await adminDb
+      .collection("users")
+      .doc(userId)
+      .set({ pushEnabled: true }, { merge: true });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -74,13 +104,11 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const sessionCookie = request.cookies.get("session")?.value;
-    if (!sessionCookie) {
+    const callerUid = await getCallerUid(request);
+    if (!callerUid) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
-    if (decoded.uid !== userId) {
+    if (callerUid !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -102,9 +130,10 @@ export async function DELETE(request: NextRequest) {
       .get();
 
     if (remaining.empty) {
-      await adminDb.collection("users").doc(userId).update({
-        pushEnabled: false,
-      });
+      await adminDb
+        .collection("users")
+        .doc(userId)
+        .set({ pushEnabled: false }, { merge: true });
     }
 
     return NextResponse.json({ success: true });

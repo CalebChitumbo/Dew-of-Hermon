@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   requestPushPermissionAndToken,
+  syncPushTokenIfGranted,
   onForegroundMessage,
   type PushPermissionFailureReason,
 } from "@/lib/fcm";
@@ -33,6 +34,24 @@ function failureMessage(reason: PushPermissionFailureReason): {
         title: "Not supported on this browser",
         description:
           "Your browser doesn't support web push notifications. Try a recent version of Chrome, Edge, Firefox, or Safari 16.4+.",
+      };
+    case "ios_not_installed":
+      return {
+        title: "Install the app first",
+        description:
+          'On iPhone and iPad, notifications only work from the installed app. In Safari tap Share → "Add to Home Screen", then open the app from your Home Screen.',
+      };
+    case "session_expired":
+      return {
+        title: "Please sign in again",
+        description:
+          "Your sign-in has expired. Sign out and back in, then enable notifications again.",
+      };
+    case "save_failed":
+      return {
+        title: "Couldn't enable notifications",
+        description:
+          "We couldn't save this device for notifications. Check your connection and tap Enable again.",
       };
     case "sw_failed":
       return {
@@ -65,6 +84,9 @@ export function PushNotificationPrompt() {
   const { toast } = useToast();
   const [showBanner, setShowBanner] = useState(false);
   const [requesting, setRequesting] = useState(false);
+  // True when permission is already granted but this device isn't registered
+  // yet (e.g. an earlier attempt failed after the user tapped "Allow").
+  const [needsFinish, setNeedsFinish] = useState(false);
 
   // Determine whether to show the prompt
   useEffect(() => {
@@ -72,8 +94,35 @@ export function PushNotificationPrompt() {
     if (typeof window === "undefined") return;
     if (!("Notification" in window)) return;
 
-    // Don't show if already granted or denied
-    if (Notification.permission !== "default") return;
+    if (Notification.permission === "denied") return;
+
+    if (Notification.permission === "granted") {
+      // Permission was given before — make sure this device's token is
+      // actually saved (and refreshed, since FCM tokens rotate). Previously the
+      // banner was hidden as soon as permission was granted, so a failed first
+      // attempt left the device permanently without push and no way to retry.
+      let cancelled = false;
+      const syncKey = `push-token-synced:${firebaseUser.uid}`;
+      if (sessionStorage.getItem(syncKey)) return;
+      syncPushTokenIfGranted(firebaseUser)
+        .then((result) => {
+          if (cancelled || !result) return;
+          if (result.ok) {
+            sessionStorage.setItem(syncKey, "1");
+          } else if (
+            result.reason !== "unsupported" &&
+            result.reason !== "denied" &&
+            !sessionStorage.getItem("push-prompt-dismissed")
+          ) {
+            setNeedsFinish(true);
+            setShowBanner(true);
+          }
+        })
+        .catch((e) => console.error("Push token sync failed:", e));
+      return () => {
+        cancelled = true;
+      };
+    }
 
     // Don't show if the user already dismissed this session
     const dismissed = sessionStorage.getItem("push-prompt-dismissed");
@@ -111,8 +160,10 @@ export function PushNotificationPrompt() {
     if (!firebaseUser) return;
     setRequesting(true);
     try {
-      const result = await requestPushPermissionAndToken(firebaseUser.uid);
+      const result = await requestPushPermissionAndToken(firebaseUser);
       if (result.ok) {
+        sessionStorage.setItem(`push-token-synced:${firebaseUser.uid}`, "1");
+        setNeedsFinish(false);
         toast({
           title: "Notifications enabled",
           description: "You'll now receive push notifications for service reminders and assignments.",
@@ -127,6 +178,7 @@ export function PushNotificationPrompt() {
         if (
           result.reason === "denied" ||
           result.reason === "unsupported" ||
+          result.reason === "ios_not_installed" ||
           result.reason === "config_missing"
         ) {
           setShowBanner(false);
@@ -159,11 +211,14 @@ export function PushNotificationPrompt() {
         </div>
         <div className="flex-1">
           <p className="font-semibold text-clay-800">
-            Enable push notifications?
+            {needsFinish
+              ? "Finish turning on notifications"
+              : "Enable push notifications?"}
           </p>
           <p className="mt-1 text-sm text-clay-600">
-            Get notified about service assignments, reminders, and announcements
-            even when the app is closed.
+            {needsFinish
+              ? "Notifications are allowed, but this device isn't registered yet. Tap Enable to finish setting it up."
+              : "Get notified about service assignments, reminders, and announcements even when the app is closed."}
           </p>
           <div className="mt-3 flex gap-2">
             <Button
