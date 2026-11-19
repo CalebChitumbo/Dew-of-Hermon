@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { setSessionCookies } from "@/lib/session-cookie";
 
 export const dynamic = "force-dynamic";
 
@@ -55,16 +55,7 @@ export async function POST(request: Request) {
       await adminDb.collection("users").doc(uid).set(newUserData);
 
       // Create a Firebase session cookie (valid for 7 days)
-      const newUserExpiresIn = 60 * 60 * 24 * 7 * 1000;
-      const newUserSessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn: newUserExpiresIn });
-      const newUserCookieStore = await cookies();
-      newUserCookieStore.set("session", newUserSessionCookie, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
-        path: "/",
-      });
+      await setSessionCookies(idToken);
 
       return NextResponse.json({
         user: { id: uid, ...newUserData },
@@ -81,16 +72,7 @@ export async function POST(request: Request) {
     }
 
     // Create a Firebase session cookie (valid for 7 days)
-    const expiresIn = 60 * 60 * 24 * 7 * 1000;
-    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
-    const cookieStore = await cookies();
-    cookieStore.set("session", sessionCookie, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
-      path: "/",
-    });
+    await setSessionCookies(idToken);
 
     return NextResponse.json({
       user: {
