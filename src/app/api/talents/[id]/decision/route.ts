@@ -43,6 +43,10 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Notifications (push + email) still being sent. Awaited before responding:
+  // on Vercel the function is frozen once the response is sent, which cut
+  // fire-and-forget pushes off.
+  const pendingNotifications: Promise<unknown>[] = [];
   try {
     const caller = await getCaller();
     if (!caller) {
@@ -136,7 +140,7 @@ export async function POST(
       }
 
       if (submitterId !== caller.uid) {
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: submitterId,
           title: "Your Talent Was Shortlisted",
           message: `${caller.name} has shortlisted "${talentTitle}". You're in the talent pool — leadership will slot you into an opportunity.`,
@@ -149,8 +153,9 @@ export async function POST(
               comments ? `\n\nTheir note: "${comments}"` : ""
             }\n\nYou're now in the talent pool. Leadership will let you know when they've found the right opportunity to slot you in.`,
           },
-        }).catch(console.error);
+        }).catch(console.error));
       }
+      await Promise.allSettled(pendingNotifications);
       return NextResponse.json({ success: true, status: "SHORTLISTED" });
     }
 
@@ -175,7 +180,7 @@ export async function POST(
       }
 
       if (submitterId !== caller.uid) {
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: submitterId,
           title: "Talent Submission Update",
           message: `Your submission "${talentTitle}" wasn't taken forward this time.${
@@ -183,8 +188,9 @@ export async function POST(
           }`,
           type: "announcement",
           link: MEMBER_LINK,
-        }).catch(console.error);
+        }).catch(console.error));
       }
+      await Promise.allSettled(pendingNotifications);
       return NextResponse.json({ success: true, status: "DECLINED" });
     }
 
@@ -242,7 +248,7 @@ export async function POST(
         const dateLine = opportunityDate
           ? ` on ${opportunityDate.toDateString()}`
           : "";
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: submitterId,
           title: "You've Been Given an Opportunity!",
           message: `${caller.name} has slotted you in: ${opportunityTitle}${dateLine}. Check your talent page for details.`,
@@ -255,8 +261,9 @@ export async function POST(
               opportunityNotes ? `\n\nDetails: ${opportunityNotes}` : ""
             }${comments ? `\n\nNote: "${comments}"` : ""}\n\nOpen your Talent Showcase page for the full details.`,
           },
-        }).catch(console.error);
+        }).catch(console.error));
       }
+      await Promise.allSettled(pendingNotifications);
       return NextResponse.json({ success: true, status: "SLOTTED" });
     }
 
@@ -283,7 +290,7 @@ export async function POST(
       }
 
       if (submitterId !== caller.uid) {
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: submitterId,
           title: "Opportunity Rescheduled",
           message: `Your slot for "${talentTitle}" was returned to the talent pool.${
@@ -291,8 +298,9 @@ export async function POST(
           } Leadership will line up another opportunity.`,
           type: "announcement",
           link: MEMBER_LINK,
-        }).catch(console.error);
+        }).catch(console.error));
       }
+      await Promise.allSettled(pendingNotifications);
       return NextResponse.json({ success: true, status: "SHORTLISTED" });
     }
 
@@ -311,7 +319,7 @@ export async function POST(
       }
 
       if (submitterId !== caller.uid) {
-        createNotificationWithEmail({
+        pendingNotifications.push(createNotificationWithEmail({
           userId: submitterId,
           title: "Thank You for Showcasing Your Talent!",
           message: `Your showcase "${talentTitle}" has been marked completed.${
@@ -319,8 +327,9 @@ export async function POST(
           }`,
           type: "announcement",
           link: MEMBER_LINK,
-        }).catch(console.error);
+        }).catch(console.error));
       }
+      await Promise.allSettled(pendingNotifications);
       return NextResponse.json({ success: true, status: "COMPLETED" });
     }
 

@@ -11,6 +11,36 @@ interface PushPayload {
 }
 
 /**
+ * The public HTTPS origin of the app, used to turn relative links into the
+ * absolute HTTPS URL that FCM requires for webpush.fcmOptions.link.
+ */
+function appOrigin(): string | null {
+  const candidates = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+  ];
+  for (const raw of candidates) {
+    const value = raw?.trim().replace(/^["']|["']$/g, "");
+    if (!value) continue;
+    try {
+      const url = new URL(value.startsWith("http") ? value : `https://${value}`);
+      if (url.protocol === "https:") return url.origin;
+    } catch {
+      // try the next candidate
+    }
+  }
+  return null;
+}
+
+function absoluteLink(link: string): string | null {
+  if (/^https:\/\//i.test(link)) return link;
+  const origin = appOrigin();
+  if (!origin) return null;
+  return new URL(link, origin).toString();
+}
+
+/**
  * Send a push notification to all registered devices for a given user.
  * Automatically cleans up stale/invalid tokens.
  */
@@ -32,20 +62,32 @@ export async function sendPushToUser(
   const tokens = tokensSnapshot.docs.map((doc) => doc.data().token as string);
   const messaging = getMessaging();
 
+  const clickLink = absoluteLink(payload.link || "/notifications");
+
   const message = {
     notification: {
       title: payload.title,
       body: payload.body,
-      ...(payload.icon ? { icon: payload.icon } : {}),
+      // (icon is not a valid field here in the FCM v1 API — it goes in
+      // webpush.notification below.)
     },
     data: {
       ...(payload.link ? { link: payload.link } : {}),
       ...(payload.tag ? { notificationId: payload.tag } : {}),
     },
     webpush: {
-      fcmOptions: {
-        link: payload.link || "/notifications",
+      headers: {
+        // Deliver promptly and keep trying for up to a day if the phone is offline.
+        Urgency: "high",
+        TTL: "86400",
       },
+      notification: {
+        icon: payload.icon || "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        ...(payload.tag ? { tag: payload.tag } : {}),
+      },
+      // FCM requires an absolute HTTPS URL for this link.
+      ...(clickLink ? { fcmOptions: { link: clickLink } } : {}),
     },
   };
 

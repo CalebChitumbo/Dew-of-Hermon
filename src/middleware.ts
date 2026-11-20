@@ -25,7 +25,11 @@ export function middleware(request: NextRequest) {
   if (isProtected) {
     const sessionCookie = request.cookies.get("session");
     if (!sessionCookie) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      // Remember where the user was going: if they're still signed in to
+      // Firebase, the login page renews the session and sends them back.
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("next", pathname + request.nextUrl.search);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

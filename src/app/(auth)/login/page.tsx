@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, firebaseUser, sessionStatus } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -24,6 +24,15 @@ export default function LoginPage() {
   const nextUrl = searchParams.get("next");
   const isSafeNext = nextUrl && nextUrl.startsWith("/") && !nextUrl.startsWith("//");
   const postAuthRedirect = isSafeNext ? nextUrl : "/dashboard";
+
+  // Still signed in to Firebase but sent here because the server session had
+  // expired: AuthContext renews the session automatically, so just carry on to
+  // where the user was going instead of asking them to sign in again.
+  useEffect(() => {
+    if (firebaseUser && sessionStatus === "valid") {
+      router.replace(postAuthRedirect);
+    }
+  }, [firebaseUser, sessionStatus, postAuthRedirect, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
